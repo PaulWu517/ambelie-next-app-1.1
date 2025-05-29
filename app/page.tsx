@@ -8,7 +8,74 @@ export const metadata = {
   description: "Discover Ambelie's unique collection of antique furniture, modern designs, and fashion, blending Eastern aesthetics with Western craftsmanship. Experience the art of living.",
 };
 
-export default function HomePage() {
+// 定义 Asian Art Item 类型
+interface AsianArtItem {
+  id: number;
+  documentId: string;
+  Title: string;
+  Period: string;
+  MainImage?: {
+    url: string;
+    alternativeText?: string;
+  } | null;
+  HoverImage?: {
+    url: string;
+    alternativeText?: string;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+}
+
+// Strapi API 响应类型
+interface StrapiResponse {
+  data: AsianArtItem[];
+  meta: {
+    pagination: {
+      page: number;
+      pageSize: number;
+      pageCount: number;
+      total: number;
+    };
+  };
+}
+
+// 从 Strapi 获取 Asian Art 数据的函数
+async function getAsianArtItems(): Promise<AsianArtItem[]> {
+  try {
+    // 使用环境变量配置 API URL，如果未设置则使用 Railway 生产 URL
+    const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+    
+    const response = await fetch(`${API_URL}/api/asian-art-items?populate=*&sort=createdAt:asc`, {
+      cache: 'no-store', // 确保获取最新数据
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error('API Response Error:', response.status, response.statusText);
+      throw new Error(`Failed to fetch data: ${response.status}`);
+    }
+    
+    const data: StrapiResponse = await response.json();
+    
+    // 添加调试日志
+    console.log('Fetched Asian Art items:', data.data.length, 'items');
+    console.log('API URL used:', API_URL);
+    
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching Asian Art items:', error);
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  // 获取 Asian Art 数据
+  const asianArtItems = await getAsianArtItems();
+  const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+
   return (
     <main>
       <ScrollAnimations />
@@ -37,6 +104,46 @@ export default function HomePage() {
         </div>
         <Link href="/category/dividers" className="view-more-link see-more-link">See More</Link>
         <div className="new-arrivals-grid">
+          {asianArtItems.length > 0 ? (
+            asianArtItems
+              .filter(item => 
+                item.MainImage?.url && 
+                item.HoverImage?.url
+              )
+              .map((item) => (
+                <article key={item.id} className="product-item">
+                  <Link href="/product/divider-detail" className="product-link">
+                    <div className="product-image">
+                      {item.MainImage?.url && (
+                        <Image 
+                          src={`${API_URL}${item.MainImage.url}`} 
+                          alt={item.MainImage.alternativeText || item.Title} 
+                          width={500} 
+                          height={667} 
+                          style={{aspectRatio: '3/4', objectFit: 'cover'}} 
+                        />
+                      )}
+                      {item.HoverImage?.url && (
+                        <Image 
+                          src={`${API_URL}${item.HoverImage.url}`} 
+                          alt={item.HoverImage.alternativeText || `${item.Title} - Detail`} 
+                          className="hover-image" 
+                          width={500} 
+                          height={667} 
+                          style={{aspectRatio: '3/4', objectFit: 'cover'}}
+                        />
+                      )}
+                    </div>
+                    <div className="product-info">
+                      <h2 className="product-title">{item.Title}</h2>
+                      <p className="product-period">{item.Period}</p>
+                    </div>
+                  </Link>
+                </article>
+              ))
+          ) : (
+            // 如果没有数据，显示原始的静态内容作为备用
+            <>
           <article className="product-item">
             <Link href="/product/divider-detail" className="product-link">
               <div className="product-image">
@@ -85,6 +192,8 @@ export default function HomePage() {
               </div>
             </Link>
           </article>
+            </>
+          )}
         </div>
       </section>
 
