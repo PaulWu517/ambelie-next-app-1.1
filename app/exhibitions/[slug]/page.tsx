@@ -1,3 +1,4 @@
+import { NextPage } from 'next';
 import React from 'react';
 import Image from 'next/image';
 import styles from './ExhibitionDetail.module.css';
@@ -97,13 +98,12 @@ function processTextWithLineBreaks(text: string): string {
     .replace(/$/, '</p>');        // Add closing paragraph tag
 }
 
-// Page component using the exact same pattern as the working products page
-export default async function ExhibitionDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ slug: string }> 
-}) {
-  const { slug } = await params;
+interface ExhibitionDetailPageProps {
+  params: { slug: string };
+}
+
+const ExhibitionDetailPage: NextPage<ExhibitionDetailPageProps> = async ({ params }) => {
+  const { slug } = params;
   const exhibition = await getExhibitionBySlug(slug);
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
@@ -182,4 +182,6 @@ export default async function ExhibitionDetailPage({
       </main>
     </div>
   );
-} 
+}
+
+export default ExhibitionDetailPage; 
