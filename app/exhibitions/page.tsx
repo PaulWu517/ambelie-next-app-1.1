@@ -2,13 +2,97 @@ import Image from 'next/image';
 import Link from 'next/link';
 import ScrollAnimations from '../../components/ScrollAnimations';
 
+// Define the types needed for data fetching
+interface ImageFormat {
+  url: string;
+  width: number;
+  height: number;
+  size: number;
+}
+
+interface ImageItem {
+  url: string;
+  alternativeText?: string | null;
+  formats?: {
+    large?: ImageFormat;
+    medium?: ImageFormat;
+    small?: ImageFormat;
+    xlarge?: ImageFormat;
+  };
+}
+
+interface Exhibition {
+  id: number;
+  name: string;
+  slug: string;
+  exhibitionType: string;
+  exhibitionStatus: 'current' | 'past';
+  startDate: string;
+  endDate: string;
+  displayDate?: string | null;
+  mainImage?: ImageItem | null;
+  introduction?: string | null;
+  description?: string | null;
+  location?: string | null;
+}
+
+interface StrapiResponse {
+  data: Exhibition[];
+}
+
+// Function to fetch exhibitions by status
+async function getExhibitionsByStatus(status: 'current' | 'past'): Promise<Exhibition[]> {
+  const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+  try {
+    const res = await fetch(
+      `${API_URL}/api/exhibitions?filters[exhibitionStatus][$eq]=${status}&populate=*&sort=startDate:desc`, 
+      {
+        cache: 'no-store',
+      }
+    );
+    if (!res.ok) {
+      throw new Error(`Failed to fetch ${status} exhibitions`);
+    }
+    const json: StrapiResponse = await res.json();
+    return json.data;
+  } catch (error) {
+    console.error(`Error fetching ${status} exhibitions:`, error);
+    return [];
+  }
+}
+
+// Helper function to format date display
+function formatDateDisplay(exhibition: Exhibition): string {
+  if (exhibition.displayDate) {
+    return exhibition.displayDate;
+  }
+  
+  const startDate = new Date(exhibition.startDate);
+  const endDate = new Date(exhibition.endDate);
+  
+  const formatOptions: Intl.DateTimeFormatOptions = { 
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  };
+  
+  const startFormatted = startDate.toLocaleDateString('en-US', formatOptions);
+  const endFormatted = endDate.toLocaleDateString('en-US', formatOptions);
+  
+  return `${startFormatted} - ${endFormatted}`;
+}
+
 // 元数据定义
 export const metadata = {
   title: "Exhibitions | Ambelie",
   description: "Explore current and past exhibitions at Ambelie. Discover unique collections of art, antiques, and design.",
 };
 
-export default function ExhibitionsPage() {
+export default async function ExhibitionsPage() {
+  const currentExhibitions = await getExhibitionsByStatus('current');
+  const pastExhibitions = await getExhibitionsByStatus('past');
+  const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+
   return (
     <main>
       <ScrollAnimations />
@@ -17,155 +101,97 @@ export default function ExhibitionsPage() {
         <h1 className="page-title">EXHIBITIONS</h1>
       </section>
 
-      {/* Current Section - Based on Store Showcase Module */}
+      {/* Current Section */}
       <section className="exhibitions-asymmetric store-locations">
         <div className="section-container">
           <h2 className="section-heading">CURRENT</h2>
         </div>
         
-        {/* First Row: Left Image + Right Text - Current Exhibition */}
-        <div className="exhibitions-row first-row">
+        {currentExhibitions.length > 0 ? (
+          currentExhibitions.map((exhibition, index) => (
+            <div key={exhibition.id} className={`exhibitions-row ${index % 2 === 0 ? 'first-row' : 'second-row'}`}>
           <div className="exhibition-main-image animate-on-scroll">
             <div className="exhibition-image-container">
-              <Image src="/assets/images/current-1.jpg" alt="MODERN GLAMOUR: ART DECO FURNITURE & TIBETAN RUGS" width={800} height={533} style={{objectFit: 'cover'}} />
+                  {exhibition.mainImage ? (
+                    <Image 
+                      src={`${API_URL}${exhibition.mainImage.formats?.large?.url || exhibition.mainImage.url}`} 
+                      alt={exhibition.mainImage.alternativeText || exhibition.name}
+                      width={800} 
+                      height={533} 
+                      style={{objectFit: 'cover'}}
+                      quality={75}
+                      priority={index === 0}
+                    />
+                  ) : (
+                    <div className="placeholder-image" style={{width: 800, height: 533, backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                      <span>No Image</span>
+                    </div>
+                  )}
             </div>
           </div>
           <div className="exhibition-content animate-on-scroll delay-200">
             <div className="exhibition-text">
-              <h2 className="exhibition-title animate-on-scroll delay-300">MODERN GLAMOUR</h2>
-              <p className="store-address animate-on-scroll delay-400">JOINT EXHIBITION</p>
-              <p className="exhibition-date animate-on-scroll delay-500">26 APRIL - 9 JUNE 2025</p>
-              <p className="exhibition-description animate-on-scroll delay-600">Experience the captivating fusion of Art Deco aesthetics and Tibetan craftsmanship in this unique exhibition. Featuring exquisite furniture pieces and hand-woven Tibetan rugs, the exhibition explores the harmonious dialogue between modern design and traditional artistry.</p>
-              <Link href="/exhibition-details" className="view-more-link animate-on-scroll delay-700">View Exhibition</Link> {/* Updated Link */}
-            </div>
+                  <h2 className="exhibition-title animate-on-scroll delay-300">{exhibition.name}</h2>
+                  <p className="store-address animate-on-scroll delay-400">{exhibition.exhibitionType}</p>
+                  <p className="exhibition-date animate-on-scroll delay-500">{formatDateDisplay(exhibition)}</p>
+                  {exhibition.introduction && (
+                    <p className="exhibition-description animate-on-scroll delay-600">{exhibition.introduction}</p>
+                  )}
+                  <Link href={`/exhibitions/${exhibition.slug}`} className="view-more-link animate-on-scroll delay-700">
+                    View Exhibition
+                  </Link>
           </div>
         </div>
-        
-        {/* Second Row: Left Text + Right Image - New Exhibition */}
-        <div className="exhibitions-row second-row">
-          <div className="exhibition-main-image animate-on-scroll">
-            <div className="exhibition-image-container">
-              <Image src="/assets/images/current-2.jpg" alt="CLOUD BROCADE: NINE CHAPTERS" width={800} height={533} style={{objectFit: 'cover'}} />
             </div>
+          ))
+        ) : (
+          <div className="no-exhibitions">
+            <p>No current exhibitions available.</p>
           </div>
-          <div className="exhibition-content animate-on-scroll delay-200">
-            <div className="exhibition-text">
-              <h2 className="exhibition-title animate-on-scroll delay-300">CLOUD BROCADE</h2>
-              <p className="store-address animate-on-scroll delay-400">SPECIAL EXHIBITION</p>
-              <p className="exhibition-date animate-on-scroll delay-500">11 APRIL - 11 MAY 2025</p>
-              <p className="exhibition-description animate-on-scroll delay-600">A significant retrospective featuring works from masters Zhang Ji Zhi, Liangkuan Xiuzong, and Inoue Yuichi. This exhibition showcases century-old brocade techniques, vibrant multi-colored compositions, and exceptional calligraphy, celebrating the rich heritage of East Asian artistic traditions.</p>
-              <Link href="/exhibition-details-harmony" className="view-more-link animate-on-scroll delay-700">View Exhibition</Link> {/* Updated Link */}
-            </div>
-          </div>
-        </div>
+        )}
       </section>
 
-      {/* Past Exhibitions Section - Based on Oriental Treasures Module */}
+      {/* Past Exhibitions Section */}
       <section className="past-exhibitions-section">
         <div className="section-container">
           <h2 className="section-heading">PAST</h2>
-        </div>
-        <div className="new-arrivals-grid"> {/* Assuming this class provides 4 columns */}
-          {/* First Row: 4 Images */}
-          <div className="product-item animate-on-scroll delay-100">
-            <Link href="/exhibition-details-past" className="product-link"> {/* Updated Link */}
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-1.jpg" alt="MATERIAL WITNESS" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-200">MATERIAL WITNESS</h2>
-                <p className="product-period animate-on-scroll delay-300">GROUP EXHIBITION</p>
-                <p className="exhibition-date animate-on-scroll delay-400">15 JANUARY - 28 FEBRUARY 2025</p>
-              </div>
-            </Link>
-          </div>
-          <div className="product-item animate-on-scroll delay-200">
-            <Link href="/exhibition-details-past" className="product-link"> {/* Updated Link */}
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-2.jpg" alt="RESONANCE IN FORM" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-300">RESONANCE IN FORM</h2>
-                <p className="product-period animate-on-scroll delay-400">SOLO EXHIBITION</p>
-                <p className="exhibition-date animate-on-scroll delay-500">10 DECEMBER - 5 JANUARY 2025</p>
-              </div>
-            </Link>
-          </div>
-          <div className="product-item animate-on-scroll delay-300">
-            <Link href="/exhibition-details-past" className="product-link"> {/* Updated Link */}
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-3.jpg" alt="LIMINAL SPACES" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-400">LIMINAL SPACES</h2>
-                <p className="product-period animate-on-scroll delay-500">CURATED BY LIU JIAN</p>
-                <p className="exhibition-date animate-on-scroll delay-600">3 NOVEMBER - 2 DECEMBER 2024</p>
-              </div>
-            </Link>
-          </div>
-          <div className="product-item animate-on-scroll delay-400">
-            <Link href="/exhibition-details-past" className="product-link"> {/* Updated Link */}
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-4.jpg" alt="ECHO OF SILENCE" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-500">ECHO OF SILENCE</h2>
-                <p className="product-period animate-on-scroll delay-600">INTERNATIONAL ARTISTS</p>
-                <p className="exhibition-date animate-on-scroll delay-700">15 SEPTEMBER - 25 OCTOBER 2024</p>
-              </div>
-            </Link>
           </div>
           
-          {/* Second Row: Added from full HTML */}
-          <div className="product-item animate-on-scroll delay-100">
-            <Link href="/exhibition-details-past" className="product-link">
+        {pastExhibitions.length > 0 ? (
+          <div className="new-arrivals-grid">
+            {pastExhibitions.map((exhibition, index) => (
+              <div key={exhibition.id} className="product-item animate-on-scroll" style={{animationDelay: `${(index % 4) * 100 + 100}ms`}}>
+                <Link href={`/exhibitions/${exhibition.slug}`} className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/Exhibitions-5.jpg" alt="FRAGMENTS OF TIME" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
+                    {exhibition.mainImage ? (
+                      <Image 
+                        src={`${API_URL}${exhibition.mainImage.formats?.medium?.url || exhibition.mainImage.url}`} 
+                        alt={exhibition.mainImage.alternativeText || exhibition.name}
+                        width={400} 
+                        height={400} 
+                        style={{aspectRatio: '1/1', objectFit: 'cover'}}
+                        quality={75}
+                      />
+                    ) : (
+                      <div className="placeholder-image" style={{width: 400, height: 400, backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                        <span>No Image</span>
+              </div>
+                    )}
               </div>
               <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-200">FRAGMENTS OF TIME</h2>
-                <p className="product-period animate-on-scroll delay-300">RETROSPECTIVE</p>
-                <p className="exhibition-date animate-on-scroll delay-400">20 JULY - 30 AUGUST 2024</p>
+                    <h2 className="product-title animate-on-scroll">{exhibition.name}</h2>
+                    <p className="product-period animate-on-scroll">{exhibition.exhibitionType}</p>
+                    <p className="exhibition-date animate-on-scroll">{formatDateDisplay(exhibition)}</p>
               </div>
             </Link>
+              </div>
+            ))}
           </div>
-          <div className="product-item animate-on-scroll delay-200">
-            <Link href="/exhibition-details-past" className="product-link">
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-6.jpg" alt="BEYOND BORDERS" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-300">BEYOND BORDERS</h2>
-                <p className="product-period animate-on-scroll delay-400">CULTURAL EXCHANGE</p>
-                <p className="exhibition-date animate-on-scroll delay-500">5 JUNE - 10 JULY 2024</p>
-              </div>
-            </Link>
+        ) : (
+          <div className="no-exhibitions">
+            <p>No past exhibitions available.</p>
           </div>
-          <div className="product-item animate-on-scroll delay-300">
-            <Link href="/exhibition-details-past" className="product-link">
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-7.jpg" alt="ESSENCE OF ELEGANCE" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-400">ESSENCE OF ELEGANCE</h2>
-                <p className="product-period animate-on-scroll delay-500">DESIGN SPOTLIGHT</p>
-                <p className="exhibition-date animate-on-scroll delay-600">10 APRIL - 25 MAY 2024</p>
-              </div>
-            </Link>
-          </div>
-          <div className="product-item animate-on-scroll delay-400">
-            <Link href="/exhibition-details-past" className="product-link">
-              <div className="product-image">
-                <Image src="/assets/images/Exhibitions-8.jpg" alt="HERITAGE REDEFINED" width={400} height={400} style={{aspectRatio: '1/1', objectFit: 'cover'}} />
-              </div>
-              <div className="product-info">
-                <h2 className="product-title animate-on-scroll delay-500">HERITAGE REDEFINED</h2>
-                <p className="product-period animate-on-scroll delay-600">CONTEMPORARY CLASSICS</p>
-                <p className="exhibition-date animate-on-scroll delay-700">15 FEBRUARY - 30 MARCH 2024</p>
-              </div>
-            </Link>
-          </div>
-        </div>
+        )}
       </section>
     </main>
   );

@@ -8,28 +8,33 @@ export const metadata = {
   description: "Discover Ambelie's unique collection of antique furniture, modern designs, and fashion, blending Eastern aesthetics with Western craftsmanship. Experience the art of living.",
 };
 
-// 定义 Asian Art Item 类型
-interface AsianArtItem {
+// 定义图片类型
+interface ImageItem {
+  url: string;
+  alternativeText?: string | null;
+}
+
+// 定义 Product 类型
+interface Product {
   id: number;
-  documentId: string;
-  Title: string;
-  Period: string;
-  MainImage?: {
-    url: string;
-    alternativeText?: string;
-  } | null;
-  HoverImage?: {
-    url: string;
-    alternativeText?: string;
-  } | null;
+  name: string;
+  period: string;
+  description: string;
+  designer: string;
+  maker: string;
+  origin: string;
+  images?: ImageItem[] | null;
+  main_image?: ImageItem | null; // 主图
+  hover_image?: ImageItem | null; // 悬停图
   createdAt: string;
   updatedAt: string;
   publishedAt: string;
+  slug: string;
 }
 
 // Strapi API 响应类型
 interface StrapiResponse {
-  data: AsianArtItem[];
+  data: Product[];
   meta: {
     pagination: {
       page: number;
@@ -40,40 +45,40 @@ interface StrapiResponse {
   };
 }
 
-// 从 Strapi 获取 Asian Art 数据的函数
-async function getAsianArtItems(): Promise<AsianArtItem[]> {
+// 从 Strapi 获取产品数据的函数
+async function getProducts(): Promise<Product[]> {
   try {
     // 使用环境变量配置 API URL，如果未设置则使用 Railway 生产 URL
     const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
     
-    const response = await fetch(`${API_URL}/api/asian-art-items?populate=*&sort=createdAt:asc`, {
+    // 请求 products 并 populate 图片、主图和悬停图
+    const response = await fetch(`${API_URL}/api/products?populate[0]=images&populate[1]=main_image&populate[2]=hover_image&sort=createdAt:asc`, {
       cache: 'no-store', // 确保获取最新数据
-      headers: {
-        'Cache-Control': 'no-cache',
-      },
     });
     
     if (!response.ok) {
       console.error('API Response Error:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error Body:', errorText);
       throw new Error(`Failed to fetch data: ${response.status}`);
     }
     
     const data: StrapiResponse = await response.json();
     
     // 添加调试日志
-    console.log('Fetched Asian Art items:', data.data.length, 'items');
+    console.log('Fetched Products:', data.data.length, 'items');
     console.log('API URL used:', API_URL);
     
     return data.data;
   } catch (error) {
-    console.error('Error fetching Asian Art items:', error);
+    console.error('Error fetching Products:', error);
     return [];
   }
 }
 
 export default async function HomePage() {
-  // 获取 Asian Art 数据
-  const asianArtItems = await getAsianArtItems();
+  // 获取产品数据
+  const products = await getProducts();
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
   return (
@@ -97,36 +102,42 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* New Arrivals Section - Asian Art */}
+      {/* New Arrivals Section - Products */}
       <section className="new-arrivals-section">
         <div className="new-arrivals-header">
-          <h2 className="section-heading">Asian Art</h2>
+          <div className="new-arrivals-left">
+            <h2 className="section-heading">New Arrivals</h2>
+            <Link href="/products" className="view-more-link see-more-link">See More</Link>
+          </div>
         </div>
-        <Link href="/category/dividers" className="view-more-link see-more-link">See More</Link>
         <div className="new-arrivals-grid">
-          {asianArtItems.length > 0 ? (
-            asianArtItems
+          {products.length > 0 ? (
+            products
               .filter(item => 
-                item.MainImage?.url && 
-                item.HoverImage?.url
+                item.main_image && 
+                item.hover_image
               )
-              .map((item) => (
+              .map((item) => {
+                const mainImage = item.main_image;
+                const hoverImage = item.hover_image;
+
+                return (
                 <article key={item.id} className="product-item">
-                  <Link href="/product/divider-detail" className="product-link">
+                    <Link href={`/products/${item.slug}`} className="product-link">
                     <div className="product-image">
-                      {item.MainImage?.url && (
+                        {mainImage?.url && (
                         <Image 
-                          src={`${API_URL}${item.MainImage.url}`} 
-                          alt={item.MainImage.alternativeText || item.Title} 
+                            src={`${API_URL}${mainImage.url}`} 
+                            alt={mainImage.alternativeText || item.name} 
                           width={500} 
                           height={667} 
                           style={{aspectRatio: '3/4', objectFit: 'cover'}} 
                         />
                       )}
-                      {item.HoverImage?.url && (
+                        {hoverImage?.url && (
                         <Image 
-                          src={`${API_URL}${item.HoverImage.url}`} 
-                          alt={item.HoverImage.alternativeText || `${item.Title} - Detail`} 
+                            src={`${API_URL}${hoverImage.url}`} 
+                            alt={hoverImage.alternativeText || `${item.name} - Detail`} 
                           className="hover-image" 
                           width={500} 
                           height={667} 
@@ -135,12 +146,13 @@ export default async function HomePage() {
                       )}
                     </div>
                     <div className="product-info">
-                      <h2 className="product-title">{item.Title}</h2>
-                      <p className="product-period">{item.Period}</p>
+                        <h2 className="product-title">{item.name}</h2>
+                        <p className="product-period">{item.period}</p>
                     </div>
                   </Link>
                 </article>
-              ))
+                )
+              })
           ) : (
             // 如果没有数据，显示原始的静态内容作为备用
             <>

@@ -60,7 +60,7 @@ a:hover {
 }
 
 .site-header {
-    padding: 20px 50px;
+    padding: 20px 50px 20px 50px;
     height: 80px;
     display: flex;
     justify-content: center;
@@ -78,12 +78,17 @@ a:hover {
     transition: background-color 0.3s ease-in-out, border-bottom 0.3s ease-in-out, height 0.3s ease-in-out;
 }
 
+.site-header .right-navigation {
+    margin-right: 0;
+}
+
 .site-header.scrolled,
 .site-header.menu-active {
     height: 80px;
     padding: 20px 50px;
     background-color: rgba(255, 255, 255, 0.95) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    margin-left: 0;
 }
 
 .logo img.logo-white {
@@ -150,6 +155,10 @@ a:hover {
     margin-left: 0;
 }
 
+.right-navigation .user-menu-item:last-child {
+    margin-right: 0;
+}
+
 .main-navigation ul {
     list-style: none;
     display: flex;
@@ -166,13 +175,6 @@ a:hover {
     transition: color 0.3s ease;
     text-transform: uppercase;
 }
-
-.site-header.scrolled .main-navigation a,
-.site-header.menu-active .main-navigation a {
-    color: var(--brand-black) !important;
-}
-
-/* 删除重复规则 - 已合并到通用hover规则中 */
 
 .main-navigation a:hover, 
 .menu-item.active > a {
@@ -212,486 +214,17 @@ a:hover {
     width: 100%;
 }
 
-.site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a {
-    color: var(--brand-red) !important;
-}
-
-.site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a::after {
-    width: 100% !important;
-    background-color: var(--brand-red) !important;
-}
-
-/* 额外确保 COLLECTIONS 在 mega menu 激活时保持激活状态 */
-.mega-menu-container.active ~ .site-header .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a,
-.site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a {
-    color: var(--brand-red) !important;
-}
-
-.mega-menu-container.active ~ .site-header .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a::after,
-.site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a::after {
-    width: 100% !important;
-    background-color: var(--brand-red) !important;
-}
-
-.mega-menu-container {
-    position: fixed;
-    top: 80px;
-    left: 0;
-    width: 100%;
-    background-color: transparent;
-    z-index: 999;
-    visibility: hidden;
-    opacity: 0;
-    transition: opacity 0.4s cubic-bezier(0.19, 1, 0.22, 1), 
-                visibility 0.4s cubic-bezier(0.19, 1, 0.22, 1), 
-                background-color 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-    border-top: none;
-    border: none;
-    margin-top: 0;
-    padding-top: 0;
-    pointer-events: none;
-    box-shadow: none;
-}
-
-.site-header.scrolled ~ .mega-menu-container {
-    top: 80px;
-}
-
-.mega-menu-container.active {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-}
-
-.primary-categories {
-    width: 100%;
-    padding: 20px 0;
-    display: flex;
-    justify-content: center;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-    background-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-    margin-top: 0;
-}
-
-.mega-menu-content {
-    box-sizing: border-box;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 20px 0;
-    position: relative;
-    min-height: 60px;
-}
-
-.mega-menu-container.has-active-primary .mega-menu-content {
-    background-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-}
-
-.mega-menu {
-    /* display: none; */ /* Remove this to allow child animations on initial show */
-    padding: 0 0 15px;
-    width: 100%;
-    opacity: 0; /* Initial state: hidden via opacity */
-    transition: opacity 0.4s ease; /* Keep its own opacity transition */
-}
-
-.mega-menu.active {
-    display: block;
-    opacity: 1;
-    animation: fadeIn 0.4s ease forwards;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.menu-section {
-    display: block;
-    flex: 1;
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 0;
-    opacity: 0;
-    transform: translateY(15px);
-    transition: opacity 0.4s ease, transform 0.4s ease;
-    pointer-events: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-}
-
-.menu-section.active {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-    position: relative;
-    animation: fadeInSection 0.4s ease forwards;
-}
-
-@keyframes fadeInSection {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.menu-section:nth-child(1) {
-    animation-delay: 0.05s;
-}
-.menu-section:nth-child(2) {
-    animation-delay: 0.1s;
-}
-.menu-section:nth-child(3) {
-    animation-delay: 0.15s;
-}
-.menu-section:nth-child(4) {
-    animation-delay: 0.2s;
-}
-
-.menu-section h2 {
-    font-family: var(--font-body);
-    font-size: 0.9em;
-    font-weight: 400;
-    margin-bottom: 5px;
-    color: var(--brand-black);
-    padding-bottom: 8px;
-    border: none !important;
-    border-bottom: none !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-align: left;
-    box-shadow: none !important;
-    background: transparent;
-}
-
-.menu-links {
-    display: flex;
-    flex-wrap: wrap;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    justify-content: center;
-    gap: 40px;
-    width: 100%;
-    text-align: center;
-}
-
-.menu-section[data-section="asian-art"] .menu-links {
-    justify-content: center !important;
-}
-
-.menu-links li {
-    margin: 0;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.4s ease, transform 0.4s ease;
-}
-
-.menu-section:not(.active) .menu-links li {
-    opacity: 0;
-    transform: translateY(10px);
-}
-
-.menu-section.active .menu-links li:nth-child(1) { 
-    transition-delay: 0.05s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(2) { 
-    transition-delay: 0.1s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(3) { 
-    transition-delay: 0.15s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(4) { 
-    transition-delay: 0.2s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(5) { 
-    transition-delay: 0.25s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(6) { 
-    transition-delay: 0.3s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(7) { 
-    transition-delay: 0.35s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(8) { 
-    transition-delay: 0.4s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(9) { 
-    transition-delay: 0.45s; 
-    opacity: 1;
-    transform: translateY(0);
-}
-.menu-section.active .menu-links li:nth-child(10) { 
-    transition-delay: 0.5s; 
-        opacity: 1;
-    transform: translateY(0);
-}
-
-.menu-links a {
-    color: var(--brand-black);
-    text-decoration: none;
-    font-size: 0.95em;
-    transition: color 0.3s ease;
-    display: inline-block;
-    position: relative;
-    text-align: center;
-}
-
-.menu-links a:hover {
-    color: var(--brand-red);
-}
-
-.menu-links a::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background-color: var(--brand-red);
-    transition: width 0.3s ease;
-}
-
-.menu-links a:hover::after {
-    width: 100%;
-}
-
-.menu-image {
-    flex: 1;
-    max-width: 300px;
-}
-
-.menu-image h2 {
-    font-family: var(--font-heading);
-    font-size: 1.5em;
-    font-weight: 400;
-    margin-bottom: 20px;
-    color: var(--brand-black);
-    padding-bottom: 10px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.menu-image-container {
-    width: 100%;
-    margin-bottom: 15px;
-}
-
-.menu-image-container img {
-    width: 100%;
-    height: auto;
-    object-fit: cover;
-}
-
-.menu-image-caption {
-    font-size: 0.9em;
-    color: var(--brand-black);
-}
-
-.user-account {
-    flex: 0 0 auto;
-    margin-left: 20px;
-    position: relative;
-}
-
-.user-button {
-    display: flex;
-    align-items: center;
-}
-
-.user-circle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background-color: var(--brand-green);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 18px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.user-circle:hover {
-    background-color: var(--brand-red);
-}
-
-.has-dropdown {
-    position: relative;
-}
-
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 200px;
-    z-index: 1010;
-    background-color: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(10px);
-    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
-    padding: 15px 0;
-    margin-top: 5px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.fullwidth-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    width: 100%;
-    padding: 40px 50px;
-    background-color: rgba(255, 255, 255, 0.98);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    z-index: 1100;
-}
-
-.dropdown-content {
-    display: flex;
-    max-width: 1400px;
-    margin: 0 auto;
-}
-
-.dropdown-column {
-    flex: 1;
-    padding: 0 20px;
-}
-
-.dropdown-column h3 {
-    font-family: var(--font-heading);
-    font-size: 1.2em;
-    font-weight: 400;
-    margin-bottom: 15px;
-    color: var(--brand-black);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    padding-bottom: 8px;
-}
-
-.dropdown-column ul {
-    display: block;
-    padding-left: 0;
-}
-
-.dropdown-column li {
-    margin-bottom: 8px;
-}
-
-.dropdown-column a {
-    font-size: 0.9em;
-    padding: 5px 0;
-    display: inline-block;
-    border-bottom: none !important;
-}
-
-/* 图片栏样式 */
-.dropdown-image {
-    flex: 1;
-    max-width: 300px;
-}
-
-.dropdown-image img {
-    width: 100%;
-    height: auto;
-    object-fit: cover;
-}
-
-.dropdown-image-caption {
-    font-size: 0.85em;
-    margin-top: 8px;
-    text-align: center;
-}
-
-/* 用户账户下拉菜单的特殊样式 */
-.user-account .dropdown-menu.user-dropdown {
-    right: 0 !important;
-    left: auto !important;
-    min-width: 120px !important;
-    width: 72px !important;
-    transform-origin: top right !important;
-}
-
-.user-account .dropdown-menu.user-dropdown ul {
-    list-style-type: none !important;
-}
-
-.user-account .dropdown-menu.user-dropdown li a {
-    text-align: right !important;
-    padding-right: 15px !important;
-    padding-left: 5px !important;
-}
-
-.has-dropdown:hover .dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.dropdown-menu ul {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    padding: 0;
-}
-
-.dropdown-menu li {
-    width: 100%;
-}
-
-.dropdown-menu a {
-    display: block;
-    padding: 10px 20px;
-    font-size: 0.85em;
-    border-bottom: none;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.dropdown-menu a:hover {
-    background-color: rgba(0, 0, 0, 0.03);
-    border-bottom: none;
-}
-
 /* Add padding to main to account for fixed header */
 main {
     padding-top: 0; /* 首页首屏为视频区时去除顶部空白 */
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+}
+
+/* 购物车页面特定样式 - 移除最小高度限制 */
+main.cart-page {
+    min-height: auto;
 }
 
 /* Hero Section */
@@ -2159,24 +1692,26 @@ main {
 .new-arrivals-section {
     max-width: 85%;
     margin: 60px auto 40px;
-    padding: 0;
-    background-color: var(--background-cream-tint);
-    padding: 40px;
+    padding: 40px 0;
+    background-color: transparent;
 }
 
 .new-arrivals-header {
+    margin-bottom: 30px;
+}
+
+.new-arrivals-left {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 0px; /* 减少底部边距 */
+    flex-direction: column;
+    align-items: flex-start;
 }
 
 .new-arrivals-header h2 {
     font-family: var(--font-heading);
-    font-size: 1.6em; /* 恢复原来的字号 */
+    font-size: 1.6em;
     font-weight: 400;
     color: var(--brand-black);
-    margin: 0;
+    margin: 0 0 4px 0;
 }
 
 /* See More链接样式 */
@@ -2186,10 +1721,9 @@ main {
     font-size: 0.9em;
     color: var(--brand-black);
     text-decoration: none;
-    margin-bottom: 25px; /* 减少底部边距，向上移动 */
-    margin-top: 5px; /* 增加顶部边距，确保与标题之间有适当间距 */
     border-bottom: 1px solid var(--brand-black);
     padding-bottom: 2px;
+    margin-top: -2px;
     transition: color 0.3s ease, border-color 0.3s ease;
 }
 
@@ -2198,11 +1732,17 @@ main {
     border-color: var(--brand-red);
 }
 
+/* New Arrivals section specific See More link - override the hidden view-more-link styles */
+.new-arrivals-section .see-more-link {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
 .new-arrivals-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 30px;
-    margin-top: 20px; /* 增加顶部边距，让图片与标题之间有更多距离 */
+    margin-top: 0;
 }
 
 /* 产品图片切换效果 */
@@ -2572,6 +2112,8 @@ main {
 
 .category-showcase-section .see-more-link {
     margin-bottom: 30px;
+    opacity: 1 !important;
+    transform: none !important;
 }
 
 .category-showcase-grid {
@@ -3375,131 +2917,6 @@ body:has(.video-background-section) .site-header:not(.scrolled):not(.menu-active
 
 body:has(.video-background-section) .site-header:not(.scrolled):not(.menu-active):not(:hover) .main-navigation a {
     color: white !important;
-}
-
-/* 这些规则已经合并到上面的高优先级规则中 */
-
-.primary-categories ul {
-    display: flex;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    gap: 50px;
-}
-
-.primary-category {
-    font-family: var(--font-body);
-    font-size: 0.9em;
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--brand-black);
-    cursor: pointer;
-    position: relative;
-    transition: color 0.3s ease;
-}
-
-.primary-category:hover,
-.primary-category.active {
-    color: var(--brand-red);
-}
-
-.primary-category::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background-color: var(--brand-red);
-    transition: width 0.3s ease;
-}
-
-.primary-category:hover::after,
-.primary-category.active::after {
-    width: 100%;
-}
-
-.menu-section.active {
-    display: block;
-    opacity: 1;
-    transform: translateY(0);
-    animation: fadeInSection 0.4s ease forwards;
-}
-
-@keyframes fadeInSection {
-    from {
-        opacity: 0;
-        transform: translateY(15px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.menu-links {
-    display: flex;
-    flex-wrap: wrap;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    justify-content: center;
-    gap: 40px;
-    width: 100%;
-    text-align: center;
-}
-
-.menu-links li {
-    margin: 0;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.4s ease, transform 0.4s ease;
-}
-
-.menu-links li:nth-child(1) { transition-delay: 0.05s; }
-.menu-links li:nth-child(2) { transition-delay: 0.1s; }
-.menu-links li:nth-child(3) { transition-delay: 0.15s; }
-.menu-links li:nth-child(4) { transition-delay: 0.2s; }
-.menu-links li:nth-child(5) { transition-delay: 0.25s; }
-.menu-links li:nth-child(6) { transition-delay: 0.3s; }
-.menu-links li:nth-child(7) { transition-delay: 0.35s; }
-.menu-links li:nth-child(8) { transition-delay: 0.4s; }
-.menu-links li:nth-child(9) { transition-delay: 0.45s; }
-.menu-links li:nth-child(10) { transition-delay: 0.5s; }
-
-.menu-section.active .menu-links li {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.menu-links a {
-    color: var(--brand-black);
-    text-decoration: none;
-    font-size: 0.95em;
-    transition: color 0.3s ease;
-    display: inline-block;
-    position: relative;
-    text-align: center;
-}
-
-.menu-links a:hover {
-    color: var(--brand-red);
-}
-
-.menu-links a::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background-color: var(--brand-red);
-    transition: width 0.3s ease;
-}
-
-.menu-links a:hover::after {
-    width: 100%;
 }
 
 .seal-logo {
@@ -4488,65 +3905,989 @@ body:has(.video-background-section) .site-header .main-navigation a {
     font-family: 'Font Awesome 6 Brands', 'FontAwesome';
 }
 
-/* 确保mega menu正常显示 */
-.mega-menu-container.active .mega-menu {
-    /* display: block !important; */ /* No longer needed as base is not display:none */
-    opacity: 1; /* More specific selector, !important likely not needed */
-    animation: fadeIn 0.4s ease forwards; /* Keep animation for the .mega-menu block */
+/* Full-width Dropdown Styles */
+.menu-item.has-dropdown {
+    position: relative; /* Crucial for positioning the dropdown */
 }
 
-/* 确保menu sections能正常显示 */
-.mega-menu-container.active .menu-section.active {
-    display: block !important;
-    opacity: 1 !important;
-    transform: translateY(0) !important;
-    animation: fadeInSection 0.4s ease forwards;
+.fullwidth-dropdown {
+    position: absolute;
+    top: 100%; /* Positioned right below the header */
+    left: 0;
+    width: 100vw; /* Full viewport width */
+    background-color: rgba(255, 255, 255, 0.98); /* Slightly transparent white */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    z-index: 1000; /* Ensure it's above other content but below the header if header has higher z-index */
+    padding: 40px 50px; /* Consistent padding */
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center; /* Center the columns container if max-width is used */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
 }
 
-/* 确保menu links能正常显示 */
-.mega-menu-container.active .menu-section.active .menu-links li {
-    opacity: 1 !important;
-    transform: translateY(0) !important;
+.menu-item.dropdown-active .fullwidth-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
 }
 
-/* 首页页眉透明状态规则已统一整合到文件开头 */
+.furniture-dropdown {
+    display: flex; /* Make this a flex container */
+    max-width: 1200px; /* Maximum width for content */
+    margin: 0 auto; /* Center the content */
+    gap: 40px; /* Spacing between columns */
+}
 
-/* 确保 COLLECTIONS 在 mega menu 激活时保持激活状态 - 高优先级规则 */
-body .site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a {
+.dropdown-column {
+    flex: 1; /* Distribute space among columns */
+    padding: 0 15px; /* Padding within each column */
+    min-width: 180px; /* Minimum width for a column */
+    display: flex;
+    flex-direction: column; /* Ensure vertical layout within each column */
+}
+
+.dropdown-column h3.dropdown-category-title {
+    font-family: var(--font-heading);
+    font-size: 1.1em; /* Slightly larger for main categories */
+    font-weight: 400;
+    color: var(--brand-black);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dropdown-column h3.dropdown-category-title.antique-title {
+    /* Styles specific to the ANTIQUE title if it needs to look different or span */
+    /* For now, it will look the same as ORIENTAL */
+}
+
+.dropdown-column h4.dropdown-subcategory-title {
+    font-family: var(--font-body);
+    font-size: 1em;
+    font-weight: 500; /* Bolder for subcategories */
+    color: var(--brand-black);
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dropdown-column ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.dropdown-column ul li {
+    margin-bottom: 10px;
+}
+
+.dropdown-column ul li a {
+    font-family: var(--font-body);
+    font-size: 0.9em;
+    color: var(--brand-black);
+    text-decoration: none;
+    display: inline-block;
+    padding-bottom: 3px;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.dropdown-column ul li a:hover {
+    color: var(--brand-red);
+}
+
+.dropdown-column ul li a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background-color: var(--brand-red);
+    transition: width 0.3s ease;
+}
+
+.dropdown-column ul li a:hover::after {
+    width: 100%;
+}
+
+/* Hide placeholder titles on larger screens if ANTIQUE is a single spanning title */
+.dropdown-category-title.mobile-hidden {
+    /* On desktop, if ANTIQUE in column 2 is the true title, hide these */
+    /* This depends on final design for spanning title */
+    /* For now, let's assume they are visible and act as spacing or repeated titles */
+    /* If they must be hidden on desktop: */
+    /* @media (min-width: 769px) { visibility: hidden; } */
+}
+
+/* Adjust header when dropdown is active */
+.site-header.menu-active {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.site-header.menu-active .logo img {
+    filter: brightness(0) !important;
+}
+
+.site-header.menu-active .main-navigation a {
+    color: var(--brand-black) !important;
+}
+
+/* Ensure the active FURNITURE link also turns red if needed */
+.site-header.menu-active .main-navigation .menu-item.dropdown-active > a {
     color: var(--brand-red) !important;
 }
 
-body .site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a::after {
-    width: 100% !important;
-    background-color: var(--brand-red) !important;
+.site-header.menu-active .main-navigation .menu-item.dropdown-active > a::after {
+    width: 100%;
+    background-color: var(--brand-red);
 }
 
-/* 最高优先级规则 - 确保COLLECTIONS在mega menu激活时始终保持红色和下划线 */
-html body .site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a {
-    color: var(--brand-red) !important;
+/* MODIFIED: Nav links to black when header has white background (scrolled OR menu active OR header hovered) */
+.site-header.scrolled .main-navigation a,
+.site-header.menu-active .main-navigation a,
+/*.mega-menu-container.active ~ .site-header .main-navigation a,*/ /* Commented out as mega-menu-container is removed */
+.site-header:not(.scrolled):not(.menu-active):hover .main-navigation a {
+    color: var(--brand-black); /* Black text */
 }
 
-html body .site-header.menu-active .main-navigation .menu-item:has(a[href="javascript:void(0)"]) > a::after {
-    width: 100% !important;
-    background-color: var(--brand-red) !important;
+/* Furniture Dropdown Menu Styles */
+.furniture-dropdown-container {
+  position: fixed; /* Fixed position to align with header and cover content */
+  top: 60px; /* Default top position, assuming scrolled header height */
+  left: 0;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.95); /* MODIFIED: Opacity to 0.95 */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  z-index: 999; /* Below header (1000), above other content */
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 30px 50px; /* Vertical and horizontal padding */
+  box-sizing: border-box;
 }
 
-/* 备用方案 - 不依赖:has()选择器的通用规则 */
-.site-header.menu-active .main-navigation .menu-item a[href="javascript:void(0)"] {
-    color: var(--brand-red) !important;
+/* Adjust top position if header is not scrolled (taller) */
+.site-header:not(.scrolled) + .furniture-dropdown-container {
+  top: 80px; /* Assuming initial header height is 80px */
+}
+.site-header.scrolled + .furniture-dropdown-container {
+  top: 80px; /* Scrolled header height is 80px */
 }
 
-.site-header.menu-active .main-navigation .menu-item a[href="javascript:void(0)"]::after {
-    width: 100% !important;
-    background-color: var(--brand-red) !important;
+
+.furniture-dropdown-container.active { /* This class isn't strictly needed if we use direct state rendering */
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* 最高优先级备用方案 */
-html body .site-header.menu-active .main-navigation .menu-item a[href="javascript:void(0)"] {
-    color: var(--brand-red) !important;
+.furniture-dropdown-content {
+  display: flex;
+  justify-content: center; 
+  gap: 60px; 
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: 30px; /* ADDED: To shift content slightly right */
 }
 
-html body .site-header.menu-active .main-navigation .menu-item a[href="javascript:void(0)"]::after {
-    width: 100% !important;
-    background-color: var(--brand-red) !important;
+.furniture-column { /* For main groups: Oriental and Antique Group */
+  /* Styles for h2 and ul/li are now more specific below */
+}
+
+.oriental-group {
+  flex-basis: 20%; 
+  min-width: 180px; 
+}
+
+.antique-group {
+  flex-basis: 75%; 
+  display: flex;
+  flex-direction: column; 
+}
+
+.antique-group > h2 { 
+  margin-bottom: 20px; 
+}
+
+.antique-sub-columns-container {
+  display: flex;
+  justify-content: space-between; 
+  gap: 30px; 
+  width: 100%;
+}
+
+.furniture-sub-column { /* Styles for SEATING, STORAGE, TABLES, OTHERS columns */
+  flex: 1; 
+  min-width: 140px; 
+}
+
+/* General h2 for main columns (ORIENTAL, ANTIQUE) */
+.furniture-column > h2 {
+  font-family: var(--font-heading);
+  font-size: 1.0em; 
+  font-weight: normal; /* CHANGED: from 700 to normal */
+  margin-bottom: 12px; /* MODIFIED: Reduced bottom margin */
+  color: var(--brand-black);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 10px;
+  /* border-bottom: 1px solid rgba(0,0,0,0.1); */
+}
+
+/* Align H2 titles in Decor dropdown with their sub-column content */
+.lighting-group > h2,
+.art-group > h2 {
+  padding-left: 7px; /* MODIFIED: Align with new sub-column padding (5px + 2px offset) */
+}
+
+/* Titles for sub-categories within Antique (SEATING, STORAGE, etc.) */
+.furniture-sub-column h3 {
+  font-family: var(--font-heading); 
+  font-size: 0.9em; 
+  font-weight: normal; /* CHANGED: from 700 to normal */
+  margin-bottom: 10px; /* MODIFIED: Reduced bottom margin */
+  color: var(--brand-black);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.furniture-column ul, .furniture-sub-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.furniture-column li, .furniture-sub-column li {
+  margin-bottom: 10px; 
+}
+
+.furniture-column li a, .furniture-sub-column li a {
+  font-family: var(--font-body);
+  font-size: 0.85em; 
+  color: var(--brand-black);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  line-height: 1.4;
+}
+
+.furniture-column li a:hover, .furniture-sub-column li a:hover {
+  color: var(--brand-red);
+}
+
+/* Style for the active FURNITURE nav item when dropdown is open */
+.main-navigation .menu-item.dropdown-active > a {
+  color: var(--brand-red); /* Or any other active indication */
+}
+.main-navigation .menu-item.dropdown-active > a::after {
+  width: 100%; /* Show underline */
+  background-color: var(--brand-red);
+}
+
+/* NEW: Underline animation for dropdown menu items */
+.dropdown-menu-item a {
+  position: relative;
+  padding-bottom: 3px; /* Add some padding for the underline */
+}
+
+.dropdown-menu-item a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--brand-red);
+  transition: width 0.3s ease;
+}
+
+.dropdown-menu-item a:hover::after {
+  width: 100%;
+}
+
+/* General h2 for main columns (ORIENTAL, ANTIQUE) */
+.furniture-column > h2 a {
+  color: var(--brand-black) !important; /* Default to black */
+  text-decoration: none;
+}
+.furniture-column > h2 a:hover {
+  color: var(--brand-red) !important; /* Red on hover */
+}
+
+/* Titles for sub-categories within Antique (SEATING, STORAGE, etc.) */
+.furniture-sub-column h3 a {
+  color: var(--brand-black) !important; /* Default to black */
+  text-decoration: none;
+}
+.furniture-sub-column h3 a:hover {
+  color: var(--brand-red) !important; /* Red on hover */
+}
+
+.furniture-column ul, .furniture-sub-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.furniture-column li a:hover, .furniture-sub-column li a:hover {
+  color: var(--brand-red);
+}
+
+/* MODIFIED: Shared Underline animation for dropdown titles and menu items */
+.furniture-column > h2 a,
+.furniture-sub-column h3 a,
+.dropdown-menu-item > a { /* Targets direct child <a> of .dropdown-menu-item */
+  position: relative;
+  padding-bottom: 3px; 
+  display: inline-block; 
+}
+
+.furniture-column > h2 a::after,
+.furniture-sub-column h3 a::after,
+.dropdown-menu-item > a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--brand-red);
+  transition: width 0.3s ease;
+}
+
+.furniture-column > h2 a:hover::after,
+.furniture-sub-column h3 a:hover::after,
+.dropdown-menu-item > a:hover::after {
+  width: 100%;
+}
+
+/* Style for the active FURNITURE nav item when dropdown is open */
+.main-navigation .menu-item.dropdown-active > a {
+  color: var(--brand-red); /* Or any other active indication */
+}
+.main-navigation .menu-item.dropdown-active > a::after {
+  width: 100%; /* Show underline */
+  background-color: var(--brand-red);
+}
+
+/* Animation styles for dropdown content */
+.furniture-column.animate-item,
+.furniture-sub-column.animate-item {
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.furniture-column.animated,
+.furniture-sub-column.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Delay classes for staggered effect */
+.delay-50 { transition-delay: 0.05s !important; }
+.delay-100 { transition-delay: 0.1s !important; }
+.delay-150 { transition-delay: 0.15s !important; }
+.delay-200 { transition-delay: 0.2s !important; }
+.delay-250 { transition-delay: 0.25s !important; }
+/* Add more as needed */
+
+/* Specific layout for DECOR dropdown if different from FURNITURE */
+.decor-sub-columns-container {
+  display: flex;
+  /* Adjust justify-content if sub-columns don't fill the space or need specific alignment */
+  /* justify-content: space-between; ensures even spacing if there's extra room */
+  justify-content: flex-start; /* Start items from left, rely on flex-basis/grow of children */
+  gap: 30px; /* Gap between sub-columns (e.g., Regular Lighting, Fortuny, Yamagiwa) */
+  width: 100%;
+  margin-top: 12px; /* Space between H2 (LIGHTING/ART) and its sub-columns content */
+}
+
+/* Adjust flex-basis for main groups within DECOR if needed */
+/* The .furniture-dropdown-content has gap: 60px */
+.lighting-group {
+  /* flex-basis: 58%; Roughly 3/5 */
+  flex: 3; /* Distribute space based on 3 columns for lighting */
+}
+
+.art-group {
+  /* flex-basis: 38%; Roughly 2/5 */
+  flex: 2; /* Takes 2 parts of the space if lighting takes 3 */
+}
+
+/* Ensure sub-columns within decor container also get consistent styling if they use .furniture-sub-column */
+.decor-sub-columns-container .furniture-sub-column {
+  /* min-width can be adjusted if decor columns are narrower/wider than furniture's antique ones */
+  /* For example: min-width: 130px; */
+  padding: 0 5px; /* MODIFIED: Reduced horizontal padding to give more space for text */
+}
+
+/* End of file or before other unrelated sections */
+
+/* Styles for Fashion Dropdown */
+.fashion-main-group {
+  flex: 1; /* Take full width as it's the only main group in Fashion dropdown */
+  display: flex;
+  flex-direction: column;
+}
+
+.fashion-columns-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between; /* Distribute columns evenly */
+  gap: 20px; /* Adjust gap as needed */
+  width: 100%;
+}
+
+/* Ensure sub-columns in fashion take up equal space within the container */
+.fashion-columns-container .furniture-sub-column {
+  flex: 1;
+  /* padding is inherited from .furniture-sub-column, adjust if necessary */
+}
+
+/* Styles for About Dropdown */
+.about-main-group {
+  flex: 1; /* Take full width as it's the only main group in About dropdown */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-links-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.about-links-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 40px; /* Space between links */
+  justify-content: center;
+}
+
+.about-links-container li {
+  margin: 0;
+}
+
+.about-links-container a {
+  font-family: var(--font-heading);
+  font-size: 1.1em;
+  font-weight: 400;
+  color: var(--brand-black);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 0;
+  position: relative;
+  display: inline-block;
+  transition: color 0.3s ease;
+}
+
+.about-links-container a::after {
+  content: '';
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--brand-red);
+  transition: width 0.3s ease;
+}
+
+.about-links-container a:hover {
+  color: var(--brand-red);
+}
+
+.about-links-container a:hover::after {
+  width: 100%;
+}
+
+/* Responsive adjustments for About dropdown */
+@media (max-width: 768px) {
+  .about-links-container ul {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .about-links-container a {
+    font-size: 1em;
+  }
+}
+
+/* 用户菜单样式 */
+.user-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.user-menu-item {
+  position: absolute;
+  right: 50px; /* Match header padding */
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.login-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.login-link:hover {
+  background-color: #f5f5f5;
+}
+
+.user-avatar-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.user-avatar-button:hover,
+.user-avatar-button.active {
+  background-color: #f5f5f5;
+}
+
+.avatar-image {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: #e5e7eb;
+  border-radius: 50%;
+  color: #6b7280;
+}
+
+.avatar-placeholder.large {
+  width: 40px;
+  height: 40px;
+}
+
+.user-name {
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 下拉菜单 */
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f9fafb;
+}
+
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-display-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-email {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-divider {
+  height: 1px;
+  background-color: #e5e7eb;
+}
+
+/* 购物车红点提示样式 */
+.cart-notification-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+/* 购物车数量徽章样式 */
+.menu-item-badge {
+  margin-left: auto;
+  background-color: #ef4444;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* 成功弹窗样式 */
+.success-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.success-modal {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 400px;
+  width: 90%;
+  animation: slideUp 0.3s ease-out;
+}
+
+.success-modal-content {
+  padding: 32px;
+  text-align: center;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  background-color: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+  font-weight: bold;
+  margin: 0 auto 24px;
+}
+
+.success-modal h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #111827;
+}
+
+.success-modal p {
+  color: #6b7280;
+  margin: 0 0 32px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.success-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.continue-shopping-btn,
+.view-cart-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.continue-shopping-btn {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.continue-shopping-btn:hover {
+  background-color: #e5e7eb;
+}
+
+.view-cart-btn {
+  background-color: #111827;
+  color: white;
+}
+
+.view-cart-btn:hover {
+  background-color: #1f2937;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to { 
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.menu-items {
+  padding: 8px 0;
+}
+
+.user-dropdown .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  color: #374151;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-dropdown .menu-item:hover {
+  background-color: #f9f9f9;
+  color: #111827;
+}
+
+/* Remove the red line animation from user dropdown items */
+.user-dropdown .menu-item::after {
+    display: none;
+}
+
+.user-dropdown .menu-item.sign-out {
+    color: var(--brand-red);
+}
+
+.user-dropdown .menu-item.sign-out:hover {
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .user-name {
+    display: none;
+  }
+  
+  .user-dropdown {
+    width: 240px;
+    right: -8px;
+  }
+}
+
+/* Header集成样式 */
+.site-header .user-menu {
+  margin-right: 0;
+  padding-right: 0;
+}
+
+.site-header .user-menu .login-link,
+.site-header .user-menu .user-avatar-button {
+  color: #333;
+  padding: 8px 4px;
+  background: transparent;
+  border-radius: 0;
+}
+
+.site-header .user-menu .login-text,
+.site-header .user-menu .user-name {
+    display: none; /* Hide text in header context */
+}
+
+.site-header .user-menu .user-icon,
+.site-header .user-menu .user-icon-header {
+    margin: 0;
+}
+
+.site-header .user-menu .avatar-image-header {
+    border-radius: 50%;
+}
+
+/* Default state (not scrolled) */
+.site-header:not(.scrolled) .user-menu .login-link,
+.site-header:not(.scrolled) .user-menu .user-icon-header {
+    color: white;
+    transition: color 0.3s ease;
+}
+
+.site-header:not(.scrolled) .user-menu .login-link:hover,
+.site-header:not(.scrolled) .user-menu .user-avatar-button:hover .user-icon-header {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Scrolled or menu-active state */
+.site-header.scrolled .user-menu .login-link,
+.site-header.scrolled .user-menu .user-icon-header,
+.site-header.menu-active .user-menu .login-link,
+.site-header.menu-active .user-menu .user-icon-header {
+    color: black;
+    transition: color 0.3s ease;
+}
+
+.site-header.scrolled .user-menu .login-link:hover,
+.site-header.scrolled .user-menu .user-avatar-button:hover .user-icon-header,
+.site-header.menu-active .user-menu .login-link:hover,
+.site-header.menu-active .user-menu .user-avatar-button:hover .user-icon-header {
+    color: #333;
+}
+
+/* This is the new rule to fix the hover issue on the homepage */
+.site-header:not(.scrolled):not(.menu-active):hover .user-menu .user-icon-header {
+  color: black;
+}
+
+/* Search Icon Styles */
+.header-search-icon {
+  position: absolute;
+  left: 50px; /* Match header padding */
+  top: 50%;
+  transform: translateY(-50%);
+  color: white; /* Default color */
+  transition: color 0.3s ease;
+  cursor: pointer;
+}
+
+/* Scrolled, menu-active, or header hover state for search icon */
+.site-header.scrolled .header-search-icon,
+.site-header.menu-active .header-search-icon,
+.site-header:not(.scrolled):not(.menu-active):hover .header-search-icon {
+  color: black;
+}
+
+/* Hover effect for search icon */
+.header-search-icon:hover {
+  color: #333; /* Darker on hover when background is white */
+}
+
+.site-header:not(.scrolled):not(.menu-active) .header-search-icon:hover {
+  color: rgba(255, 255, 255, 0.8); /* Lighter on hover when background is dark */
+}
+
+/* --- Search Icon Styles --- */
+.header-search-icon {
+  position: absolute;
+  left: 50px; /* Match header padding */
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.header-search-icon .search-icon-svg {
+  transition: color 0.3s ease;
+}
+
+.header-search-icon .search-text {
+  font-size: 0.95em;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+
+
+/* Default state (not scrolled) for search icon */
+.site-header:not(.scrolled):not(.menu-active) .header-search-icon .search-icon-svg,
+.site-header:not(.scrolled):not(.menu-active) .header-search-icon .search-text {
+  color: white;
+}
+.site-header:not(.scrolled):not(.menu-active) .header-search-icon:hover .search-icon-svg,
+.site-header:not(.scrolled):not(.menu-active) .header-search-icon:hover .search-text {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+
+/* Scrolled, menu-active, or header hover state for search icon */
+.site-header.scrolled .header-search-icon .search-icon-svg,
+.site-header.menu-active .header-search-icon .search-icon-svg,
+.site-header:not(.scrolled):not(.menu-active):hover .header-search-icon .search-icon-svg,
+.site-header.scrolled .header-search-icon .search-text,
+.site-header.menu-active .header-search-icon .search-text,
+.site-header:not(.scrolled):not(.menu-active):hover .header-search-icon .search-text {
+  color: black;
+}
+
+.site-header.scrolled .header-search-icon:hover .search-icon-svg,
+.site-header.menu-active .header-search-icon:hover .search-icon-svg,
+.site-header.scrolled .header-search-icon:hover .search-text,
+.site-header.menu-active .header-search-icon:hover .search-text {
+  color: #333;
+}
+
+.site-header:not(.scrolled):not(.menu-active):hover .header-search-icon:hover .search-icon-svg,
+.site-header:not(.scrolled):not(.menu-active):hover .header-search-icon:hover .search-text {
+    color: #333;
 }

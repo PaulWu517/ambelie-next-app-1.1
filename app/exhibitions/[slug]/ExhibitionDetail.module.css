@@ -1,0 +1,165 @@
+.exhibitionDetailContainer {
+  padding: 4rem 6rem;
+  padding-top: 120px; /* Add padding to account for fixed header */
+  max-width: 1600px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+}
+
+.exhibitionHeader {
+  text-align: center;
+  margin-bottom: 4rem;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 2rem;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: var(--brand-black);
+  font-weight: normal;
+}
+
+.metaInfo {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  color: #555;
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.type, .date, .location {
+  position: relative;
+}
+
+.type:not(:last-child):after,
+.date:not(:last-child):after {
+  content: '•';
+  margin-left: 1rem;
+  color: #ccc;
+}
+
+.mainContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+.textColumn {
+  line-height: 1.8;
+  font-size: 1.1rem;
+  color: var(--brand-black);
+  position: sticky;
+  top: 100px;
+  /* 设置最小高度，确保文字内容能够在滚动时正确固定 */
+  min-height: calc(100vh - 120px);
+  /* 使用flex布局来控制内容在容器中的位置 */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.textColumn p {
+  margin-bottom: 1.5rem;
+}
+
+.introduction {
+  font-style: italic;
+  font-size: 1.2rem;
+  margin-bottom: 2.5rem;
+  color: #333;
+  border-left: 2px solid #ddd;
+  padding-left: 1.5rem;
+  white-space: pre-line; /* 保留换行符和空格 */
+}
+
+.introduction p {
+  margin-bottom: 1.2rem;
+  text-align: justify; /* 两端对齐，提高阅读体验 */
+}
+
+.introduction br {
+  line-height: 1.8;
+}
+
+.description {
+  line-height: 1.8;
+  white-space: pre-line; /* 保留换行符和空格 */
+}
+
+.description p {
+  margin-bottom: 1.5rem;
+  text-align: justify; /* 两端对齐，提高阅读体验 */
+}
+
+.description br {
+  line-height: 1.8;
+}
+
+.description h2,
+.description h3 {
+  font-family: var(--font-heading);
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.imageColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.imageWrapper {
+  width: 80%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.noImages {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .exhibitionDetailContainer {
+    padding: 2rem 3rem;
+    padding-top: 100px; 
+  }
+
+  .mainContent {
+    grid-template-columns: 1fr;
+  }
+
+  .imageColumn {
+    margin-top: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .exhibitionDetailContainer {
+    padding: 1.5rem;
+    padding-top: 100px; 
+  }
+
+  .title {
+    font-size: 2.2rem;
+  }
+
+  .metaInfo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+} 

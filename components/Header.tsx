@@ -2,146 +2,398 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react'; // 引入 useState 和 useEffect
+import { useState, useEffect, useRef } from 'react'; // 引入 useState, useEffect, useRef
 import { usePathname } from 'next/navigation'; // 引入 usePathname 来获取当前路径
+import UserMenu from './UserMenu';
+import { Search } from 'lucide-react'; // Import Search Icon
+// import { useAuthStore } from '../lib/stores/authStore'; // 临时注释，避免模块错误
 
 // 注意：Mega Menu 的动态交互 (如鼠标悬停显示、分类切换等) 
 // 将需要客户端 JavaScript 逻辑，我们稍后会添加。
 // 目前这只是结构和样式的迁移。
 
 export default function Header() {
-  const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
-  const [activePrimaryCategory, setActivePrimaryCategory] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  // 移除 isHeaderHovered 状态，现在使用纯CSS :hover 处理
-  // const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+  // Furniture Dropdown States
+  const [isFurnitureDropdownOpen, setIsFurnitureDropdownOpen] = useState(false);
+  const [runFurnitureAnimation, setRunFurnitureAnimation] = useState(false); 
+  const furnitureDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Decor Dropdown States
+  const [isDecorDropdownOpen, setIsDecorDropdownOpen] = useState(false);
+  const [runDecorAnimation, setRunDecorAnimation] = useState(false);
+  const decorDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fashion Dropdown States
+  const [isFashionDropdownOpen, setIsFashionDropdownOpen] = useState(false);
+  const [runFashionAnimation, setRunFashionAnimation] = useState(false);
+  const fashionDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // About Dropdown States
+  const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
+  const [runAboutAnimation, setRunAboutAnimation] = useState(false);
+  const aboutDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Hover states for non-dropdown menu items
+  const [isExhibitionsHovered, setIsExhibitionsHovered] = useState(false);
+  const [isProjectsHovered, setIsProjectsHovered] = useState(false);
+  const [isSearchHovered, setIsSearchHovered] = useState(false);
 
   const pathname = usePathname(); // 获取当前路径
+  const isHomepage = pathname === '/'; // Check if it's the homepage
+
+  // 用户状态管理 (临时模拟数据)
+  // const { user, isAuthenticated, logout } = useAuthStore();
+  const [mockUser] = useState({
+    id: '1',
+    email: 'user@example.com', 
+    username: 'testuser',
+    firstName: 'Test',
+    lastName: 'User',
+    avatar: undefined
+  });
+  const isAuthenticated = true; // 临时设为true来测试UI
+  
+  const handleSignOut = () => {
+    // logout();
+    console.log('Sign out');
+  };
 
   // 处理页面滚动事件，用于改变 header 样式
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50); // 当滚动超过50px时，认为已滚动
+      setIsScrolled(window.scrollY > 50);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Mega Menu 的显示/隐藏逻辑
-  const handleCollectionsMouseEnter = () => {
-    setIsMegaMenuOpen(true);
-    // 如果没有激活的分类，默认激活第一个
-    if (!activePrimaryCategory) {
-      setActivePrimaryCategory('asian-art');
+  // Clear timeouts on component unmount
+  useEffect(() => {
+    return () => {
+      if (furnitureDropdownTimeoutRef.current) {
+        clearTimeout(furnitureDropdownTimeoutRef.current);
+      }
+      if (decorDropdownTimeoutRef.current) {
+        clearTimeout(decorDropdownTimeoutRef.current);
+      }
+      if (fashionDropdownTimeoutRef.current) {
+        clearTimeout(fashionDropdownTimeoutRef.current);
+      }
+      if (aboutDropdownTimeoutRef.current) {
+        clearTimeout(aboutDropdownTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Effect to trigger animations for Furniture dropdown columns
+  useEffect(() => {
+    let animationTimer: NodeJS.Timeout;
+    if (isFurnitureDropdownOpen) {
+      animationTimer = setTimeout(() => {
+        setRunFurnitureAnimation(true);
+      }, 20);
+    } else {
+      setRunFurnitureAnimation(false);
     }
-  };
+    return () => clearTimeout(animationTimer);
+  }, [isFurnitureDropdownOpen]);
 
-  const handleMegaMenuMouseLeave = () => {
-    setIsMegaMenuOpen(false);
-    // 延迟重置激活分类，确保关闭动画完成
-    setTimeout(() => {
-      setActivePrimaryCategory(null);
-    }, 300);
-  };
-
-  // 处理其他导航项的鼠标悬停，关闭mega menu
-  const handleOtherNavMouseEnter = () => {
-    if (isMegaMenuOpen) {
-      setIsMegaMenuOpen(false);
-      setTimeout(() => {
-        setActivePrimaryCategory(null);
-      }, 300);
+  // Effect to trigger animations for Decor dropdown columns
+  useEffect(() => {
+    let animationTimer: NodeJS.Timeout;
+    if (isDecorDropdownOpen) {
+      animationTimer = setTimeout(() => {
+        setRunDecorAnimation(true);
+      }, 20);
+    } else {
+      setRunDecorAnimation(false);
     }
-  };
+    return () => clearTimeout(animationTimer);
+  }, [isDecorDropdownOpen]);
 
-  // Header 悬停逻辑
-  // 注释掉 Header 悬停事件处理器，现在使用纯CSS的:hover
-  // const handleHeaderMouseEnter = () => {
-  //   setIsHeaderHovered(true);
-  // };
-
-  // const handleHeaderMouseLeave = () => {
-  //   setIsHeaderHovered(false);
-  // };
-
-  // 点击一级分类，设置当前激活的分类
-  const handlePrimaryCategoryClick = (category: string) => {
-    if (category !== activePrimaryCategory) {
-    setActivePrimaryCategory(category);
+  // Effect to trigger animations for Fashion dropdown columns
+  useEffect(() => {
+    let animationTimer: NodeJS.Timeout;
+    if (isFashionDropdownOpen) {
+      animationTimer = setTimeout(() => {
+        setRunFashionAnimation(true);
+      }, 20);
+    } else {
+      setRunFashionAnimation(false);
     }
+    return () => clearTimeout(animationTimer);
+  }, [isFashionDropdownOpen]);
+
+  // Effect to trigger animations for About dropdown columns
+  useEffect(() => {
+    let animationTimer: NodeJS.Timeout;
+    if (isAboutDropdownOpen) {
+      animationTimer = setTimeout(() => {
+        setRunAboutAnimation(true);
+      }, 20);
+    } else {
+      setRunAboutAnimation(false);
+    }
+    return () => clearTimeout(animationTimer);
+  }, [isAboutDropdownOpen]);
+
+  // Furniture Event Handlers
+  const handleFurnitureNavMouseEnter = () => {
+    if (furnitureDropdownTimeoutRef.current) clearTimeout(furnitureDropdownTimeoutRef.current);
+    if (isDecorDropdownOpen) setIsDecorDropdownOpen(false); // Close other dropdowns
+    if (isFashionDropdownOpen) setIsFashionDropdownOpen(false); // Close other dropdowns
+    if (isAboutDropdownOpen) setIsAboutDropdownOpen(false); // Close other dropdowns
+    setIsExhibitionsHovered(false);
+    setIsProjectsHovered(false);
+    setIsFurnitureDropdownOpen(true);
+  };
+  const handleFurnitureNavMouseLeave = () => {
+    furnitureDropdownTimeoutRef.current = setTimeout(() => setIsFurnitureDropdownOpen(false), 200);
+  };
+  const handleFurnitureDropdownMouseEnter = () => {
+    if (furnitureDropdownTimeoutRef.current) clearTimeout(furnitureDropdownTimeoutRef.current);
+  };
+  const handleFurnitureDropdownMouseLeave = () => setIsFurnitureDropdownOpen(false);
+
+  // Decor Event Handlers
+  const handleDecorNavMouseEnter = () => {
+    if (decorDropdownTimeoutRef.current) clearTimeout(decorDropdownTimeoutRef.current);
+    if (isFurnitureDropdownOpen) setIsFurnitureDropdownOpen(false); // Close other dropdowns
+    if (isFashionDropdownOpen) setIsFashionDropdownOpen(false); // Close other dropdowns
+    if (isAboutDropdownOpen) setIsAboutDropdownOpen(false); // Close other dropdowns
+    setIsExhibitionsHovered(false);
+    setIsProjectsHovered(false);
+    setIsDecorDropdownOpen(true);
+  };
+  const handleDecorNavMouseLeave = () => {
+    decorDropdownTimeoutRef.current = setTimeout(() => setIsDecorDropdownOpen(false), 200);
+  };
+  const handleDecorDropdownMouseEnter = () => {
+    if (decorDropdownTimeoutRef.current) clearTimeout(decorDropdownTimeoutRef.current);
+  };
+  const handleDecorDropdownMouseLeave = () => setIsDecorDropdownOpen(false);
+
+  // Fashion Event Handlers
+  const handleFashionNavMouseEnter = () => {
+    if (fashionDropdownTimeoutRef.current) clearTimeout(fashionDropdownTimeoutRef.current);
+    if (isFurnitureDropdownOpen) setIsFurnitureDropdownOpen(false);
+    if (isDecorDropdownOpen) setIsDecorDropdownOpen(false);
+    if (isAboutDropdownOpen) setIsAboutDropdownOpen(false);
+    setIsExhibitionsHovered(false);
+    setIsProjectsHovered(false);
+    setIsFashionDropdownOpen(true);
+  };
+  const handleFashionNavMouseLeave = () => {
+    fashionDropdownTimeoutRef.current = setTimeout(() => setIsFashionDropdownOpen(false), 200);
+  };
+  const handleFashionDropdownMouseEnter = () => {
+    if (fashionDropdownTimeoutRef.current) clearTimeout(fashionDropdownTimeoutRef.current);
+  };
+  const handleFashionDropdownMouseLeave = () => setIsFashionDropdownOpen(false);
+
+  // About Event Handlers
+  const handleAboutNavMouseEnter = () => {
+    if (aboutDropdownTimeoutRef.current) clearTimeout(aboutDropdownTimeoutRef.current);
+    if (isFurnitureDropdownOpen) setIsFurnitureDropdownOpen(false);
+    if (isDecorDropdownOpen) setIsDecorDropdownOpen(false);
+    if (isFashionDropdownOpen) setIsFashionDropdownOpen(false);
+    setIsExhibitionsHovered(false);
+    setIsProjectsHovered(false);
+    setIsAboutDropdownOpen(true);
+  };
+  const handleAboutNavMouseLeave = () => {
+    aboutDropdownTimeoutRef.current = setTimeout(() => setIsAboutDropdownOpen(false), 200);
+  };
+  const handleAboutDropdownMouseEnter = () => {
+    if (aboutDropdownTimeoutRef.current) clearTimeout(aboutDropdownTimeoutRef.current);
+  };
+  const handleAboutDropdownMouseLeave = () => setIsAboutDropdownOpen(false);
+
+  // Handlers for simple menu items
+  const handleExhibitionsEnter = () => {
+    setIsFurnitureDropdownOpen(false);
+    setIsDecorDropdownOpen(false);
+    setIsFashionDropdownOpen(false);
+    setIsAboutDropdownOpen(false);
+    setIsProjectsHovered(false);
+    setIsExhibitionsHovered(true);
   };
 
-  // 构建 header 的 className
-  const isHomepage = pathname === '/';
-  // Header 激活条件：滚动了，或者MegaMenu打开了（移除了鼠标悬停，因为现在用CSS处理）
-  const isHeaderConditionallyActive = isScrolled || isMegaMenuOpen;
+  const handleProjectsEnter = () => {
+    setIsFurnitureDropdownOpen(false);
+    setIsDecorDropdownOpen(false);
+    setIsFashionDropdownOpen(false);
+    setIsAboutDropdownOpen(false);
+    setIsExhibitionsHovered(false);
+    setIsProjectsHovered(true);
+  };
+
+  const handleSimpleLinkMouseLeave = () => {
+    setIsExhibitionsHovered(false);
+    setIsProjectsHovered(false);
+  };
+
+  const isHeaderConditionallyActive = isScrolled;
 
   let headerClasses = ['site-header'];
-  if (isScrolled) {
+
+  if (!isHomepage || isScrolled) {
     headerClasses.push('scrolled');
   }
-  if (isMegaMenuOpen) {
-    headerClasses.push('menu-active');
+
+  if (isFurnitureDropdownOpen || isDecorDropdownOpen || isFashionDropdownOpen || isAboutDropdownOpen || isExhibitionsHovered || isProjectsHovered) {
+    if (!headerClasses.includes('menu-active')) {
+        headerClasses.push('menu-active');
+    }
   }
-  // 移除 header-is-hovered 类，因为现在用CSS :hover 处理
-  // if (isHeaderHovered) {
-  //   headerClasses.push('header-is-hovered');
-  // }
+
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+
+  const headerIsActive = headerClasses.includes('scrolled') || headerClasses.includes('menu-active') || isHeaderHovered;
 
   const headerClassName = headerClasses.join(' ').trim();
 
+  const logoImageClassName = `logo-${!isScrolled && isHomepage && !isFurnitureDropdownOpen && !isDecorDropdownOpen && !isFashionDropdownOpen && !isAboutDropdownOpen && !isExhibitionsHovered && !isProjectsHovered ? 'white' : 'dark'}`;
 
-  // 构建 Mega Menu 容器的 className
-  const megaMenuContainerClassName = `mega-menu-container ${
-    isMegaMenuOpen ? 'active' : ''
-  } ${
-    activePrimaryCategory ? 'has-active-primary' : ''
-  }`.trim();
-  
-  // 根据header状态决定Logo源或样式
-  // 假设 /assets/vi/Ambelie_VI_Logos.png 是深色logo
-  // 在首页且header未激活时，应该显示白色logo
-  // 其他情况显示深色logo
-  const showWhiteLogo = isHomepage && !isHeaderConditionallyActive;
-  // CSS会处理logo颜色，这里只准备一个变量给Image的className，以便CSS区分
-  const logoImageClassName = showWhiteLogo ? 'logo-white' : 'logo-dark';
+  const searchIconColor = headerIsActive ? (isSearchHovered ? '#333' : 'black') : (isSearchHovered ? 'rgba(255, 255, 255, 0.8)' : 'white');
 
+  const furnitureLinks = {
+    oriental: [
+      { name: 'SCREENS', href: '/category/screens' },
+      { name: 'CHAIRS', href: '/category/oriental-chairs' },
+      { name: 'TABLES', href: '/category/oriental-tables' },
+      { name: 'CABINETS & CUPBOARDS', href: '/category/cabinets-cupboards' },
+      { name: 'RUGS', href: '/category/rugs' },
+      { name: 'OTHERS', href: '/category/oriental-others' },
+    ],
+    antique: {
+      seating: [
+        { name: 'CHAIRS', href: '/category/chairs' },
+        { name: 'ARMCHAIRS', href: '/category/armchairs' },
+        { name: 'SOFA', href: '/category/sofa' },
+        { name: 'DINING ROOM CHAIRS', href: '/category/dining-room-chairs' },
+      ],
+      storage: [
+        { name: 'CABINETS', href: '/category/cabinets' },
+        { name: 'DRESSERS', href: '/category/dressers' },
+        { name: 'NIGHT STANDS', href: '/category/night-stands' },
+      ],
+      tables: [
+        { name: 'DINING TABLES', href: '/category/dining-tables' },
+        { name: 'COFFEE TABLES', href: '/category/coffee-tables' },
+        { name: 'SIDE TABLES', href: '/category/side-tables' },
+      ],
+      others: [
+        { name: 'DESIGNERS', href: '/category/designers' },
+      ],
+    },
+  };
+
+  const decorLinks = {
+    lighting: {
+      regular: [
+        { name: 'WALL LIGHTS', href: '/category/wall-lights' },
+        { name: 'TABLE LAMPS', href: '/category/table-lamps' },
+        { name: 'FLOOR LAMPS', href: '/category/floor-lamps' },
+        { name: 'PENDANT', href: '/category/pendant' },
+      ],
+      fortuny: [
+        { name: 'SILK LAMPS', href: '/category/silk-lamps' },
+        { name: 'GLASS LAMPS', href: '/category/glass-lamps' },
+      ],
+      yamagiwa: [
+        { name: 'FRANK LLOYD WRIGHT', href: '/category/frank-lloyd-wright' },
+        { name: 'JACOBSSON', href: '/category/jacobsson' },
+      ],
+    },
+    art: {
+      regular: [
+        { name: 'SCULPTURE', href: '/category/sculpture' },
+        { name: 'PAINTINGS', href: '/category/paintings' },
+        { name: 'DRAWINGS & WATERCOLOR', href: '/category/drawings-watercolor' }, 
+      ],
+      orientalArt: [
+        { name: 'CALLIGRAPHY', href: '/category/calligraphy' },
+        { name: 'EMBROIDERY', href: '/category/embroidery' },
+      ],
+    },
+  };
+
+  const fashionLinks = {
+    regular: [
+      { name: 'TOPS', href: '/category/tops' },
+      { name: 'BOTTOMS', href: '/category/bottoms' },
+      { name: 'DRESSES', href: '/category/dresses' },
+      { name: 'BAGS', href: '/category/bags' },
+      { name: 'ACCESSORIES', href: '/category/accessories' },
+    ],
+    fortuny: [
+      { name: 'JACKETS & EVENING COATS', href: '/category/jackets-evening-coats' },
+      { name: 'SCARVES', href: '/category/scarves' },
+      { name: 'BAGS', href: '/category/fortuny-bags' },
+      { name: 'DELPHOS DRESSES', href: '/category/delphos-dresses' },
+    ],
+    tba: [
+      { name: 'CLOTHINGS', href: '/category/clothings' },
+      { name: 'ACCESSORIES', href: '/category/tba-accessories' },
+    ],
+    runway: [
+      // Currently no sub-items in markdown, will render as a title.
+      // Add items here like: { name: 'ITEM NAME', href: '/category/item'}
+    ],
+  };
+
+  const aboutLinks = [
+    { name: 'OUR STORY', href: '/about' },
+    { name: 'CONTACT', href: '/contact' },
+    { name: 'AMBELIE SHANGHAI', href: '/about/shanghai' },
+    { name: 'AMBELIE HANGZHOU', href: '/about/hangzhou' },
+  ];
 
   return (
     <>
       <header 
         className={headerClassName}
-        // 移除JavaScript悬停事件处理器，现在使用纯CSS :hover
-        // onMouseEnter={handleHeaderMouseEnter}
-        // onMouseLeave={handleHeaderMouseLeave}
+        onMouseEnter={() => setIsHeaderHovered(true)}
+        onMouseLeave={() => setIsHeaderHovered(false)}
       >
+        <div 
+          className="header-search-icon"
+          onMouseEnter={() => setIsSearchHovered(true)}
+          onMouseLeave={() => setIsSearchHovered(false)}
+        >
+          <Search size={20} className="search-icon-svg" style={{ color: searchIconColor }} />
+          {isSearchHovered && <span className="search-text" style={{ color: searchIconColor }}>SEARCH</span>}
+        </div>
         <nav className="main-navigation left-navigation">
           <ul>
-            <li 
-              className={`menu-item ${isMegaMenuOpen ? 'active' : ''}`}
-              onMouseEnter={handleCollectionsMouseEnter} 
-              // onMouseLeave 不直接在这里处理，因为鼠标需要能移动到 mega-menu 上
+            <li
+              className={`menu-item ${pathname === '/furniture' || pathname.startsWith('/furniture/') ? 'active' : ''} ${isFurnitureDropdownOpen ? 'dropdown-active' : ''}`}
+              onMouseEnter={handleFurnitureNavMouseEnter}
+              onMouseLeave={handleFurnitureNavMouseLeave}
             >
-              <Link href="javascript:void(0)">COLLECTIONS</Link>
+              <Link href="/furniture">FURNITURE</Link>
             </li>
-            <li 
-              className={`menu-item ${pathname === '/exhibitions' ? 'active' : ''}`}
-              onMouseEnter={handleOtherNavMouseEnter}
+            <li
+              className={`menu-item ${pathname === '/decor' || pathname.startsWith('/decor/') ? 'active' : ''} ${isDecorDropdownOpen ? 'dropdown-active' : ''}`}
+              onMouseEnter={handleDecorNavMouseEnter}
+              onMouseLeave={handleDecorNavMouseLeave}
             >
-              <Link href="/exhibitions">EXHIBITIONS</Link>
+              <Link href="/decor">DECOR</Link>
             </li>
-            <li 
-              className={`menu-item ${pathname === '/events' ? 'active' : ''}`}
-              onMouseEnter={handleOtherNavMouseEnter}
+            <li
+              className={`menu-item ${pathname === '/fashion' || pathname.startsWith('/fashion/') ? 'active' : ''} ${isFashionDropdownOpen ? 'dropdown-active' : ''}`}
+              onMouseEnter={handleFashionNavMouseEnter}
+              onMouseLeave={handleFashionNavMouseLeave}
             >
-              <Link href="/events">EVENTS</Link>
+              <Link href="/fashion">FASHION</Link>
             </li>
           </ul>
         </nav>
         
-        <div className="logo" onMouseEnter={handleOtherNavMouseEnter}>
+        <div className="logo">
           <Link href="/">
-            {/* 添加 logoImageClassName 以便CSS可以target */}
             <Image 
               className={logoImageClassName} 
               src="/assets/vi/Ambelie_VI_Logos.png" 
@@ -157,118 +409,238 @@ export default function Header() {
         <nav className="main-navigation right-navigation">
           <ul>
             <li 
-              className={`menu-item ${pathname === '/projects' ? 'active' : ''}`}
-              onMouseEnter={handleOtherNavMouseEnter}
+              className={`menu-item ${pathname === '/exhibitions' || pathname.startsWith('/exhibitions/') ? 'active' : ''} ${isExhibitionsHovered ? 'dropdown-active' : ''}`}
+              onMouseEnter={handleExhibitionsEnter}
+              onMouseLeave={handleSimpleLinkMouseLeave}
+            >
+              <Link href="/exhibitions">EXHIBITIONS</Link>
+            </li>
+            <li 
+              className={`menu-item ${pathname === '/projects' || pathname.startsWith('/projects/') ? 'active' : ''} ${isProjectsHovered ? 'dropdown-active' : ''}`}
+              onMouseEnter={handleProjectsEnter}
+              onMouseLeave={handleSimpleLinkMouseLeave}
             >
               <Link href="/projects">PROJECTS</Link>
             </li>
             <li 
-              className={`menu-item ${pathname === '/about' ? 'active' : ''}`}
-              onMouseEnter={handleOtherNavMouseEnter}
+              className={`menu-item ${pathname === '/about' || pathname.startsWith('/about/') ? 'active' : ''} ${isAboutDropdownOpen ? 'dropdown-active' : ''}`}
+              onMouseEnter={handleAboutNavMouseEnter}
+              onMouseLeave={handleAboutNavMouseLeave}
             >
-              <Link href="/about">ABOUT</Link>
+              <a href="#" onClick={(e) => e.preventDefault()}>ABOUT</a>
             </li>
-            <li 
-              className={`menu-item ${pathname === '/contact' ? 'active' : ''}`}
-              onMouseEnter={handleOtherNavMouseEnter}
-            >
-              <Link href="/contact">CONTACT</Link>
+            <li className="menu-item user-menu-item">
+              <UserMenu 
+                user={isAuthenticated ? mockUser : null} 
+                onSignOut={handleSignOut}
+              />
             </li>
           </ul>
         </nav>
       </header>
 
-      <div 
-        className={megaMenuContainerClassName}
-        onMouseLeave={handleMegaMenuMouseLeave} // 当鼠标离开整个 mega menu 区域时关闭
-      >
-        <div className="mega-menu" id="collection-menu"> {/* 这个id可能不再直接需要，因为状态由React管理 */} 
-          <div className="primary-categories">
-            <ul>
-              {[ 'asian-art', 'antique', 'designers', 'fashion', 'brands'].map((cat) => (
-                <li 
-                  key={cat}
-                  className={`primary-category ${activePrimaryCategory === cat ? 'active' : ''}`}
-                  onClick={() => handlePrimaryCategoryClick(cat)}
-                  onMouseEnter={() => setActivePrimaryCategory(cat)} // 鼠标悬停在一级分类上也激活它
-                >
-                  {/* 将分类名美化显示，例如：asian-art -> Asian Art */}
-                  {cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="mega-menu-content">
-            {/* 根据 activePrimaryCategory 动态显示对应的 menu-section */} 
-            {/* Asian art */}
-            <div className={`menu-section ${activePrimaryCategory === 'asian-art' ? 'active' : ''}`} data-section="asian-art">
-              <ul className="menu-links">
-                <li><Link href="/category/dividers">Dividers</Link></li>
-                <li><Link href="/category/chairs">Chairs</Link></li>
-                <li><Link href="/category/embroidery">Embroidery</Link></li>
-                <li><Link href="/category/coffee-tables">Coffee tables</Link></li>
-                <li><Link href="/category/tables">Tables</Link></li>
-                <li><Link href="/category/cabinets">Cabinets</Link></li>
-                <li><Link href="/category/lighting">Lighting</Link></li>
-                <li><Link href="/category/others">Others</Link></li>
+      {/* Furniture Dropdown Menu */}
+      {isFurnitureDropdownOpen && (
+        <div
+          className={`furniture-dropdown-container ${isFurnitureDropdownOpen ? 'active' : ''}`}
+          onMouseEnter={handleFurnitureDropdownMouseEnter}
+          onMouseLeave={handleFurnitureDropdownMouseLeave}
+        >
+          <div className="furniture-dropdown-content">
+            <div className={`furniture-column oriental-group animate-item ${runFurnitureAnimation ? 'animated delay-50' : ''}`}>
+              <h2><Link href="/furniture/oriental">ORIENTAL</Link></h2>
+              <ul>
+                {furnitureLinks.oriental.map((link) => (
+                  <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                ))}
               </ul>
             </div>
-            {/* Antique */}
-            <div className={`menu-section ${activePrimaryCategory === 'antique' ? 'active' : ''}`} data-section="antique">
-              <ul className="menu-links">
-                <li><Link href="/category/dividers">Dividers</Link></li>
-                <li><Link href="/category/chairs">Chairs</Link></li>
-                <li><Link href="/category/sofas">Sofas</Link></li>
-                <li><Link href="/category/coffee-tables">Coffee tables</Link></li>
-                <li><Link href="/category/tables">Tables</Link></li>
-                <li><Link href="/category/cabinets">Cabinets</Link></li>
-                <li><Link href="/category/lighting">Lighting</Link></li>
-                <li><Link href="/category/others">Others</Link></li>
-              </ul>
-            </div>
-            {/* Designers */}
-            <div className={`menu-section ${activePrimaryCategory === 'designers' ? 'active' : ''}`} data-section="designers">
-              <ul className="menu-links">
-                <li><Link href="/category/dividers">Dividers</Link></li>
-                <li><Link href="/category/chairs">Chairs</Link></li>
-                <li><Link href="/category/sofas">Sofas</Link></li>
-                <li><Link href="/category/coffee-tables">Coffee tables</Link></li>
-                <li><Link href="/category/tables">Tables</Link></li>
-                <li><Link href="/category/cabinets">Cabinets</Link></li>
-                <li><Link href="/category/lighting">Lighting</Link></li>
-                <li><Link href="/category/others">Others</Link></li>
-              </ul>
-            </div>
-            {/* Fashion */}
-            <div className={`menu-section ${activePrimaryCategory === 'fashion' ? 'active' : ''}`} data-section="fashion">
-              <ul className="menu-links">
-                <li><Link href="/category/rent">Rent</Link></li>
-                <li><Link href="/category/bottom">Bottom</Link></li>
-                <li><Link href="/category/top">Top</Link></li>
-                <li><Link href="/category/coats">Coats</Link></li>
-                <li><Link href="/category/shoes">Shoes</Link></li>
-                <li><Link href="/category/accessories">Accessories</Link></li>
-                <li><Link href="/category/jackets">Jackets</Link></li>
-                <li><Link href="/category/dress">Dress</Link></li>
-                <li><Link href="/category/lifestyle">Lifestyle</Link></li>
-                <li><Link href="/category/suit">Suit</Link></li>
-              </ul>
-            </div>
-            {/* Brands */}
-            <div className={`menu-section ${activePrimaryCategory === 'brands' ? 'active' : ''}`} data-section="brands">
-              <ul className="menu-links">
-                <li><Link href="/category/yamagiwa">Yamagiwa</Link></li>
-                <li><Link href="/category/fortuny">Fortuny</Link></li>
-                <li><Link href="/category/artempo">Artempo</Link></li>
-                <li><Link href="/category/communs">Communs</Link></li>
-                <li><Link href="/category/tba">T.ba</Link></li>
-                <li><Link href="/category/archivio">ARCHIVIO</Link></li>
-                <li><Link href="/category/tbc">TBC</Link></li>
-              </ul>
+            <div className={`furniture-column antique-group animate-item ${runFurnitureAnimation ? 'animated delay-100' : ''}`}>
+              <h2><Link href="/furniture/antique">ANTIQUE</Link></h2>
+              <div className="antique-sub-columns-container">
+                <div className={`furniture-sub-column animate-item ${runFurnitureAnimation ? 'animated delay-150' : ''}`}>
+                  <h3><Link href="/furniture/antique/seating">SEATING</Link></h3>
+                  <ul>
+                    {furnitureLinks.antique.seating.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                <div className={`furniture-sub-column animate-item ${runFurnitureAnimation ? 'animated delay-200' : ''}`}>
+                  <h3><Link href="/furniture/antique/storage">STORAGE</Link></h3>
+                  <ul>
+                    {furnitureLinks.antique.storage.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                <div className={`furniture-sub-column animate-item ${runFurnitureAnimation ? 'animated delay-250' : ''}`}>
+                  <h3><Link href="/furniture/antique/tables">TABLES</Link></h3>
+                  <ul>
+                    {furnitureLinks.antique.tables.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                <div className={`furniture-sub-column animate-item ${runFurnitureAnimation ? 'animated delay-300' : ''}`}>
+                  <h3><Link href="/furniture/antique/others">OTHERS</Link></h3>
+                  <ul>
+                    {furnitureLinks.antique.others.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Decor Dropdown Menu */}
+      {isDecorDropdownOpen && (
+        <div
+          className={`furniture-dropdown-container ${isDecorDropdownOpen ? 'active' : ''}`} 
+          onMouseEnter={handleDecorDropdownMouseEnter}
+          onMouseLeave={handleDecorDropdownMouseLeave}
+        >
+          <div className="furniture-dropdown-content"> {/* Main flex container for DECOR */}
+            {/* Group 1: LIGHTING (contains 3 columns internally) */}
+            <div className={`furniture-column lighting-group animate-item ${runDecorAnimation ? 'animated delay-50' : ''}`}>
+              <h2><Link href="/decor/lighting">LIGHTING</Link></h2>
+              <div className="decor-sub-columns-container"> 
+                {/* Column 1.1: Regular Lighting */} 
+                <div className={`furniture-sub-column animate-item ${runDecorAnimation ? 'animated delay-100' : ''}`}>
+                  <ul>
+                    {decorLinks.lighting.regular.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Column 1.2: FORTUNY COLLECTION */}
+                <div className={`furniture-sub-column animate-item ${runDecorAnimation ? 'animated delay-150' : ''}`}>
+                  <h3><Link href="/decor/lighting/fortuny">FORTUNY COLLECTION</Link></h3>
+                  <ul>
+                    {decorLinks.lighting.fortuny.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Column 1.3: YAMAGIWA COLLECTION */}
+                <div className={`furniture-sub-column animate-item ${runDecorAnimation ? 'animated delay-200' : ''}`}>
+                  <h3><Link href="/decor/lighting/yamagiwa">YAMAGIWA COLLECTION</Link></h3>
+                  <ul>
+                    {decorLinks.lighting.yamagiwa.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Group 2: ART (contains 2 columns internally) */}
+            <div className={`furniture-column art-group animate-item ${runDecorAnimation ? 'animated delay-250' : ''}`}>
+              <h2><Link href="/decor/art">ART</Link></h2>
+              <div className="decor-sub-columns-container"> 
+                {/* Column 2.1: Regular Art */} 
+                <div className={`furniture-sub-column animate-item ${runDecorAnimation ? 'animated delay-300' : ''}`}>
+                  <ul>
+                    {decorLinks.art.regular.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Column 2.2: ORIENTAL ART */}
+                <div className={`furniture-sub-column animate-item ${runDecorAnimation ? 'animated delay-350' : ''}`}>
+                  <h3><Link href="/decor/art/oriental-art">ORIENTAL ART</Link></h3>
+                  <ul>
+                    {decorLinks.art.orientalArt.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fashion Dropdown Menu */}
+      {isFashionDropdownOpen && (
+        <div
+          className={`furniture-dropdown-container ${isFashionDropdownOpen ? 'active' : ''}`}
+          onMouseEnter={handleFashionDropdownMouseEnter}
+          onMouseLeave={handleFashionDropdownMouseLeave}
+        >
+          <div className="furniture-dropdown-content"> {/* Main flex container for FASHION */}
+            {/* Single H2 Title for FASHION */}
+            <div className={`furniture-column fashion-main-group animate-item ${runFashionAnimation ? 'animated delay-50' : ''}`}>
+              <h2><Link href="/fashion">FASHION</Link></h2>
+              {/* Container for the 4 columns */}
+              <div className="fashion-columns-container"> 
+                {/* Column 1: Regular Fashion */}
+                <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-100' : ''}`}>
+                  {/* No H3 for regular items */}
+                  <ul>
+                    {fashionLinks.regular.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Column 2: FORTUNY COLLECTION */}
+                <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-150' : ''}`}>
+                  <h3><Link href="/fashion/fortuny">FORTUNY COLLECTION</Link></h3>
+                  <ul>
+                    {fashionLinks.fortuny.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Column 3: T.BA COLLECTION */}
+                <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-200' : ''}`}>
+                  <h3><Link href="/fashion/tba">T.BA COLLECTION</Link></h3>
+                  <ul>
+                    {fashionLinks.tba.map((link) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+                {/* Column 4: RUNWAY COLLECTION */}
+                <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-250' : ''}`}>
+                  <h3><Link href="/fashion/runway">RUNWAY COLLECTION</Link></h3>
+                  <ul>
+                    {fashionLinks.runway.map((link: { name: string; href: string }) => (
+                      <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About Dropdown Menu */}
+      {isAboutDropdownOpen && (
+        <div
+          className={`furniture-dropdown-container ${isAboutDropdownOpen ? 'active' : ''}`}
+          onMouseEnter={handleAboutDropdownMouseEnter}
+          onMouseLeave={handleAboutDropdownMouseLeave}
+        >
+          <div className="furniture-dropdown-content">
+            <div className={`furniture-column about-main-group animate-item ${runAboutAnimation ? 'animated delay-50' : ''}`}>
+              <div className="about-links-container">
+                <ul>
+                  {aboutLinks.map((link, index) => (
+                    <li key={link.name} className={`dropdown-menu-item animate-item ${runAboutAnimation ? `animated delay-${100 + index * 50}` : ''}`}>
+                      <Link href={link.href}>{link.name}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 } 
