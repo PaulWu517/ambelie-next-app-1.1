@@ -1,9 +1,8 @@
-import { NextPage } from 'next';
 import React from 'react';
 import Image from 'next/image';
 import styles from './ExhibitionDetail.module.css';
 
-// Define the types needed for data fetching
+// --- TYPE DEFINITIONS ---
 interface ImageFormat {
   url: string;
   width: number;
@@ -42,68 +41,50 @@ interface StrapiResponse {
   data: Exhibition[];
 }
 
-// Function to fetch a single exhibition by its slug
+// --- DATA FETCHING ---
 async function getExhibitionBySlug(slug: string): Promise<Exhibition | null> {
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
   try {
     const res = await fetch(
-      `${API_URL}/api/exhibitions?filters[slug][$eq]=${slug}&populate=*`, 
-      {
-        cache: 'no-store',
-      }
+      `${API_URL}/api/exhibitions?filters[slug][$eq]=${slug}&populate=*`,
+      { cache: 'no-store' }
     );
     if (!res.ok) {
       throw new Error('Failed to fetch exhibition');
     }
     const json: StrapiResponse = await res.json();
-    if (json.data.length === 0) {
-      return null;
-    }
-    return json.data[0];
+    return json.data.length > 0 ? json.data[0] : null;
   } catch (error) {
     console.error('Error fetching exhibition by slug:', error);
     return null;
   }
 }
 
-// Helper function to format date display
+// --- HELPER FUNCTIONS ---
 function formatDateDisplay(exhibition: Exhibition): string {
-  if (exhibition.displayDate) {
-    return exhibition.displayDate;
-  }
-  
+  if (exhibition.displayDate) return exhibition.displayDate;
   const startDate = new Date(exhibition.startDate);
   const endDate = new Date(exhibition.endDate);
-  
-  const formatOptions: Intl.DateTimeFormatOptions = { 
-    year: 'numeric', 
-    month: 'long' 
-  };
-  
+  const formatOptions: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long' };
   const startFormatted = startDate.toLocaleDateString('en-US', formatOptions);
   const endFormatted = endDate.toLocaleDateString('en-US', formatOptions);
-  
   return `${startFormatted} - ${endFormatted}`;
 }
 
-// Helper function to process text with line breaks
 function processTextWithLineBreaks(text: string): string {
   if (!text) return '';
-  
-  // Replace line breaks with HTML <br> tags
-  return text
-    .replace(/\n\n/g, '</p><p>')  // Double line breaks become paragraph breaks
-    .replace(/\n/g, '<br />')     // Single line breaks become <br> tags
-    .replace(/^/, '<p>')          // Add opening paragraph tag
-    .replace(/$/, '</p>');        // Add closing paragraph tag
+  return `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br />')}</p>`;
 }
 
+// --- PAGE COMPONENT ---
 interface ExhibitionDetailPageProps {
-  params: { slug: string };
+  params: Promise<{
+    slug: string;
+  }>;
 }
 
-const ExhibitionDetailPage: NextPage<ExhibitionDetailPageProps> = async ({ params }) => {
-  const { slug } = params;
+export default async function ExhibitionDetailPage({ params }: ExhibitionDetailPageProps) {
+  const { slug } = await params;
   const exhibition = await getExhibitionBySlug(slug);
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
@@ -136,13 +117,13 @@ const ExhibitionDetailPage: NextPage<ExhibitionDetailPageProps> = async ({ param
       <main className={styles.mainContent}>
         <div className={styles.textColumn}>
           {exhibition.introduction && (
-            <div 
+            <div
               className={styles.introduction}
               dangerouslySetInnerHTML={{ __html: processTextWithLineBreaks(exhibition.introduction) }}
             />
           )}
           {exhibition.description && (
-            <div 
+            <div
               className={styles.description}
               dangerouslySetInnerHTML={{ __html: processTextWithLineBreaks(exhibition.description) }}
             />
@@ -152,7 +133,6 @@ const ExhibitionDetailPage: NextPage<ExhibitionDetailPageProps> = async ({ param
         <div className={styles.imageColumn}>
           {exhibition.images && exhibition.images.length > 0 ? (
             exhibition.images.map((image, index) => {
-              // 优先使用smaller format以避免超时，如果不存在则fallback到原图
               const imageUrl = image.formats?.large?.url || image.formats?.medium?.url || image.url;
               const imageWidth = image.formats?.large?.width || image.formats?.medium?.width || 800;
               const imageHeight = image.formats?.large?.height || image.formats?.medium?.height || 1200;
@@ -182,6 +162,4 @@ const ExhibitionDetailPage: NextPage<ExhibitionDetailPageProps> = async ({ param
       </main>
     </div>
   );
-}
-
-export default ExhibitionDetailPage; 
+} 
