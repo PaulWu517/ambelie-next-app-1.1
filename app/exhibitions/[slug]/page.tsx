@@ -97,13 +97,11 @@ function processTextWithLineBreaks(text: string): string {
     .replace(/$/, '</p>');        // Add closing paragraph tag
 }
 
-interface ExhibitionDetailPageProps {
-  params: Promise<{
-    slug: string;
-  }>;
-}
-
-export default async function ExhibitionDetailPage({ params }: ExhibitionDetailPageProps) {
+export default async function ExhibitionDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ slug: string }> 
+}) {
   const { slug } = await params; // 等待 params
   const exhibition = await getExhibitionBySlug(slug);
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
