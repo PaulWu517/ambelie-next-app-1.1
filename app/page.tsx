@@ -51,8 +51,16 @@ async function getProducts(): Promise<Product[]> {
     // 使用环境变量配置 API URL，如果未设置则使用 Railway 生产 URL
     const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
     
+    // 构造新的URL，包含排序和分页限制
+    const fetchUrl = new URL(`${API_URL}/api/products`);
+    fetchUrl.searchParams.append('populate[0]', 'images');
+    fetchUrl.searchParams.append('populate[1]', 'main_image');
+    fetchUrl.searchParams.append('populate[2]', 'hover_image');
+    fetchUrl.searchParams.append('sort', 'createdAt:desc'); // 按创建日期降序排序
+    fetchUrl.searchParams.append('pagination[limit]', '4'); // 限制为4个结果
+
     // 请求 products 并 populate 图片、主图和悬停图
-    const response = await fetch(`${API_URL}/api/products?populate[0]=images&populate[1]=main_image&populate[2]=hover_image&sort=createdAt:asc`, {
+    const response = await fetch(fetchUrl.toString(), {
       cache: 'no-store', // 确保获取最新数据
     });
     
