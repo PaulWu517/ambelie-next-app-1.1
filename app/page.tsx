@@ -80,6 +80,8 @@ async function getProducts(): Promise<Product[]> {
     return data.data;
   } catch (error) {
     console.error('Error fetching Products:', error);
+    console.log('使用静态内容作为备用方案');
+    // 当 API 不可用时，返回空数组，页面会显示静态备用内容
     return [];
   }
 }
