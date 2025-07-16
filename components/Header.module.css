@@ -1,0 +1,305 @@
+/* Header Module CSS */
+.siteHeader {
+    padding: 25px 50px 15px 50px;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    background-color: transparent;
+    border-bottom: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1000;
+    box-sizing: border-box;
+    margin-bottom: 0;
+    transition: background-color 0.3s ease-in-out, border-bottom 0.3s ease-in-out, height 0.3s ease-in-out;
+}
+
+/* 全局样式已移动到 app/globals.css 文件中 */
+
+/* 所有页面特定的顶部间距样式已移动到 app/globals.css */
+
+/* 订单管理页面顶部间距样式已移动到 app/globals.css */
+
+/* 滚动状态和菜单激活状态的样式 */
+.scrolled,
+.menuActive {
+    height: 120px !important;
+    padding: 25px 50px 15px 50px !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    margin-left: 0;
+}
+
+/* 第一行：搜索图标 - Logo - 用户图标 */
+.topRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+/* 搜索图标容器 - 固定宽度避免影响logo位置 */
+.headerSearchIcon {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 0.95em;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    min-width: 80px; /* 设置最小宽度，确保有足够空间显示SEARCH文字 */
+    justify-content: flex-start;
+}
+
+.logo {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: filter 0.3s ease;
+}
+
+.logo img {
+    max-height: 40px;
+    display: block;
+    filter: brightness(0) invert(1);
+    transition: filter 0.3s ease; 
+}
+
+.scrolled .logo img,
+.menuActive .logo img {
+    filter: brightness(0) !important;
+}
+
+/* 第二行：所有导航项目 */
+.bottomRow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 30px;
+}
+
+/* 用户菜单容器 */
+.userMenuContainer {
+    display: flex;
+    align-items: center;
+    min-width: 80px; /* 与搜索图标容器保持对称 */
+    justify-content: flex-end;
+}
+
+.mainNavigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mainNavigation ul {
+    list-style: none;
+    display: flex;
+    gap: 40px;
+    margin: 0;
+    padding: 0;
+}
+
+.mainNavigation a {
+    text-decoration: none;
+    color: white;
+    font-size: 0.95em;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    padding-bottom: 5px;
+    transition: color 0.3s ease;
+    text-transform: uppercase;
+    position: relative;
+}
+
+/* 为所有导航链接添加下划线，默认宽度为0 */
+.mainNavigation a::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 0;
+    height: 1.5px;
+    background-color: #880913;
+    transition: width 0.3s ease;
+}
+
+/* 悬停和激活状态的颜色变化 */
+.mainNavigation a:hover, 
+.menuItem.active > a {
+    color: #880913 !important;
+}
+
+/* 悬停时显示下划线动画 */
+.mainNavigation a:hover::after {
+    width: 100%;
+}
+
+.menuItem {
+    position: relative;
+}
+
+/* 激活状态的下划线始终显示 */
+.menuItem.active > a::after {
+    width: 100%;
+}
+
+.active {
+    /* Active state styles */
+}
+
+.scrolled .mainNavigation a,
+.menuActive .mainNavigation a {
+    color: #231815 !important;
+}
+
+.scrolled .mainNavigation a:hover,
+.menuActive .mainNavigation a:hover {
+    color: #880913 !important;
+}
+
+/* User Menu Styles */
+.userMenu {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: 20px;
+}
+
+.userMenuItems {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.loginLink {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    text-decoration: none;
+    font-size: 0.95em;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: color 0.3s ease;
+}
+
+.loginLink:hover {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.scrolled .loginLink,
+.menuActive .loginLink {
+    color: #231815 !important;
+}
+
+.scrolled .loginLink:hover,
+.menuActive .loginLink:hover {
+    color: #880913 !important;
+}
+
+.userIcon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+/* User Icon Header Styles */
+.userIcon {
+    transition: color 0.3s ease;
+}
+
+/* Search Icon Styles */
+.headerSearchIcon:hover {
+    color: #880913 !important;
+}
+
+.scrolled .headerSearchIcon,
+.menuActive .headerSearchIcon {
+    color: #231815 !important;
+}
+
+.scrolled .headerSearchIcon:hover,
+.menuActive .headerSearchIcon:hover {
+    color: #880913 !important;
+}
+
+.searchIcon {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .siteHeader {
+        padding: 15px 25px 10px 25px;
+        height: 100px;
+    }
+    
+    .scrolled,
+    .menuActive {
+        height: 100px !important;
+        padding: 15px 25px 10px 25px !important;
+    }
+    
+    .topRow {
+        height: 50px;
+        margin-bottom: 8px;
+    }
+    
+    .bottomRow {
+        height: 25px;
+    }
+    
+    .logo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+    
+    .logo img {
+        max-height: 35px;
+    }
+    
+    .mainNavigation ul {
+        gap: 15px;
+    }
+    
+    .mainNavigation a {
+        font-size: 0.85em;
+    }
+    
+    .headerSearchIcon {
+        min-width: 60px; /* 移动端减少最小宽度 */
+        gap: 6px;
+        font-size: 0.85em;
+    }
+    
+    .searchIcon {
+        width: 16px;
+        height: 16px;
+    }
+    
+    /* 移动端页面内容区域的上边距样式已移动到 app/globals.css */
+
+    .userMenuContainer {
+        min-width: 60px; /* 移动端与搜索图标容器保持对称 */
+    }
+}

@@ -3,26 +3,30 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { User, ShoppingCart, Heart, MessageSquare, MapPin, LogOut } from 'lucide-react';
+import { User, ShoppingCart, Heart, MessageSquare, MapPin, LogOut, FileText } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cartStore';
+import { useInquiryStore } from '@/lib/stores/inquiryStore';
 
 interface UserMenuProps {
   user: {
-    id: string;
+    id: string | number;
     email: string;
-    username: string;
+    username?: string;
+    name?: string;
     firstName?: string;
     lastName?: string;
     avatar?: string;
   } | null;
   onSignOut: () => void;
+  iconColor?: string;
 }
 
-export default function UserMenu({ user, onSignOut }: UserMenuProps) {
+export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cartItemCount = useCartStore((state) => state.getItemCount());
+  const inquiryCount = useInquiryStore((state) => state.getItemCount());
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -50,7 +54,7 @@ export default function UserMenu({ user, onSignOut }: UserMenuProps) {
     return (
       <div className="user-menu">
         <Link href="/auth/login" className="login-link">
-          <User className="user-icon" size={20} />
+          <User className="user-icon" size={20} style={{ color: iconColor }} />
           <span className="login-text">Sign In</span>
         </Link>
       </div>
@@ -71,7 +75,7 @@ export default function UserMenu({ user, onSignOut }: UserMenuProps) {
     },
     {
       label: 'Orders',
-      href: '/account/orders',
+      href: '/orders',
       icon: MessageSquare,
     },
     {
@@ -81,8 +85,9 @@ export default function UserMenu({ user, onSignOut }: UserMenuProps) {
     },
     {
       label: 'Inquiries',
-      href: '/account/inquiries',
-      icon: MessageSquare,
+      href: '/inquiry',
+      icon: FileText,
+      badge: inquiryCount > 0 ? inquiryCount : undefined,
     },
     // {
     //   label: 'Addresses',
@@ -101,33 +106,36 @@ export default function UserMenu({ user, onSignOut }: UserMenuProps) {
       <button
         className={`user-avatar-button ${isOpen ? 'active' : ''}`}
         aria-label="User menu"
+        style={{ color: iconColor }}
       >
-        {cartItemCount > 0 && <div className="cart-notification-dot"></div>}
+        {(cartItemCount > 0 || inquiryCount > 0) && <div className="notification-dot"></div>}
         
-        {user.avatar ? (
+        {user?.avatar ? (
           <Image
             src={user.avatar}
-            alt={`${user.firstName || user.username}'s avatar`}
+            alt={`${user.firstName || user.name || user.username || 'User'}'s avatar`}
             width={20}
             height={20}
             className="avatar-image-header"
           />
         ) : (
-          <User size={20} className="user-icon-header" />
+          <User size={20} className="user-icon-header" style={{ color: iconColor }} />
         )}
+        {/* 隐藏用户名文字显示
         <span className="user-name">
           {user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username}
         </span>
+        */}
       </button>
 
       {isOpen && (
         <div className="user-dropdown">
           <div className="user-info">
             <div className="user-avatar">
-              {user.avatar ? (
+              {user?.avatar ? (
                 <Image
                   src={user.avatar}
-                  alt={`${user.firstName || user.username}'s avatar`}
+                  alt={`${user.firstName || user.name || user.username || 'User'}'s avatar`}
                   width={40}
                   height={40}
                   className="avatar-image"
@@ -140,9 +148,9 @@ export default function UserMenu({ user, onSignOut }: UserMenuProps) {
             </div>
             <div className="user-details">
               <p className="user-display-name">
-                {user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.username}
+                {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : (user?.name || user?.username || 'User')}
               </p>
-              <p className="user-email">{user.email}</p>
+              <p className="user-email">{user?.email}</p>
             </div>
           </div>
 

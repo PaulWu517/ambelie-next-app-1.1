@@ -133,22 +133,16 @@ export default async function ExhibitionDetailPage({ params }: ExhibitionDetailP
         <div className={styles.imageColumn}>
           {exhibition.images && exhibition.images.length > 0 ? (
             exhibition.images.map((image, index) => {
-              const imageUrl = image.formats?.large?.url || image.formats?.medium?.url || image.url;
-              const imageWidth = image.formats?.large?.width || image.formats?.medium?.width || 800;
-              const imageHeight = image.formats?.large?.height || image.formats?.medium?.height || 1200;
-              
               return (
                 <div key={index} className={styles.imageWrapper}>
                   <Image
-                    src={`${API_URL}${imageUrl}`}
+                    src={`${API_URL}${image.url}`}
                     alt={image.alternativeText || `Exhibition image ${index + 1}`}
-                    width={imageWidth}
-                    height={imageHeight}
+                    width={800}
+                    height={1200}
                     className={styles.image}
-                    quality={75}
                     priority={index === 0}
-                    placeholder="blur"
-                    blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+                    unoptimized
                   />
                 </div>
               );

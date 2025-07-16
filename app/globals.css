@@ -60,8 +60,8 @@ a:hover {
 }
 
 .site-header {
-    padding: 20px 50px 20px 50px;
-    height: 80px;
+    padding: 25px 50px 25px 50px;
+    height: 90px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -84,8 +84,8 @@ a:hover {
 
 .site-header.scrolled,
 .site-header.menu-active {
-    height: 80px;
-    padding: 20px 50px;
+    height: 200px;
+    padding: 25px 50px;
     background-color: rgba(255, 255, 255, 0.95) !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     margin-left: 0;
@@ -2426,7 +2426,7 @@ main.cart-page {
 
 /* 展览页面样式 */
 .page-header {
-    padding: 0px 0 5px; /* 减少顶部内边距，将标题向上移动更多 */
+    padding: 20px 0 10px; /* 增加顶部padding让标题下移，减少底部padding让内容更靠近 */
     text-align: left; /* 改为左对齐 */
     background-color: var(--background-light);
     max-width: 85%; /* 添加最大宽度 */
@@ -2449,7 +2449,7 @@ main.cart-page {
 .exhibitions-asymmetric {
     width: 100%;
     max-width: 100%; /* 改为100%，让图片与屏幕左侧对齐 */
-    margin: -10px 0 10px; /* 修改顶部边距，让Current部分上移更多 */
+    margin: -10px 0 10px; /* 减少顶部边距，让CURRENT更靠近EXHIBITIONS标题 */
     padding: 0; /* 移除所有内边距 */
     box-sizing: border-box;
 }
@@ -2710,6 +2710,11 @@ main.cart-page {
     margin-bottom: 0;
 }
 
+/* 首页特殊处理：包含视频背景的main元素margin-top为0 */
+main:has(.video-background-section) {
+    margin-top: 0 !important;
+}
+
 /* 视频背景区域样式 */
 .video-background-section {
     width: 100%;
@@ -2717,7 +2722,17 @@ main.cart-page {
     position: relative;
     overflow: hidden;
     margin: 0; /* MODIFIED: Ensure no default margin, especially margin-top */
+    margin-top: -120px; /* 上移120px以抵消main的margin-top */
     padding: 0; /* MODIFIED: Ensure no default padding, especially padding-top */
+    padding-top: 120px; /* 恢复内部间距，确保内容不被header遮挡 */
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+    .video-background-section {
+        margin-top: -100px; /* 移动端上移100px */
+        padding-top: 100px; /* 移动端恢复内部间距 */
+    }
 }
 
 .video-background {
@@ -2748,7 +2763,7 @@ main.cart-page {
 
 .video-content {
     max-width: 80%;
-    margin-top: 60vh;
+    margin-top: 70vh; /* 从60vh增加到65vh，让内容往下移动 */
     text-align: center;
 }
 
@@ -2762,13 +2777,16 @@ main.cart-page {
 }
 
 .video-description {
-    font-size: 1rem; 
-    line-height: 1.6;
+    font-family: var(--font-heading);
+    font-size: 1.2rem; 
+    line-height: 1.5;
     margin-bottom: 25px; 
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
     color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
+    letter-spacing: 0.02em;
 }
 
 .video-button {
@@ -2813,13 +2831,17 @@ main.cart-page {
     }
     
     .video-description {
-        font-size: 1rem;
+        font-size: 1.1rem;
     }
 }
 
 @media (max-width: 480px) {
     .video-title {
         font-size: 1.8rem;
+    }
+    
+    .video-description {
+        font-size: 1rem;
     }
     
     .video-button {
@@ -3332,9 +3354,10 @@ body:has(.page-header) .site-header .menu-item.active > a {
     color: var(--brand-red) !important;
 }
 
-/* 白色背景页面main部分添加顶部间隙 */
+/* 白色背景页面main部分添加顶部间隙，并覆盖Header模块的margin-top */
 body:has(.page-header) main {
-    padding-top: 120px; /* 为页眉留出间隙 */
+    margin-top: 0 !important; /* 覆盖Header.module.css的margin-top: 120px */
+    padding-top: 140px; /* 增加顶部间距，让正文内容下移一点 */
 }
 
 /* 白色背景页面专门的页眉样式 - 始终保持白色背景 */
@@ -3388,7 +3411,6 @@ body:has(.product-detail-container) .site-header .menu-item.active > a {
 
 /* 白色背景页面main部分添加顶部间隙 */
 body:has(.contact-section) main,
-body:has(.page-header) main,
 body:has(.category-header) main,
 body:has(.product-detail-container) main {
     padding-top: 120px; /* 为页眉留出间隙 */
@@ -3854,7 +3876,6 @@ body:has(.product-detail-container) .site-header .menu-item.active > a {
 
 /* 白色背景页面main部分添加顶部间隙 */
 body:has(.contact-section) main,
-body:has(.page-header) main,
 body:has(.category-header) main,
 body:has(.product-detail-container) main {
     padding-top: 120px; /* 为页眉留出间隙 */
@@ -4059,7 +4080,7 @@ body:has(.video-background-section) .site-header .main-navigation a {
 /* Furniture Dropdown Menu Styles */
 .furniture-dropdown-container {
   position: fixed; /* Fixed position to align with header and cover content */
-  top: 60px; /* Default top position, assuming scrolled header height */
+  top: 120px; /* Updated for new header height */
   left: 0;
   width: 100%;
   background-color: rgba(255, 255, 255, 0.95); /* MODIFIED: Opacity to 0.95 */
@@ -4076,10 +4097,10 @@ body:has(.video-background-section) .site-header .main-navigation a {
 
 /* Adjust top position if header is not scrolled (taller) */
 .site-header:not(.scrolled) + .furniture-dropdown-container {
-  top: 80px; /* Assuming initial header height is 80px */
+  top: 120px; /* Updated for new header height */
 }
 .site-header.scrolled + .furniture-dropdown-container {
-  top: 80px; /* Scrolled header height is 80px */
+  top: 120px; /* Updated for new header height */
 }
 
 
@@ -4087,6 +4108,7 @@ body:has(.video-background-section) .site-header .main-navigation a {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto; /* 重新启用交互 */
 }
 
 .furniture-dropdown-content {
@@ -4103,12 +4125,13 @@ body:has(.video-background-section) .site-header .main-navigation a {
 }
 
 .oriental-group {
-  flex-basis: 20%; 
-  min-width: 180px; 
+  flex-basis: 40%; 
+  min-width: 300px; 
+  margin-left: -350px; /* 向左移动 */
 }
 
 .antique-group {
-  flex-basis: 75%; 
+  flex-basis: 55%; 
   display: flex;
   flex-direction: column; 
 }
@@ -4124,9 +4147,57 @@ body:has(.video-background-section) .site-header .main-navigation a {
   width: 100%;
 }
 
+.oriental-sub-columns-container {
+  display: flex;
+  justify-content: space-between; 
+  gap: 30px; 
+  width: 100%;
+}
+
+.oriental-single-row-container {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 80px;
+  margin-top: 5px;
+}
+
+.oriental-category-link {
+  font-family: var(--font-body);
+  font-size: 0.85em;
+  color: var(--brand-black);
+  text-decoration: none;
+  transition: color 0.3s ease;
+  line-height: 1.4;
+  white-space: nowrap;
+  position: relative;
+  padding-bottom: 3px;
+  display: inline-block;
+  flex-shrink: 0; /* 防止收缩 */
+}
+
+.oriental-category-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: var(--brand-red);
+  transition: width 0.3s ease;
+}
+
+.oriental-category-link:hover {
+  color: var(--brand-red);
+}
+
+.oriental-category-link:hover::after {
+  width: 100%;
+}
+
 .furniture-sub-column { /* Styles for SEATING, STORAGE, TABLES, OTHERS columns */
-  flex: 1; 
-  min-width: 140px; 
+  flex: 0 0 auto; /* Don't grow or shrink, use natural width */
+  min-width: 180px; 
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 /* General h2 for main columns (ORIENTAL, ANTIQUE) */
@@ -4157,6 +4228,7 @@ body:has(.video-background-section) .site-header .main-navigation a {
   color: var(--brand-black);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 .furniture-column ul, .furniture-sub-column ul {
@@ -4176,6 +4248,7 @@ body:has(.video-background-section) .site-header .main-navigation a {
   text-decoration: none;
   transition: color 0.3s ease;
   line-height: 1.4;
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 .furniture-column li a:hover, .furniture-sub-column li a:hover {
@@ -4297,17 +4370,34 @@ body:has(.video-background-section) .site-header .main-navigation a {
 .delay-150 { transition-delay: 0.15s !important; }
 .delay-200 { transition-delay: 0.2s !important; }
 .delay-250 { transition-delay: 0.25s !important; }
+
+/* 移动端下拉菜单位置调整 */
+@media (max-width: 768px) {
+  .furniture-dropdown-container {
+    top: 100px; /* 移动端header高度 */
+  }
+  
+  .site-header:not(.scrolled) + .furniture-dropdown-container,
+  .site-header.scrolled + .furniture-dropdown-container {
+    top: 100px; /* 移动端header高度 */
+  }
+}
 /* Add more as needed */
 
 /* Specific layout for DECOR dropdown if different from FURNITURE */
+.furniture-dropdown-container .furniture-dropdown-content .furniture-column.lighting-group .decor-sub-columns-container,
+.furniture-dropdown-container .furniture-dropdown-content .furniture-column.art-group .decor-sub-columns-container,
+.furniture-dropdown-content .lighting-group .decor-sub-columns-container,
+.furniture-dropdown-content .art-group .decor-sub-columns-container,
 .decor-sub-columns-container {
-  display: flex;
+  display: flex !important;
+  flex-direction: row !important;
   /* Adjust justify-content if sub-columns don't fill the space or need specific alignment */
   /* justify-content: space-between; ensures even spacing if there's extra room */
-  justify-content: flex-start; /* Start items from left, rely on flex-basis/grow of children */
-  gap: 30px; /* Gap between sub-columns (e.g., Regular Lighting, Fortuny, Yamagiwa) */
-  width: 100%;
-  margin-top: 12px; /* Space between H2 (LIGHTING/ART) and its sub-columns content */
+  justify-content: center !important; /* Center the three columns */
+  gap: 100px !important; /* Gap between sub-columns (e.g., Regular Lighting, Fortuny, Yamagiwa) */
+  width: 100% !important;
+  margin-top: 12px !important; /* Space between H2 (LIGHTING/ART) and its sub-columns content */
 }
 
 /* Adjust flex-basis for main groups within DECOR if needed */
@@ -4341,14 +4431,15 @@ body:has(.video-background-section) .site-header .main-navigation a {
 .fashion-columns-container {
   display: flex;
   flex-direction: row;
-  justify-content: space-between; /* Distribute columns evenly */
-  gap: 20px; /* Adjust gap as needed */
+  justify-content: center; /* Center the columns */
+  gap: 100px; /* Reduced gap for tighter spacing */
   width: 100%;
+  margin-left: 10px; /* Move to the right */
 }
 
-/* Ensure sub-columns in fashion take up equal space within the container */
+/* Ensure sub-columns in fashion use natural width */
 .fashion-columns-container .furniture-sub-column {
-  flex: 1;
+  flex: 0 0 auto; /* Use natural width, don't grow or shrink */
   /* padding is inherited from .furniture-sub-column, adjust if necessary */
 }
 
@@ -4560,8 +4651,8 @@ body:has(.video-background-section) .site-header .main-navigation a {
   background-color: #e5e7eb;
 }
 
-/* 购物车红点提示样式 */
-.cart-notification-dot {
+/* 统一通知红点提示样式 */
+.notification-dot {
   position: absolute;
   top: -2px;
   right: -2px;
@@ -4890,4 +4981,80 @@ body:has(.video-background-section) .site-header .main-navigation a {
 .site-header:not(.scrolled):not(.menu-active):hover .header-search-icon:hover .search-icon-svg,
 .site-header:not(.scrolled):not(.menu-active):hover .header-search-icon:hover .search-text {
     color: #333;
+}
+
+/* 统一的通知点样式 - 有购物车商品或询价商品时显示红点 */
+.notification-dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 8px;
+  height: 8px;
+  background-color: #ff4444;
+  border-radius: 50%;
+  z-index: 1001;
+}
+
+/* 从 Header.module.css 移动过来的全局样式 */
+/* 调整页面内容区域的上边距以适应新的header高度 */
+main {
+    margin-top: 120px;
+}
+
+/* 首页视频背景特殊处理 */
+main:has(.video-background-section) {
+    margin-top: 0;
+}
+
+/* About页面顶部间距调整 */
+main.about-page {
+    margin-top: 40px;
+}
+
+/* Contact页面顶部间距调整 */
+main.contact-page {
+    margin-top: 20px;
+}
+
+/* 商品详情页顶部间距调整 */
+main.product-detail-page {
+    margin-top: 50px;
+}
+
+/* 订单管理页面顶部间距调整 */
+main.orders-page {
+    margin-top: 140px;
+}
+
+/* 移动端响应式样式 */
+@media (max-width: 768px) {
+    /* 移动端页面内容区域的上边距调整 */
+    main {
+        margin-top: 100px;
+    }
+    
+    /* 移动端首页视频背景特殊处理 */
+    main:has(.video-background-section) {
+        margin-top: 0;
+    }
+    
+    /* 移动端About页面顶部间距调整 */
+    main.about-page {
+        margin-top: 50px;
+    }
+    
+    /* 移动端Contact页面顶部间距调整 */
+    main.contact-page {
+        margin-top: 40px;
+    }
+    
+    /* 移动端商品详情页顶部间距调整 */
+    main.product-detail-page {
+        margin-top: 55px;
+    }
+    
+    /* 移动端订单管理页面顶部间距调整 */
+    main.orders-page {
+        margin-top: 120px;
+    }
 }

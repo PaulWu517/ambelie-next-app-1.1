@@ -114,13 +114,13 @@ export default async function ExhibitionsPage() {
             <div className="exhibition-image-container">
                   {exhibition.mainImage ? (
                     <Image 
-                      src={`${API_URL}${exhibition.mainImage.formats?.large?.url || exhibition.mainImage.url}`} 
+                      src={`${API_URL}${exhibition.mainImage.url}`} 
                       alt={exhibition.mainImage.alternativeText || exhibition.name}
                       width={800} 
                       height={533} 
                       style={{objectFit: 'cover'}}
-                      quality={75}
                       priority={index === 0}
+                      unoptimized
                     />
                   ) : (
                     <div className="placeholder-image" style={{width: 800, height: 533, backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
@@ -165,12 +165,12 @@ export default async function ExhibitionsPage() {
               <div className="product-image">
                     {exhibition.mainImage ? (
                       <Image 
-                        src={`${API_URL}${exhibition.mainImage.formats?.medium?.url || exhibition.mainImage.url}`} 
+                        src={`${API_URL}${exhibition.mainImage.url}`} 
                         alt={exhibition.mainImage.alternativeText || exhibition.name}
                         width={400} 
                         height={400} 
                         style={{aspectRatio: '1/1', objectFit: 'cover'}}
-                        quality={75}
+                        unoptimized
                       />
                     ) : (
                       <div className="placeholder-image" style={{width: 400, height: 400, backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>

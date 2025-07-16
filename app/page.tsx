@@ -2,94 +2,120 @@ import Image from "next/image";
 import Link from 'next/link';
 import ScrollAnimations from '../components/ScrollAnimations';
 
+// 定义首页展览的类型（与exhibitions页面保持一致）
+interface ImageItem {
+  url: string;
+  alternativeText?: string | null;
+  formats?: {
+    large?: { url: string; width: number; height: number; size: number; };
+    medium?: { url: string; width: number; height: number; size: number; };
+    small?: { url: string; width: number; height: number; size: number; };
+    xlarge?: { url: string; width: number; height: number; size: number; };
+  };
+}
+
+interface HomepageExhibition {
+  id: number;
+  name: string;
+  slug: string;
+  exhibitionType: string;
+  exhibitionStatus: 'current' | 'past';
+  startDate: string;
+  endDate: string;
+  mainImage?: ImageItem | null;
+  introduction?: string | null;
+  description?: string | null;
+  location?: string | null;
+  showOnHomepage: boolean;
+}
+
+interface HomepageProject {
+  id: number;
+  name: string;
+  slug: string;
+  projectType?: string;
+  date?: string;
+  location?: string;
+  mainImage?: ImageItem | null;
+  introduction?: string | null;
+  content?: string | null;
+  showOnHomepage: boolean;
+}
+
+interface StrapiResponse<T> {
+  data: T[];
+}
+
+// 获取首页展览数据的函数
+async function getHomepageExhibition(): Promise<HomepageExhibition | null> {
+  try {
+    const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+    const response = await fetch(
+      `${API_URL}/api/exhibitions?filters[showOnHomepage][$eq]=true&populate=*&sort=startDate:desc`,
+      {
+        next: { revalidate: 60 }, // 缓存60秒
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('Failed to fetch exhibition data');
+      return null;
+    }
+    
+    const json: StrapiResponse<HomepageExhibition> = await response.json();
+    
+    // 返回第一个符合条件的展览
+    if (json.data && json.data.length > 0) {
+      return json.data[0];
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching exhibition data:', error);
+    return null;
+  }
+}
+
+// 获取首页项目数据的函数
+async function getHomepageProject(): Promise<HomepageProject | null> {
+  try {
+    const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+    const response = await fetch(
+      `${API_URL}/api/projects?filters[showOnHomepage][$eq]=true&populate=*&sort=date:desc`,
+      {
+        next: { revalidate: 60 }, // 缓存60秒
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('Failed to fetch project data');
+      return null;
+    }
+    
+    const json: StrapiResponse<HomepageProject> = await response.json();
+    
+    // 返回第一个符合条件的项目
+    if (json.data && json.data.length > 0) {
+      return json.data[0];
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching project data:', error);
+    return null;
+  }
+}
+
 // 元数据定义
 export const metadata = {
   title: "Ambelie | Fusion of Art, Design, and Timeless Antiques",
   description: "Discover Ambelie's unique collection of antique furniture, modern designs, and fashion, blending Eastern aesthetics with Western craftsmanship. Experience the art of living.",
 };
 
-// 定义图片类型
-interface ImageItem {
-  url: string;
-  alternativeText?: string | null;
-}
-
-// 定义 Product 类型
-interface Product {
-  id: number;
-  name: string;
-  period: string;
-  description: string;
-  designer: string;
-  maker: string;
-  origin: string;
-  images?: ImageItem[] | null;
-  main_image?: ImageItem | null; // 主图
-  hover_image?: ImageItem | null; // 悬停图
-  createdAt: string;
-  updatedAt: string;
-  publishedAt: string;
-  slug: string;
-}
-
-// Strapi API 响应类型
-interface StrapiResponse {
-  data: Product[];
-  meta: {
-    pagination: {
-      page: number;
-      pageSize: number;
-      pageCount: number;
-      total: number;
-    };
-  };
-}
-
-// 从 Strapi 获取产品数据的函数
-async function getProducts(): Promise<Product[]> {
-  try {
-    // 使用环境变量配置 API URL，如果未设置则使用 Railway 生产 URL
-    const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
-    
-    // 构造新的URL，包含排序和分页限制
-    const fetchUrl = new URL(`${API_URL}/api/products`);
-    fetchUrl.searchParams.append('populate[0]', 'images');
-    fetchUrl.searchParams.append('populate[1]', 'main_image');
-    fetchUrl.searchParams.append('populate[2]', 'hover_image');
-    fetchUrl.searchParams.append('sort', 'createdAt:desc'); // 按创建日期降序排序
-    fetchUrl.searchParams.append('pagination[limit]', '4'); // 限制为4个结果
-
-    // 请求 products 并 populate 图片、主图和悬停图
-    const response = await fetch(fetchUrl.toString(), {
-      cache: 'no-store', // 确保获取最新数据
-    });
-    
-    if (!response.ok) {
-      console.error('API Response Error:', response.status, response.statusText);
-      const errorText = await response.text();
-      console.error('Error Body:', errorText);
-      throw new Error(`Failed to fetch data: ${response.status}`);
-    }
-    
-    const data: StrapiResponse = await response.json();
-    
-    // 添加调试日志
-    console.log('Fetched Products:', data.data.length, 'items');
-    console.log('API URL used:', API_URL);
-    
-    return data.data;
-  } catch (error) {
-    console.error('Error fetching Products:', error);
-    console.log('使用静态内容作为备用方案');
-    // 当 API 不可用时，返回空数组，页面会显示静态备用内容
-    return [];
-  }
-}
-
 export default async function HomePage() {
-  // 获取产品数据
-  const products = await getProducts();
-  const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+  // 获取首页展览数据和项目数据
+  const homepageExhibition = await getHomepageExhibition();
+  const homepageProject = await getHomepageProject();
 
   return (
     <main>
@@ -105,9 +131,8 @@ export default async function HomePage() {
             <div className="seal-logo">
               <Image src="/assets/images/seal_logo.png" alt="Ambelie Seal Logo" width={120} height={120} style={{opacity: 0.8, height: 'auto'}} />
             </div>
-            <h1 className="video-title">THE FUSION OF ART AND LIFE</h1>
-            <p className="video-description">Discover the unique blend of art, culture, and timeless design.</p>
-            <Link href="/exhibitions" className="video-button">Learn More</Link>
+            <p className="video-description">Beauty is what remains after time has washed<br/>everything else away.</p>
+            {/* <Link href="/exhibitions" className="video-button">Learn More</Link> */}
           </div>
         </div>
       </section>
@@ -116,114 +141,83 @@ export default async function HomePage() {
       <section className="new-arrivals-section">
         <div className="new-arrivals-header">
           <div className="new-arrivals-left">
-            <h2 className="section-heading">New Arrivals</h2>
-            <Link href="/products" className="view-more-link see-more-link">See More</Link>
+            <h2 className="section-heading">Featured Collections</h2>
+            <p className="section-subtitle">Curated Excellence</p>
           </div>
         </div>
         <div className="new-arrivals-grid">
-          {products.length > 0 ? (
-            products
-              .filter(item => 
-                item.main_image && 
-                item.hover_image
-              )
-              .map((item) => {
-                const mainImage = item.main_image;
-                const hoverImage = item.hover_image;
-
-                return (
-                <article key={item.id} className="product-item">
-                    <Link href={`/products/${item.slug}`} className="product-link">
-                    <div className="product-image">
-                        {mainImage?.url && (
-                        <Image 
-                            src={`${API_URL}${mainImage.url}`} 
-                            alt={mainImage.alternativeText || item.name} 
-                          width={500} 
-                          height={667} 
-                          style={{aspectRatio: '3/4', objectFit: 'cover'}} 
-                        />
-                      )}
-                        {hoverImage?.url && (
-                        <Image 
-                            src={`${API_URL}${hoverImage.url}`} 
-                            alt={hoverImage.alternativeText || `${item.name} - Detail`} 
-                          className="hover-image" 
-                          width={500} 
-                          height={667} 
-                          style={{aspectRatio: '3/4', objectFit: 'cover'}}
-                        />
-                      )}
-                    </div>
-                    <div className="product-info">
-                        <h2 className="product-title">{item.name}</h2>
-                        <p className="product-period">{item.period}</p>
-                    </div>
-                  </Link>
-                </article>
-                )
-              })
-          ) : (
-            // 如果没有数据，显示原始的静态内容作为备用
-            <>
           <article className="product-item">
-            <Link href="/product/divider-detail" className="product-link">
+            <Link href="/category/oriental-furniture" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/1-1.jpg" alt="Chinese Antique Wooden Screen - Front View" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/1-2.jpg" alt="Chinese Antique Wooden Screen - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_collection/ORIENTAL FURNITURE_1.jpg" alt="Oriental Furniture Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_collection/ORIENTAL FURNITURE_2.jpg" alt="Oriental Furniture Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Chinese Antique Wooden Screen</h2>
-                <p className="product-period">Qing Dynasty, Late 19th Century</p>
+                <h2 className="product-title">ORIENTAL FURNITURE</h2>
+                <p className="product-period">Traditional & Contemporary</p>
               </div>
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/product/divider-detail" className="product-link">
+            <Link href="/category/antique-furniture" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/2-1.jpg" alt="Carved Rosewood Room Divider - Front View" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/2-2.jpg" alt="Carved Rosewood Room Divider - Side View" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_collection/ANTIQUE FURNITURE_1.jpg" alt="Antique Furniture Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_collection/ANTIQUE FURNITURE_2.jpg" alt="Antique Furniture Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Carved Rosewood Room Divider</h2>
-                <p className="product-period">Chinese, Early 20th Century</p>
+                <h2 className="product-title">ANTIQUE FURNITURE</h2>
+                <p className="product-period">Historic & Vintage</p>
               </div>
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/product/divider-detail" className="product-link">
+            <Link href="/category/art" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/3-1.jpg" alt="Four-Panel Japanese Byobu Screen" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/3-2.jpg" alt="Four-Panel Japanese Byobu Screen - Unfolded" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_collection/ART_1.jpg" alt="Art Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_collection/ART_2.jpg" alt="Art Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Four-Panel Japanese Byobu Screen</h2>
-                <p className="product-period">Meiji Period, 1880s</p>
+                <h2 className="product-title">ART</h2>
+                <p className="product-period">Contemporary & Classic</p>
               </div>
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/product/divider-detail" className="product-link">
+            <Link href="/category/lighting" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/4-1.jpg" alt="Elm Wood Lattice Screen" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/4-2.jpg" alt="Elm Wood Lattice Screen - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_collection/LIGHTING_1.jpg" alt="Lighting Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_collection/LIGHTING_2.jpg" alt="Lighting Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Elm Wood Lattice Screen</h2>
-                <p className="product-period">Chinese, Mid-20th Century</p>
+                <h2 className="product-title">LIGHTING</h2>
+                <p className="product-period">Design & Vintage</p>
               </div>
             </Link>
           </article>
-            </>
-          )}
         </div>
       </section>
 
-      {/* Fullscreen Exhibition Section (CROSSING THE RIVER OF TIME) */}
-      <section className="fullscreen-exhibition">
+      {/* Fullscreen Exhibition Section (Dynamic Exhibition) */}
+      <section 
+        className="fullscreen-exhibition"
+        style={{
+          backgroundImage: homepageExhibition && homepageExhibition.mainImage
+            ? `url(${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${homepageExhibition.mainImage.url})`
+            : "url('/assets/images/placeholder-hero.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
         <div className="exhibition-overlay">
-          <h2 className="exhibition-slogan">CROSSING THE RIVER OF TIME</h2>
-          <Link href="/events" className="exhibition-button">Explore More</Link>
+          <h2 className="exhibition-slogan">
+            {homepageExhibition?.name?.toUpperCase() || 'CROSSING THE RIVER OF TIME'}
+          </h2>
+          <Link 
+            href={homepageExhibition ? `/exhibitions/${homepageExhibition.slug}` : '/events'} 
+            className="exhibition-button"
+          >
+            Explore More
+          </Link>
         </div>
       </section>
 
@@ -318,12 +312,27 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Second Fullscreen Exhibition Section (THE FUSION OF ART AND LIFE - placeholder) */}
-      <section className="fullscreen-exhibition" style={{backgroundImage: "url('/assets/images/placeholder-hero.jpg')", backgroundSize: 'cover', backgroundPosition: 'center'}}>
+      {/* Second Fullscreen Exhibition Section (Dynamic Project) */}
+      <section 
+        className="fullscreen-exhibition" 
+        style={{
+          backgroundImage: homepageProject && homepageProject.mainImage
+            ? `url(${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${homepageProject.mainImage.url})`
+            : "url('/assets/images/placeholder-hero.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      >
           <div className="exhibition-overlay">
-              <h2 className="exhibition-slogan">THE FUSION OF ART AND LIFE</h2>
-              <p className="video-description">From Europe to Asia, from classical to modern, AMBELIE is dedicated to bringing you an artistic space experience that integrates diverse cultures and aesthetics, making antique furniture an art piece in your life.</p>
-              <Link href="/projects" className="exhibition-button">Learn More</Link>
+              <h2 className="exhibition-slogan">
+                {homepageProject?.name?.toUpperCase() || 'THE FUSION OF ART AND LIFE'}
+              </h2>
+              <Link 
+                href={homepageProject ? `/projects/${homepageProject.slug}` : '/projects'} 
+                className="exhibition-button"
+              >
+                Learn More
+              </Link>
           </div>
       </section>
 
@@ -342,7 +351,7 @@ export default async function HomePage() {
                       <p className="store-address animate-on-scroll delay-400">No. 21 Kangping Road, Xuhui District, Shanghai</p>
                       <p className="exhibition-date animate-on-scroll delay-500">Opening Hours: 10:00 - 20:00</p>
                       <p className="exhibition-description animate-on-scroll delay-600">AMBELIE has returned to Shanghai, nestled in a serene garden villa at Kangping Road. Our treasured collection has found its roots in this three-story garden house built in 1945, surrounded by swaying shadows and lush greenery.</p>
-                      <Link href="/reservation" className="view-more-link animate-on-scroll delay-700">Visit Store</Link>
+                      <Link href="/about/shanghai" className="view-more-link animate-on-scroll delay-700">Visit Store</Link>
                   </div>
               </div>
           </div>
@@ -360,7 +369,7 @@ export default async function HomePage() {
                       <p className="store-address animate-on-scroll delay-400">By Appointment</p>
                       <p className="exhibition-date animate-on-scroll delay-500">Opening Hours: 10:00 - 20:00</p>
                       <p className="exhibition-description animate-on-scroll delay-600">We've brought treasures from around the world to our Hangzhou space. This street once sheltered the renowned artist Mei Lanfang and was home to "Huang Garden." The refined aesthetic exists quietly here, immersed in a sense of history and culture.</p>
-                      <Link href="/reservation" className="view-more-link animate-on-scroll delay-700">Visit Store</Link>
+                      <Link href="/about/hangzhou" className="view-more-link animate-on-scroll delay-700">Visit Store</Link>
                   </div>
               </div>
           </div>

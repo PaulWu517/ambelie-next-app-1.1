@@ -9,7 +9,7 @@ const CartPage = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, getItemCount } = useCartStore();
 
   return (
-    <main className="cart-page" style={{ paddingTop: '120px', paddingBottom: '100px' }}>
+    <main className="cart-page" style={{ paddingBottom: '100px' }}>
       <div className="section-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 50px' }}>
                 <h1 className="section-heading" style={{ marginBottom: '40px', textAlign: 'left' }}>Shopping Cart</h1>
         
@@ -186,7 +186,10 @@ const CartPage = () => {
                   <span>Subtotal ({getItemCount()} items)</span>
                   <span style={{ color: 'var(--brand-green)' }}>${getCartTotal().toFixed(2)}</span>
                 </div>
-                <button style={{ 
+                <Link 
+                  href="/checkout"
+                  style={{ 
+                    display: 'block',
                   width: '100%', 
                   backgroundColor: 'var(--brand-black)', 
                   color: 'white', 
@@ -198,10 +201,13 @@ const CartPage = () => {
                   fontFamily: 'var(--font-body)',
                   letterSpacing: '0.5px',
                   textTransform: 'uppercase',
+                    textDecoration: 'none',
+                    textAlign: 'center',
                   transition: 'background-color 0.3s ease'
-                }}>
+                  }}
+                >
                   Proceed to Checkout
-                </button>
+                </Link>
               </div>
             </div>
           </div>

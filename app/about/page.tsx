@@ -14,7 +14,7 @@ export default function AboutPage() {
       {/* Header 和 Footer 通常在根布局 (layout.tsx) 中处理，以保持一致性 */}
       {/* <Header /> */}
 
-      <main>
+      <main className="about-page">
         <ScrollAnimations />
         {/* 首图区域 */}
         <section className="about-hero-section">

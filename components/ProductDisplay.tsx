@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
+import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import { Product as CartProduct } from '@/types';
-import styles from '../app/products/[slug]/ProductDetailPage.module.css'; // Reusing the page's CSS module
+import styles from '../app/products/[slug]/ProductDetailPage.module.css';
 
 interface ImageItem {
   url: string;
@@ -20,6 +21,7 @@ interface Product {
   materials: string;
   origin: string;
   dimensions: string;
+  designer: string;
   price?: number;
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;
@@ -32,12 +34,22 @@ interface ProductDisplayProps {
 }
 
 // 成功弹窗组件
-function SuccessModal({ isOpen, onClose, productName }: { isOpen: boolean; onClose: () => void; productName: string }) {
+function SuccessModal({ 
+  isOpen, 
+  onClose, 
+  productName, 
+  isInquiry = false 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  productName: string;
+  isInquiry?: boolean;
+}) {
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
         onClose();
-      }, 3000); // 3秒后自动关闭
+      }, 3000);
       
       return () => clearTimeout(timer);
     }
@@ -50,14 +62,14 @@ function SuccessModal({ isOpen, onClose, productName }: { isOpen: boolean; onClo
       <div className="success-modal" onClick={(e) => e.stopPropagation()}>
         <div className="success-modal-content">
           <div className="success-icon">✓</div>
-          <h3>Added to Cart</h3>
-          <p>{productName} has been added to your cart</p>
+          <h3>{isInquiry ? 'Added to Inquiry' : 'Added to Cart'}</h3>
+          <p>{productName} has been added to your {isInquiry ? 'inquiry list' : 'cart'}</p>
           <div className="success-modal-actions">
             <button onClick={onClose} className="continue-shopping-btn">
               Continue Shopping
             </button>
-            <Link href="/cart" className="view-cart-btn">
-              View Cart
+            <Link href={isInquiry ? "/inquiry" : "/cart"} className="view-cart-btn">
+              {isInquiry ? 'View Inquiry' : 'View Cart'}
             </Link>
           </div>
         </div>
@@ -67,14 +79,14 @@ function SuccessModal({ isOpen, onClose, productName }: { isOpen: boolean; onClo
 }
 
 export default function ProductDisplay({ product, API_URL }: ProductDisplayProps) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isIntroExpanded, setIsIntroExpanded] = useState(false);
+  const [lastAction, setLastAction] = useState<'cart' | 'inquiry'>('cart');
   
   const { addToCart } = useCartStore();
+  const { addToInquiry } = useInquiryStore();
   
-  // 使用真实的后端数据
   const actualPrice = product.price || 0;
   const isInquiryOnly = product.isInquiryOnly || false;
 
@@ -83,38 +95,11 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     alt: img.alternativeText || product.name
   })) || [];
 
-  const handlePrevImage = () => {
-    setCurrentImageIndex((prevIndex) =>
-      prevIndex === 0 ? images.length - 1 : prevIndex - 1
-    );
-  };
-
-  const handleNextImage = () => {
-    setCurrentImageIndex((prevIndex) =>
-      prevIndex === images.length - 1 ? 0 : prevIndex + 1
-    );
-  };
-
-  const handleThumbnailClick = (index: number) => {
-    setCurrentImageIndex(index);
-  };
-
-  const openLightbox = () => {
-    if (images.length > 0) {
-      setIsLightboxOpen(true);
-    }
-  };
-
-  const closeLightbox = () => {
-    setIsLightboxOpen(false);
-  };
-
   const handleAddToCart = async () => {
     if (isInquiryOnly) return;
     
     setIsAddingToCart(true);
     
-    // 转换数据格式以适配购物车
     const cartProduct: CartProduct = {
       id: product.id.toString(),
       name: product.name,
@@ -123,6 +108,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
       materials: product.materials,
       origin: product.origin,
       dimensions: product.dimensions,
+      designer: product.designer,
       price: actualPrice,
       slug: product.slug,
       main_image: product.images && product.images.length > 0 ? {
@@ -153,11 +139,62 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     try {
       addToCart(cartProduct);
       setIsAddingToCart(false);
-      setShowSuccessModal(true); // 显示成功弹窗
+      setShowSuccessModal(true);
+      setLastAction('cart');
     } catch (error) {
       console.error('Error adding to cart:', error);
       setIsAddingToCart(false);
     }
+  };
+
+  const handleAddToInquiry = async () => {
+    const inquiryProduct = {
+      id: product.id.toString(),
+      name: product.name,
+      period: product.period,
+      description: product.description,
+      materials: product.materials,
+      origin: product.origin,
+      dimensions: product.dimensions,
+      designer: product.designer,
+      price: actualPrice,
+      slug: product.slug,
+      main_image: product.images && product.images.length > 0 ? {
+        data: {
+          id: 1,
+          attributes: {
+            name: 'main_image',
+            alternativeText: product.images[0].alternativeText || null,
+            caption: null,
+            width: 500,
+            height: 667,
+            formats: {},
+            hash: '',
+            ext: '.jpg',
+            mime: 'image/jpeg',
+            size: 100,
+            url: product.images[0].url,
+            previewUrl: null,
+            provider: 'local',
+            provider_metadata: {},
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        }
+      } : undefined
+    };
+
+    try {
+      addToInquiry(inquiryProduct);
+      setShowSuccessModal(true); // Re-use success modal for inquiry
+      setLastAction('inquiry');
+    } catch (error) {
+      console.error('Error adding to inquiry:', error);
+    }
+  };
+
+  const toggleIntroExpanded = () => {
+    setIsIntroExpanded(!isIntroExpanded);
   };
 
   const details = [
@@ -165,89 +202,66 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     { label: 'Period:', value: product.period },
     { label: 'Origin:', value: product.origin },
     { label: 'Materials:', value: product.materials },
-  ];
+    { label: 'Designer:', value: product.designer },
+  ].filter(detail => detail.value && detail.value.trim() !== ''); // 过滤掉空值
 
   return (
     <>
       <div className={styles.productDetailContainer}>
-        <div className={styles.productGallery}>
-          <div className={styles.mainImageContainer}>
-            <button className={`${styles.galleryNav} ${styles.prevButton}`} onClick={handlePrevImage}>
-              <i className="fas fa-chevron-left"></i>
-            </button>
-            <div className={styles.mainImage} onClick={openLightbox} style={{ cursor: 'zoom-in' }}>
-              {images.map((image, index) => (
+        {/* 左侧图片列 */}
+        <div className={styles.imageColumn}>
+          {images.length > 0 ? (
+            images.map((image, index) => (
+              <div key={index} className={styles.imageWrapper}>
                 <Image
-                  key={index}
                   src={image.src}
                   alt={image.alt}
-                  fill
-                  style={{ objectFit: 'contain' }}
-                  className={index === currentImageIndex ? styles.active : ''}
+                  width={600}
+                  height={800}
+                  className={styles.image}
                   priority={index === 0}
-                />
-              ))}
-            </div>
-            <button className={`${styles.galleryNav} ${styles.nextButton}`} onClick={handleNextImage}>
-              <i className="fas fa-chevron-right"></i>
-            </button>
-          </div>
-          <div className={styles.imageZoomInfo}>
-            <span>Click to zoom</span>
-          </div>
-        </div>
-
-        {isLightboxOpen && (
-          <div className={styles.lightboxOverlay} onClick={closeLightbox}>
-            <button className={styles.lightboxClose} onClick={closeLightbox}>
-              &times;
-            </button>
-            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-              <button className={`${styles.lightboxNav} ${styles.lightboxPrev}`} onClick={handlePrevImage}>
-                &#10094;
-              </button>
-              <div className={styles.lightboxImageContainer}>
-                <Image
-                  src={images[currentImageIndex].src}
-                  alt={images[currentImageIndex].alt}
-                  fill
-                  style={{ objectFit: 'contain' }}
+                  unoptimized
                 />
               </div>
-              <button className={`${styles.lightboxNav} ${styles.lightboxNext}`} onClick={handleNextImage}>
-                &#10095;
-              </button>
+            ))
+          ) : (
+            <div className={styles.noImages}>
+              <p>No images available for this product.</p>
             </div>
+          )}
           </div>
-        )}
 
-        <div className={styles.productInfoSticky}>
+        {/* 右侧文字信息列 */}
+        <div className={styles.textColumn}>
           <div className={styles.productInfoContent}>
             <h1 className={styles.productTitle}>{product.name}</h1>
             
-            <div className={styles.priceContainer} style={{ marginBottom: '20px' }}>
+            <div className={styles.priceContainer}>
               {!isInquiryOnly && actualPrice > 0 ? (
-                <div style={{ fontSize: '1.4em', fontWeight: 'bold', color: 'var(--brand-green)' }}>
+                <div className={styles.price}>
                   ${actualPrice.toLocaleString()}
                 </div>
               ) : (
-                <div style={{ fontSize: '1.2em', fontStyle: 'italic', color: '#666' }}>
+                <div className={styles.inquiryPrice}>
                   Price on inquiry
                 </div>
               )}
             </div>
 
-            <div className={styles.thumbnailGallery}>
-              {images.map((image, index) => (
-                <div
-                  key={index}
-                  className={`${styles.thumbnail} ${index === currentImageIndex ? styles.active : ''}`}
-                  onClick={() => handleThumbnailClick(index)}
-                >
-                  <Image src={image.src} alt={`Thumbnail ${index + 1}`} width={85} height={113} style={{objectFit: 'cover'}} />
+            {/* Introduction 部分 - 现在在产品详情之前 */}
+            {product.description && (
+              <div className={styles.introduction}>
+                <div className={`${styles.introductionText} ${!isIntroExpanded ? styles.collapsed : ''}`}>
+                  {product.description}
                 </div>
-              ))}
+                <button
+                  onClick={toggleIntroExpanded}
+                  className={styles.readMoreButton}
+                >
+                  {isIntroExpanded ? 'Read less' : 'Read more'}
+                </button>
             </div>
+            )}
 
             <div className={styles.productDetails}>
               {details.map((detail, index) => (
@@ -256,22 +270,24 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
                   <span className={styles.detailValue}>{detail.value}</span>
                 </div>
               ))}
-            </div>
           </div>
 
           <div className={styles.productActions}>
             {isInquiryOnly ? (
-              <Link href="/contact" className={styles.actionButton}>
-                <span className={styles.buttonText}>Inquire</span>
-              </Link>
+              <button 
+                className={`${styles.actionButton} ${styles.inquireButton}`}
+                onClick={handleAddToInquiry}
+              >
+                <span className={styles.buttonText}>ADD TO INQUIRY</span>
+              </button>
             ) : (
               <button 
-                className={styles.actionButton}
+                className={`${styles.actionButton} ${styles.addToCartButton}`}
                 onClick={handleAddToCart}
                 disabled={isAddingToCart}
               >
                 <span className={styles.buttonText}>
-                  {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                  {isAddingToCart ? 'ADDING...' : 'ADD TO CART'}
                 </span>
               </button>
             )}
@@ -279,14 +295,15 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
               <span className={styles.buttonText}>AR VIEWING</span>
             </button>
           </div>
+          </div>
         </div>
       </div>
 
-      {/* 成功弹窗 */}
       <SuccessModal 
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         productName={product.name}
+        isInquiry={lastAction === 'inquiry'}
       />
     </>
   );

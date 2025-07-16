@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './ProductDetailPage.module.css';
-import ProductDisplay from '../../../components/ProductDisplay'; // Use the new client component
-import RelatedProducts from '../../../components/RelatedProducts'; // Import the new component
+import ProductDisplay from '../../../components/ProductDisplay';
+import RelatedProducts from '../../../components/RelatedProducts';
 
 // Define the types needed for data fetching
 interface ImageItem {
@@ -17,6 +17,7 @@ interface Product {
   materials: string;
   origin: string;
   dimensions: string;
+  designer: string;
   price?: number;
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;
@@ -34,7 +35,7 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
     console.log(`Fetching product with slug: ${slug}`);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     const res = await fetch(`${API_URL}/api/products?filters[slug][$eq]=${slug}&populate=images`, {
       cache: 'no-store',
@@ -78,34 +79,22 @@ interface ProductDetailPageProps {
   }>;
 }
 
-// This remains a Server Component, but now it's much simpler.
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
-  const { slug } = await params; // 等待 params
+  const { slug } = await params;
   const product = await getProductBySlug(slug);
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
   if (!product) {
     return (
-      <main className={styles.subpageContent}>
+      <main className={`product-detail-page ${styles.subpageContent}`}>
         <div className="text-center py-20">Product not found.</div>
       </main>
     );
   }
 
   return (
-    <main className={styles.subpageContent}>
+    <main className={`product-detail-page ${styles.subpageContent}`}>
       <ProductDisplay product={product} API_URL={API_URL} />
-      
-      {/* 商品描述区域 - 放在图片和信息区域下方 */}
-      <div className={styles.productDescriptionSection}>
-        <div className={styles.descriptionContent}>
-          <h2 className={styles.descriptionTitle}>Introduction</h2>
-          <div className={styles.descriptionText}>
-            {product.description}
-          </div>
-        </div>
-      </div>
-      
       <RelatedProducts />
     </main>
   );

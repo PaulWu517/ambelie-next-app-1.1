@@ -49,9 +49,8 @@ export default function RelatedProducts() {
                 <Image
                   src={relatedItem.imageUrl}
                   alt={relatedItem.title}
-                  width={300}
-                  height={400}
-                  style={{objectFit: 'cover'}}
+                  width={400}
+                  height={533}
                   className={styles.relatedImg}
                 />
               </div>

@@ -28,6 +28,7 @@ export interface Product {
   materials?: string;
   origin?: string;
   dimensions?: string;
+  designer?: string;
   price?: number; // 商品价格
   isInquiryOnly?: boolean; // 是否仅支持询价
   slug: string;
@@ -38,4 +39,25 @@ export interface Product {
 
 export interface CartItem extends Product {
   quantity: number;
+}
+
+export interface Exhibition {
+  id: number;
+  attributes: {
+    name: string;
+    slug: string;
+    exhibitionType: string;
+    exhibitionStatus: 'current' | 'past';
+    startDate: string;
+    endDate: string;
+    introduction?: string;
+    description?: string;
+    location?: string;
+    showOnHomepage: boolean;
+    mainImage: { data: Image };
+    images?: { data: Image[] };
+    createdAt: string;
+    updatedAt: string;
+    publishedAt: string;
+  };
 } 

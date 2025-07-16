@@ -1,0 +1,614 @@
+/* Project Detail Container */
+.projectDetailContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 160px 20px 40px;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header Section */
+.projectHeader {
+  text-align: center;
+  margin-bottom: 60px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 40px;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 300;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  color: #2c2c2c;
+  text-transform: uppercase;
+}
+
+.metaInfo {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  font-size: 1rem;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+.type {
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.date {
+  font-style: italic;
+}
+
+.location {
+  color: #888;
+  font-weight: 400;
+}
+
+/* Main Content Layout - Single Column for CKEditor Content */
+.mainContent {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.textColumn {
+  width: 100%;
+}
+
+.introduction {
+  font-size: 1.4rem;
+  line-height: 1.8;
+  color: #333;
+  margin-bottom: 40px;
+  font-weight: 400;
+  text-align: center;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.introduction p {
+  margin-bottom: 20px;
+}
+
+.content {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  max-width: 100%;
+  margin: 0 auto;
+  
+  /* 确保CKEditor内容保持原始格式 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  
+  /* 处理可能的表格 */
+  overflow-x: auto;
+}
+
+/* CKEditor 标题样式 */
+.content h1, .content h2, .content h3 {
+  color: #2c2c2c;
+  margin-top: 30px;
+  margin-bottom: 15px;
+  font-weight: normal;
+}
+
+.content h1 {
+  font-size: 2.2rem;
+}
+
+.content h2 {
+  font-size: 1.8rem;
+}
+
+.content h3 {
+  font-size: 1.4rem;
+}
+
+.content p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  overflow-wrap: break-word;
+}
+
+/* CKEditor 列表样式 */
+.content ul, .content ol {
+  margin: 20px 0;
+  padding-left: 30px;
+}
+
+.content li {
+  margin-bottom: 8px;
+}
+
+/* CKEditor 引用样式 */
+.content blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 20px;
+  margin: 30px 0;
+  font-style: italic;
+  color: #666;
+}
+
+/* CKEditor 文本样式 */
+.content strong {
+  font-weight: 600;
+  color: #333;
+}
+
+.content em {
+  font-style: italic;
+}
+
+.content a {
+  color: #007bff;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.3s ease;
+}
+
+.content a:hover {
+  border-bottom-color: #007bff;
+}
+
+/* CKEditor 表格样式 */
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 1rem;
+}
+
+.content table th,
+.content table td {
+  border: 1px solid #ddd;
+  padding: 12px 8px;
+  text-align: left;
+}
+
+.content table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.content table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* CKEditor 代码块样式 */
+.content pre {
+  background-color: #f4f4f4;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  overflow-x: auto;
+  margin: 20px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.content code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+/* CKEditor 图片样式控制 - 正常图片居中显示，保持原有宽度 */
+.content img:not([class*="image-style-align"]) {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  display: block !important;
+  margin: 20px auto !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  float: none !important;
+}
+
+/* 所有图片的通用样式（不影响布局） */
+.content img {
+  height: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.content img:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* CKEditor 图片说明文字 - 居中显示，保持原有宽度 */
+.content figure {
+  margin: 30px auto !important;
+  text-align: center !important;
+  display: block !important;
+}
+
+.content figure img {
+  margin-bottom: 10px;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+.content figcaption {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+/* CKEditor 对齐样式 */
+.content .text-center {
+  text-align: center;
+}
+
+.content .text-left {
+  text-align: left;
+}
+
+.content .text-right {
+  text-align: right;
+}
+
+.content .text-justify {
+  text-align: justify;
+}
+
+/* CKEditor 缩进样式 */
+.content .indent {
+  margin-left: 40px;
+}
+
+/* CKEditor 高亮样式 */
+.content mark {
+  background-color: #ffff00;
+  padding: 2px 4px;
+}
+
+/* CKEditor 删除线和下划线 */
+.content s {
+  text-decoration: line-through;
+}
+
+.content u {
+  text-decoration: underline;
+}
+
+/* CKEditor 分页符或分隔符 */
+.content hr {
+  border: none;
+  border-top: 2px solid #ddd;
+  margin: 30px 0;
+  width: 100%;
+}
+
+/* 确保CKEditor内容的视频和iframe响应式 */
+.content iframe,
+.content video {
+  max-width: 80%;
+  height: auto;
+  display: block;
+  margin: 20px auto;
+}
+
+/* CKEditor 5 精确布局支持 */
+
+/* CKEditor 5 图片布局 - 简化方案：所有图片居中显示 */
+
+/* 注释掉左右对齐功能，改为统一居中 */
+/*
+.content .image-style-align-left {
+  float: left !important;
+  display: block !important;
+  margin: 0 30px 20px 0 !important;
+}
+
+.content .image-style-align-right {
+  float: right !important;
+  display: block !important;
+  margin: 0 0 20px 30px !important;
+}
+
+.content p img.image-style-align-left {
+  display: inline-block !important;
+  vertical-align: top !important;
+  float: none !important;
+  margin: 0 10px 20px 0 !important;
+}
+
+.content p img.image-style-align-right {
+  display: inline-block !important;
+  vertical-align: top !important;
+  float: none !important;
+  margin: 0 0 20px 10px !important;
+}
+
+.content p img.image-style-align-left:only-child {
+  float: left !important;
+  display: block !important;
+  margin: 0 30px 20px 0 !important;
+}
+
+.content p img.image-style-align-right:only-child {
+  float: right !important;
+  display: block !important;
+  margin: 0 0 20px 30px !important;
+}
+*/
+
+/* 统一处理：所有图片都居中显示 - 保持原有宽度设置 */
+.content .image-style-align-left,
+.content .image-style-align-right,
+.content .image-style-align-center,
+.content p img.image-style-align-left,
+.content p img.image-style-align-right,
+.content p img.image-style-align-left:only-child,
+.content p img.image-style-align-right:only-child {
+  display: block !important;
+  margin: 20px auto !important;
+  float: none !important;
+  clear: both !important;
+}
+
+/* 注释：CKEditor 5 居中图片现在由统一规则处理 */
+/*
+.content .image-style-align-center {
+  display: block;
+  margin: 20px auto;
+  max-width: 100%;
+  width: 100%;
+  clear: both;
+  float: none;
+}
+*/
+
+/* CKEditor 5 全宽图片（没有特殊类名的默认图片） */
+.content p > img:not([class*="image-style-align"]) {
+  display: block;
+  margin: 20px auto;
+  max-width: 100%;
+  width: 100%;
+  clear: both;
+}
+
+/* 确保没有内联宽度设置的图片为100%宽度 */
+.content img:not([style*="width"]),
+.content figure:not([style*="width"]) {
+  width: 100% !important;
+}
+
+/* CKEditor 5 resized 图片通用处理 - 统一居中显示，保持原有宽度 */
+.content .image_resized,
+.content img.image_resized,
+.content figure.image_resized,
+.content figure.image.image_resized {
+  height: auto !important;
+  display: block !important;
+  margin: 20px auto !important;
+  float: none !important;
+}
+
+/* CKEditor 5 Figure 包装的图片 - 统一居中显示，保持原有宽度 */
+.content figure.image {
+  margin: 20px auto !important;
+  text-align: center !important;
+  display: block !important;
+  float: none !important;
+}
+
+/* 注释掉Figure的左右对齐功能 */
+/*
+.content figure.image.image-style-align-left {
+  float: left !important;
+  display: block !important;
+  margin: 0 30px 20px 0 !important;
+  text-align: left;
+}
+
+.content figure.image.image-style-align-right {
+  float: right !important;
+  display: block !important;
+  margin: 0 0 20px 30px !important;
+  text-align: right;
+}
+*/
+
+/* 所有Figure图片都居中显示 - 保持原有宽度设置 */
+.content figure.image.image-style-align-left,
+.content figure.image.image-style-align-right,
+.content figure.image.image-style-align-center,
+.content figure.image.image_resized {
+  float: none !important;
+  display: block !important;
+  text-align: center !important;
+  margin: 20px auto !important;
+}
+
+.content figure img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 注释：由于不再使用浮动，清除浮动规则不再需要 */
+/*
+.content::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+*/
+
+/* 强制居中：所有CKEditor图片元素的通用规则 - 保持原有宽度 */
+.content [class*="image"],
+.content [class*="image-style"],
+.content figure[class*="image"],
+.content img[class*="image"] {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  float: none !important;
+  text-align: center !important;
+}
+
+/* 最高优先级：确保所有图片都居中 - 只覆盖浮动，保持宽度 */
+.content img[style],
+.content figure[style],
+.content figure.image[style] {
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  margin-top: 20px !important;
+  margin-bottom: 20px !important;
+  float: none !important;
+}
+
+/* 图片后的段落处理 */
+.content img + p {
+  margin-top: 20px;
+}
+
+
+
+/* 无内容时的提示 */
+.noContent {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-style: italic;
+}
+
+/* Image Column - 保留但简化（用于独立图片显示） */
+.imageColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 40px;
+}
+
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.imageWrapper:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.imageWrapper:hover .image {
+  transform: scale(1.02);
+}
+
+.noImages {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-style: italic;
+}
+
+/* 移动端优化 - 居中显示，保持宽度比例 */
+@media (max-width: 768px) {
+  .content img,
+  .content figure img,
+  .content figure.image,
+  .content [class*="image"],
+  .content [class*="image-style"] {
+    display: block !important;
+    margin: 20px auto !important;
+    float: none !important;
+    text-align: center !important;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 968px) {
+  .mainContent {
+    padding: 0 15px;
+  }
+
+  .title {
+    font-size: 2.5rem;
+  }
+
+  .metaInfo {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .projectDetailContainer {
+    padding: 100px 15px 20px;
+  }
+
+  .projectHeader {
+    margin-bottom: 40px;
+    padding-bottom: 30px;
+  }
+
+  .title {
+    font-size: 2rem;
+    letter-spacing: 1px;
+  }
+
+  .metaInfo {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .introduction {
+    font-size: 1.2rem;
+  }
+
+  .content {
+    font-size: 1rem;
+  }
+
+  .mainContent {
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.8rem;
+  }
+
+  .introduction {
+    font-size: 1.1rem;
+  }
+
+  .content {
+    font-size: 1rem;
+  }
+
+  .content h1 {
+    font-size: 1.8rem;
+  }
+
+  .content h2 {
+    font-size: 1.5rem;
+  }
+
+  .content h3 {
+    font-size: 1.2rem;
+  }
+} 

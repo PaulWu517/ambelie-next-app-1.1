@@ -2,243 +2,168 @@
 
 /* 主容器 */
 .productDetailContainer {
-    display: flex;
-    margin-top: 100px; /* 增加顶部外边距，与页眉保持距离 */
-    min-height: calc(100vh - 120px - 80px); /* 调整最小高度, 减去页眉高度 */
-    position: relative;
-    padding: 0 5%; /* 使用padding创建侧边距 */
-    width: 100%; /* 确保容器占满可用宽度 */
-    box-sizing: border-box; /* 确保padding不会增加总宽度 */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: start;
+    margin-top: 10px;
+    padding: 4rem 6rem;
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+    font-family: var(--font-body);
 }
 
-/* 左侧产品画廊区域 */
-.productGallery {
-    flex: 0 0 60%; /* 增加图片区宽度 */
-    background-color: #e6e1db; /* 恢复淡灰色背景 */
+/* 左侧图片列 */
+.imageColumn {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 30px 0;
-    position: relative;
-    max-height: 80vh; /* 恢复高度限制 */
+    gap: 2rem;
 }
 
-/* 主图片容器 */
-.mainImageContainer {
-    width: 90%; /* 缩小图片容器，显得更精致 */
-    height: 75vh; /* 相应调整高度 */
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.imageWrapper {
+    width: 95%;
+    margin: 0 auto;
+    overflow: hidden;
 }
 
-/* 主图片区域 */
-.mainImage {
+.image {
     width: 100%;
-    height: 100%;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: auto;
+    display: block;
+    object-fit: cover;
 }
 
-.mainImage img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain; /* This will be respected by Next/Image with fill */
-    opacity: 0;
-    transition: opacity 0.3s ease; /* 减少过渡时间 */
-    cursor: zoom-in;
-    display: none; /* 添加display控制以确保完全隐藏 */
+.noImages {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
 }
 
-.mainImage img.active {
-    opacity: 1;
-    z-index: 1;
-    display: block; /* 显示激活的图片 */
-}
-
-/* 导航按钮 */
-.galleryNav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.8);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-}
-
-.galleryNav:hover {
-    background-color: white;
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-}
-
-.prevButton {
-    left: -20px;
-}
-
-.nextButton {
-    right: -20px;
-}
-
-.galleryNav i {
-    color: #333;
-    font-size: 14px;
-}
-
-/* 缩放提示 */
-.imageZoomInfo {
-    margin-top: 15px; /* 调整间距 */
-    color: #777;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-}
-
-.imageZoomInfo span {
-    margin-left: 5px;
-}
-
-/* 右侧信息区域 */
-.productInfoSticky {
-    flex: 0 0 40%;
+/* 右侧文字信息列 */
+.textColumn {
+    line-height: 1.8;
+    font-size: 0.9rem;
+    color: var(--brand-black);
     position: sticky;
-    top: 100px;
-    height: 90vh; /* 关键：设置与左侧图片区域同样的高度 */
-    padding: 40px 30px;
+    top: 140px;  /* 从100px调整为140px，让文字区下移40px */
+    min-height: calc(100vh - 160px);  /* 相应调整最小高度 */
     display: flex;
     flex-direction: column;
-    box-sizing: border-box; /* 确保 padding 不会增加总高度 */
+    justify-content: flex-start;
 }
 
 /* 信息内容 */
 .productInfoContent {
-    flex: 1; /* 关键：让内容区域占据所有可用的垂直空间 */
-    overflow-y: auto; /* 如果内容过多，允许其内部滚动 */
+    flex: 1;
+    overflow-y: auto;
     max-width: 90%;
     margin: 0 auto;
 }
 
 /* 产品标题 */
-.productInfoContent .productTitle {
+.productTitle {
     font-family: var(--font-heading);
-    font-size: 2.2em;
+    font-size: 2em;
     font-weight: 400;
     color: var(--brand-black);
     margin-bottom: 10px;
     letter-spacing: 0.02em;
 }
 
-/* 时期信息 */
-.productInfoContent .productPeriod {
-    font-family: var(--font-body);
-    font-size: 1em;
+/* 价格容器 */
+.priceContainer {
+    margin-bottom: 30px;
+}
+
+.price {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: var(--brand-green);
+}
+
+.inquiryPrice {
+    font-size: 1.2em;
+    font-style: italic;
     color: #666;
-    margin-bottom: 30px;
-}
-
-/* 产品简短描述 (替代了之前的年代位置) */
-.productInfoContent .productShortDescription {
-    font-family: var(--font-body);
-    font-size: 0.95em; /* Slightly smaller than period, or adjust as needed */
-    color: #555; /* Slightly darker than period, or adjust */
-    margin-bottom: 25px; /* Adjust spacing as needed */
-    line-height: 1.6;
-    white-space: pre-line; /* 保留换行符，使后端数据中的换行在前端正确显示 */
-}
-
-/* 产品描述区域 */
-.productDescription {
-    margin-bottom: 30px;
-    line-height: 1.7;
-}
-
-.productDescription p {
-    margin-bottom: 15px;
-    font-size: 0.95em; /* 略微减小字体大小 */
 }
 
 /* 产品详细信息 */
 .productDetails {
-    margin-top: 25px; /* 减少上边距 */
-    margin-bottom: 25px; /* 减少下边距 */
+    margin-top: 25px;
+    margin-bottom: 25px;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
-    padding-top: 15px; /* 减少顶部内边距 */
+    padding-top: 15px;
 }
 
 .detailItem {
     display: flex;
-    margin-bottom: 6px; /* 从12px减少到6px，让行间距更紧凑 */
-    flex-wrap: wrap;
+    margin-bottom: 12px;
+    align-items: baseline;
 }
 
 .detailLabel {
-    flex: 0 0 120px;
+    width: 140px;
+    flex-shrink: 0;
     font-weight: 500;
     color: #333;
-    font-size: 1em; /* 放大字体 */
+    font-size: 1em;
 }
 
 .detailValue {
     flex: 1;
     color: #666;
-    font-size: 1em; /* 放大字体 */
-    line-height: 1.3; /* 减少行高，让文本更紧凑 */
+    font-size: 1em;
+    line-height: 1.3;
 }
 
-/* 缩略图画廊 */
-.thumbnailGallery {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px; /* 为缩略图添加上边距 */
+/* Introduction 部分 */
+.introduction {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding-top: 20px;
 }
 
-.thumbnail {
-    aspect-ratio: 3/4;
+.introductionText {
+    font-family: var(--font-body);
+    font-size: 1em;
+    line-height: 1.7;
+    color: #555;
+    white-space: pre-line;
+    text-align: justify;
+}
+
+.introductionText.collapsed {
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+.readMoreButton {
+    background: none;
+    border: none;
+    color: var(--brand-black);
+    font-size: 0.9em;
     cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.3s ease;
-    max-width: 85px;
-    max-height: 115px;
+    text-decoration: underline;
+    margin-top: 10px;
+    padding: 0;
+    font-family: var(--font-body);
 }
 
-.thumbnail.active {
-    border-color: #333;
+.readMoreButton:hover {
+    color: #666;
 }
 
-.thumbnail:hover {
-    border-color: #999;
-}
-
-.thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.thumbnail:hover img {
-    transform: scale(1.05);
-}
-
-/* 操作按钮 - 与图片区域底部对齐 */
+/* 操作按钮 */
 .productActions {
     display: flex;
-    gap: 25px; /* 增大按钮之间的距离 */
-    margin-top: auto; /* 关键：将自己推到容器的底部 */
-    padding-top: 20px; /* 在按钮和上方内容之间增加一些间距 */
+    gap: 25px;
+    margin-top: auto;
+    padding-top: 20px;
     flex-shrink: 0;
 }
 
@@ -248,29 +173,61 @@
     justify-content: center;
     border: 1px solid var(--brand-black);
     cursor: pointer;
-    font-family: var(--font-body);
-    font-size: 0.9em;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    text-align: center;
-    flex-grow: 0;
-    flex-shrink: 0;
-    flex-basis: 240px;
-    padding: 12px 10px;
-    background-color: white; /* Normal state: white background */
-    color: var(--brand-black); /* Normal state: black text */
+    background: transparent;
+    color: var(--brand-black);
+    text-decoration: none;
+    padding: 18px 32px;
+    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    min-width: 220px;
+    white-space: nowrap;
 }
 
 .actionButton:hover {
-    color: white; /* Fallback if buttonText rule somehow fails, or if button has direct text */
-    /* background-color: var(--brand-black); */
+    background-color: var(--brand-black);
+    color: white;
 }
 
-/* Ensure text within the span also turns white on hover */
 .actionButton:hover .buttonText {
+    color: white;
+}
+
+/* INQUIRE 按钮特殊样式 - 初始为黑色，悬停为浅黑色 */
+.inquireButton {
+    background-color: var(--brand-black);
+    color: white;
+}
+
+.inquireButton .buttonText {
+    color: white;
+}
+
+.inquireButton:hover {
+    background-color: #555;
+    color: white;
+}
+
+.inquireButton:hover .buttonText {
+    color: white;
+}
+
+/* ADD TO CART 按钮特殊样式 - 和INQUIRE一样的格式 */
+.addToCartButton {
+    background-color: var(--brand-black);
+    color: white;
+}
+
+.addToCartButton .buttonText {
+    color: white;
+}
+
+.addToCartButton:hover {
+    background-color: #555;
+    color: white;
+}
+
+.addToCartButton:hover .buttonText {
     color: white;
 }
 
@@ -278,28 +235,29 @@
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    width: 0;
+    left: -100%;
+    width: 100%;
     height: 100%;
-    background-color: var(--brand-black); /* Animation bar is black */
-    transition: width 0.4s ease;
-    z-index: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
 }
 
 .actionButton:hover::after {
-    width: 100%;
+    left: 100%;
 }
 
 .buttonText {
-    position: relative;
-    z-index: 1; /* Ensure text is above the ::after pseudo-element */
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1;
 }
 
-/* 购物车按钮禁用状态 */
 .actionButton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    pointer-events: none;
 }
 
 .actionButton:disabled::after {
@@ -307,110 +265,49 @@
 }
 
 .actionButton:disabled:hover {
-    background-color: white;
-    color: var(--brand-black);
+    background: var(--brand-black);
+    color: white;
 }
 
-.arModal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    opacity: 0;
-    transition: opacity 0.3s ease;
+/* 商品描述区域样式 */
+.productDescriptionSection {
+    background-color: #f8f8f8;
+    padding: 60px 0;
+    margin-top: 60px;
 }
 
-.arModal.show {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 1;
+.descriptionContent {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 6rem;
 }
 
-.arModalContent {
-    background-color: white;
-    width: 90%;
-    max-width: 400px;
-    padding: 30px;
-    border-radius: 5px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    position: relative;
-    transform: translateY(20px);
-    opacity: 0;
-    transition: all 0.4s ease;
-}
-
-.arModal.show .arModalContent {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.arClose {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 24px;
-    font-weight: 300;
-    color: #999;
-    cursor: pointer;
-    transition: color 0.3s ease;
-    line-height: 1;
-}
-
-.arClose:hover {
-    color: #333;
-}
-
-.arModal h3 {
+.descriptionTitle {
     font-family: var(--font-heading);
-    font-size: 1.5em;
-    font-weight: 400;
+    font-size: 2.5em;
+    margin-bottom: 30px;
     color: var(--brand-black);
-    margin-bottom: 15px;
+    text-align: center;
+    font-weight: normal;
 }
 
-.arModal p {
+.descriptionText {
     font-family: var(--font-body);
-    font-size: 0.95em;
-    line-height: 1.6;
-    color: #666;
-    margin-bottom: 20px;
-}
-
-.arImage {
-    width: 200px;
-    height: 200px;
-    margin: 0 auto 20px;
-    padding: 15px;
-    border: 1px solid #eee;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.arImage img {
-    max-width: 100%;
-    max-height: 100%;
-}
-
-.arInstructions {
-    font-size: 0.9em;
-    color: #888;
-    font-style: italic;
+    font-size: 1.1em;
+    line-height: 1.8;
+    color: #333;
+    text-align: justify;
+    white-space: pre-line;
 }
 
 /* 相关产品区域 */
 .relatedProducts {
-    width: 100%; /* This ensures it tries to fill its container */
-    max-width: 85%; /* Changed from a fixed value (e.g., 1200px) to 90% of the viewport */
-    margin: 60px auto; /* Keeps the section centered */
-    padding: 0 20px; /* Retains existing horizontal padding; adjust if 90% should be content-only width */
+    width: 100%;
+    max-width: 1800px;
+    margin: 80px auto;
+    padding: 0 6rem;
     box-sizing: border-box;
-    padding-top: 60px;
+    padding-top: 80px;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -419,14 +316,14 @@
     font-size: 1.8em;
     font-weight: 400;
     color: var(--brand-black);
-    margin-bottom: 40px;
+    margin-bottom: 50px;
     text-align: left;
 }
 
 .relatedItems {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 30px;
+    gap: 40px;
 }
 
 .relatedItem {
@@ -444,16 +341,15 @@
 }
 
 .relatedImage {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     overflow: hidden;
-    aspect-ratio: 3 / 4; /* Enforce aspect ratio on the container */
-    background-color: #f0f0f0; /* Optional: Add a background color for empty space if image loads slowly or fails */
+    aspect-ratio: 3 / 4;
+    background-color: #f0f0f0;
 }
 
 .relatedImg {
     width: 100%;
-    height: 100%; /* Make image fill the container height */
-    /* aspect-ratio: 3/4; Remove from here, container handles it */
+    height: 100%;
     object-fit: cover;
     transition: transform 0.4s ease;
 }
@@ -462,319 +358,121 @@
     transform: scale(1.03);
 }
 
+.relatedInfo {
+    padding: 0;
+}
+
 .relatedProductTitle {
     font-family: var(--font-heading);
-    font-size: 1.1em;
+    font-size: 1.2em;
     font-weight: 400;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    line-height: 1.3;
 }
 
 .relatedPeriod {
     font-family: var(--font-body);
-    font-size: 0.85em;
-    color: #666;
-}
-
-/* QR码模态框样式 */
-.qrModal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.qrModal.show {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 1;
-}
-
-.qrModalContent {
-    background-color: white;
-    width: 90%;
-    max-width: 400px;
-    padding: 30px;
-    border-radius: 5px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    position: relative;
-    transform: translateY(20px);
-    opacity: 0;
-    transition: all 0.4s ease;
-}
-
-.qrModal.show .qrModalContent {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.qrClose {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 24px;
-    font-weight: 300;
-    color: #999;
-    cursor: pointer;
-    transition: color 0.3s ease;
-    line-height: 1;
-}
-
-.qrClose:hover {
-    color: #333;
-}
-
-.qrModal h3 {
-    font-family: var(--font-heading);
-    font-size: 1.5em;
-    font-weight: 400;
-    color: var(--brand-black);
-    margin-bottom: 15px;
-}
-
-.qrModal p {
-    font-family: var(--font-body);
-    font-size: 0.95em;
-    line-height: 1.6;
-    color: #666;
-    margin-bottom: 20px;
-}
-
-.qrImage {
-    width: 200px;
-    height: 200px;
-    margin: 0 auto 20px;
-    padding: 15px;
-    border: 1px solid #eee;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.qrImage img {
-    max-width: 100%;
-    max-height: 100%;
-}
-
-.qrInstructions {
     font-size: 0.9em;
-    color: #888;
-    font-style: italic;
+    color: #666;
+    margin: 0;
 }
 
-/* 响应式适配 */
-@media (max-width: 1200px) {
-    .productGallery {
-        flex: 0 0 50%;
-    }
-    
-    .productInfoSticky {
-        flex: 0 0 50%;
-    }
-    
-    .mainImageContainer {
-        width: 85%;
-    }
-}
-
+/* 响应式调整 */
 @media (max-width: 992px) {
     .productDetailContainer {
-        flex-direction: column;
+        grid-template-columns: 1fr;
+        padding: 2rem 3rem;
+        gap: 2rem;
+        margin-top: 60px;
     }
-    
-    .productGallery,
-    .productInfoSticky {
-        flex: 0 0 100%;
+
+    .textColumn {
+        position: static;
+        min-height: auto;
+    }
+
+    .productInfoContent {
+        max-width: 100%;
+    }
+
+    .imageWrapper {
         width: 100%;
     }
-    
-    .productGallery {
-        min-height: 50vh;
+
+    .relatedProducts {
+        max-width: 1200px;
+        padding: 0 3rem;
+        margin: 60px auto;
+        padding-top: 60px;
     }
-    
-    .productInfoSticky {
-        position: relative;
-        top: 0;
-        height: auto;
-        max-height: none;
-        padding: 40px 20px;
-    }
-    
-    .productInfoSticky {
-        display: block; /* 在移动设备上取消flex布局 */
-    }
-    
-    .productActions {
-        margin-top: 20px; /* 在移动设备上恢复正常间距 */
-    }
-    
-    .productInfoContent {
-        flex: none; /* 移动设备上取消flex属性 */
-        overflow-y: visible;
-    }
-    
-    .thumbnailGallery {
-        /* grid-template-columns: repeat(8, 1fr); */ /* Original might be too many */
-        display: flex; /* Changed from grid for better scroll/overflow handling if needed */
-        overflow-x: auto; /* Allow horizontal scroll for thumbnails */
-        padding-bottom: 10px; /* Space for scrollbar if it appears */
-        max-width: 100%; /* Ensure it doesn't overflow its parent */
-    }
-    
+
     .relatedItems {
         grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
     }
 }
 
-@media (max-width: 576px) {
-    .productGallery {
-        min-height: 40vh;
-        padding: 30px 0;
+@media (max-width: 768px) {
+    .productDetailContainer {
+        padding: 1.5rem;
+        margin-top: 60px;
     }
-    
-    .mainImageContainer {
-        width: 90%;
-        height: 40vh;
+
+    .productTitle {
+        font-size: 1.6em;
     }
-    
-    .thumbnailGallery {
-        /* grid-template-columns: repeat(5, 1fr); */ /* As above, flex is likely better */
-         /* Max width adjustments might be needed based on content and screen */
+
+    .detailLabel {
+        width: 100px;
     }
-    
-    .productInfoContent .productTitle {
-        font-size: 1.8em;
+
+    .productActions {
+        flex-direction: column;
+        gap: 15px;
     }
-    
+
+    .actionButton {
+        min-width: 100%;
+        padding: 14px 32px;
+    }
+
+    .buttonText {
+        font-size: 12px;
+    }
+
+    .descriptionContent {
+        padding: 0 1.5rem;
+    }
+
+    .descriptionTitle {
+        font-size: 2em;
+    }
+
+    .descriptionText {
+        font-size: 1em;
+    }
+
+    .relatedProducts {
+        padding: 0 1.5rem;
+        margin: 40px auto;
+        padding-top: 40px;
+    }
+
     .relatedItems {
         grid-template-columns: 1fr;
+        gap: 25px;
     }
-}
 
-.actionButton .buttonText {
-  transition: transform 0.3s ease;
-}
+    .relatedTitle {
+        font-size: 1.5em;
+        margin-bottom: 30px;
+    }
 
-/* Lightbox Styles */
-.lightboxOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
+    .relatedProductTitle {
+        font-size: 1.1em;
+    }
 
-.lightboxContent {
-  position: relative;
-  width: 90vw;
-  height: 90vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.lightboxImageContainer {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.lightboxClose {
-  position: absolute;
-  top: 20px;
-  right: 40px;
-  color: #fff;
-  font-size: 40px;
-  font-weight: bold;
-  cursor: pointer;
-  background: none;
-  border: none;
-  z-index: 1001;
-}
-
-.lightboxNav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  cursor: pointer;
-  padding: 16px;
-  font-size: 24px;
-  z-index: 1001;
-  transition: background-color 0.3s;
-}
-
-.lightboxNav:hover {
-  background-color: rgba(0, 0, 0, 0.8);
-}
-
-.lightboxPrev {
-  left: 20px;
-}
-
-.lightboxNext {
-  right: 20px;
-}
-
-/* 商品描述区域样式 */
-.productDescriptionSection {
-  max-width: 1200px;
-  margin: 60px auto;
-  padding: 0 30px;
-}
-
-.descriptionContent {
-  padding: 40px;
-  border-radius: 8px;
-}
-
-.descriptionTitle {
-  font-family: var(--font-heading);
-  font-size: 1.8em;
-  font-weight: 400;
-  color: var(--brand-black);
-  margin-bottom: 20px;
-  letter-spacing: 0.02em;
-  text-align: center;
-}
-
-.descriptionText {
-  font-family: var(--font-body);
-  font-size: 1em;
-  line-height: 1.7;
-  color: #555;
-  white-space: pre-line; /* 保留换行符 */
-}
-
-/* 响应式适配 */
-@media (max-width: 768px) {
-  .productDescriptionSection {
-    margin: 40px auto;
-    padding: 0 20px;
-  }
-  
-  .descriptionContent {
-    padding: 30px 20px;
-  }
-  
-  .descriptionTitle {
-    font-size: 1.5em;
-  }
-  
-  .descriptionText {
-    font-size: 0.95em;
-  }
+    .relatedPeriod {
+        font-size: 0.85em;
+    }
 } 

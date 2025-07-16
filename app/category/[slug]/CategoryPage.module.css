@@ -1,6 +1,6 @@
 .container {
   max-width: 85%;
-  margin: 100px auto 40px;
+  margin: 140px auto 40px;
   padding: 0 20px;
 }
 
@@ -46,6 +46,9 @@
 }
 
 @media (max-width: 600px) {
+  .container {
+    margin: 120px auto 40px;
+  }
   .productGrid {
     grid-template-columns: 1fr;
   }

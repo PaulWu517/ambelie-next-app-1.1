@@ -22,12 +22,20 @@ export default function Footer() {
         
         <div className="footer-center">
           <div className="footer-links-group">
+            <h3>COLLECTIONS</h3>
+            <ul>
+              <li><Link href="/oriental-furniture">ORIENTAL FURNITURE</Link></li>
+              <li><Link href="/antique-furniture">ANTIQUE FURNITURE</Link></li>
+              <li><Link href="/lighting">LIGHTING</Link></li>
+              <li><Link href="/art">ART</Link></li>
+              <li><Link href="/fashion">FASHION</Link></li>
+            </ul>
+          </div>
+          <div className="footer-links-group">
             <h3>EXPLORE</h3>
             <ul>
-              {/* 假设的页面路径 */}
-              <li><Link href="/category/all">COLLECTIONS</Link></li> 
               <li><Link href="/exhibitions">EXHIBITIONS</Link></li>
-              <li><Link href="/events">EVENTS</Link></li>
+              <li><Link href="/press">PRESS</Link></li>
               <li><Link href="/projects">PROJECTS</Link></li>
             </ul>
           </div>
