@@ -19,18 +19,18 @@ const AuthDebugPage = () => {
           NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
         },
         // Cookies
-        cookies: {
+        cookies: typeof document !== 'undefined' ? {
           all: document.cookie,
           websiteUserToken: getCookie('website-user-token'),
           ambelieSession: getCookie('ambelie-session'),
           authToken: getCookie('auth-token'),
-        },
+        } : {},
         // LocalStorage
-        localStorage: {
+        localStorage: typeof window !== 'undefined' && window.localStorage ? {
           userEmail: localStorage.getItem('userEmail'),
           customerEmail: localStorage.getItem('customerEmail'),
           user: localStorage.getItem('user'),
-        },
+        } : {},
         // Auth State
         authState: {
           user,
@@ -38,10 +38,10 @@ const AuthDebugPage = () => {
           isLoading,
         },
         // URL Info
-        urlInfo: {
+        urlInfo: typeof window !== 'undefined' ? {
           currentUrl: window.location.href,
           origin: window.location.origin,
-        }
+        } : {}
       };
       setDebugInfo(info);
     };
@@ -50,6 +50,7 @@ const AuthDebugPage = () => {
   }, [user, isLoggedIn, isLoading]);
 
   const getCookie = (name: string) => {
+    if (typeof document === 'undefined') return null;
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop()?.split(';').shift();
@@ -103,15 +104,18 @@ const AuthDebugPage = () => {
 
   const clearAllAuth = () => {
     // 清除所有认证相关数据
-    document.cookie = 'website-user-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'ambelie-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-    document.cookie = 'next-auth.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    if (typeof document !== 'undefined') {
+      document.cookie = 'website-user-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'ambelie-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+      document.cookie = 'next-auth.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
     
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    window.location.reload();
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.reload();
+    }
   };
 
   return (
@@ -183,8 +187,8 @@ const AuthDebugPage = () => {
           <p><strong>认证状态:</strong> {isLoggedIn ? '已登录' : '未登录'}</p>
           <p><strong>加载状态:</strong> {isLoading ? '加载中' : '已完成'}</p>
           <p><strong>用户信息:</strong> {user ? `${user.email} (${user.name})` : '无'}</p>
-          <p><strong>Website Token:</strong> {getCookie('website-user-token') ? '存在' : '不存在'}</p>
-          <p><strong>Session:</strong> {getCookie('ambelie-session') ? '存在' : '不存在'}</p>
+          <p><strong>Website Token:</strong> {typeof document !== 'undefined' && getCookie('website-user-token') ? '存在' : '不存在'}</p>
+          <p><strong>Session:</strong> {typeof document !== 'undefined' && getCookie('ambelie-session') ? '存在' : '不存在'}</p>
         </div>
       </div>
 

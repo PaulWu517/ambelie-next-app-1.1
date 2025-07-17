@@ -113,7 +113,9 @@ const CheckoutPage = () => {
 
       if (success && data.url) {
         // 重定向到Stripe Checkout
-        window.location.href = data.url;
+        if (typeof window !== 'undefined') {
+          window.location.href = data.url;
+        }
       } else {
         throw new Error('创建支付会话失败');
       }
