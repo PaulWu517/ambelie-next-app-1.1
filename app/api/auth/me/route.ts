@@ -12,6 +12,34 @@ export async function GET(request: NextRequest) {
     if (websiteUserToken) {
       try {
         const backendResponse = await fetch(`${process.env.STRAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'}/api/website-users/me`, {
+          headers: {
+            'Authorization': `Bearer ${websiteUserToken}`
+          }
+        });
+
+        if (backendResponse.ok) {
+          const userData = await backendResponse.json();
+          return NextResponse.json(userData);
+        }
+      } catch (error) {
+        console.error('Error fetching user from backend:', error);
+        // 如果后端验证失败，可以考虑清除无效的token
+      }
+    }
+
+    // 如果没有website-user-token，则回退到本地session
+    if (sessionId) {
+      const session = getUserSession(sessionId);
+      if (session) {
+        return NextResponse.json({ 
+          email: session.email, 
+          name: session.name,
+          isGuest: true // 标记为访客
+        });
+      }
+    }
+      try {
+        const backendResponse = await fetch(`${process.env.STRAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'}/api/website-users/me`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${websiteUserToken}`,

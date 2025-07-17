@@ -85,10 +85,10 @@ export default function LoginForm() {
       const result = await response.json();
 
       if (response.ok) {
-        setMessage('Login successful!');
-        // Redirect to homepage or user-specified page
+        setMessage('Login successful! Redirecting...');
+        // 强制刷新页面以更新认证状态
         setTimeout(() => {
-          router.push('/');
+          window.location.href = '/';
         }, 1000);
       } else {
         setError(result.error || 'Verification failed');
@@ -234,4 +234,4 @@ export default function LoginForm() {
       )}
     </div>
   );
-} 
+}
