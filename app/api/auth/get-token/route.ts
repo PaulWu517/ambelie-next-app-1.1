@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../[...nextauth]/route';
 import { getUserSession } from '@/lib/auth-storage';
 
 export async function GET(request: NextRequest) {
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
     
     // 方法2: 检查NextAuth session
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (session && (session as any).accessToken) {
       console.log('Found NextAuth session token');
       return NextResponse.json({
