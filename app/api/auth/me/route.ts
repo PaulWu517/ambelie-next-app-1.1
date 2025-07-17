@@ -38,30 +38,11 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // 回退到本地session
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: '未登录' },
-        { status: 401 }
-      );
-    }
-    
-    const userSession = getUserSession(sessionId);
-    
-    if (!userSession) {
-      return NextResponse.json(
-        { error: '会话已过期，请重新登录' },
-        { status: 401 }
-      );
-    }
-    
-    return NextResponse.json({
-      user: {
-        email: userSession.email,
-        name: userSession.name || null,
-        loginTime: userSession.createdAt,
-      }
-    });
+    // 如果没有有效的 websiteUserToken，则视为未登录
+    return NextResponse.json(
+      { error: '用户未认证' },
+      { status: 401 }
+    );
     
   } catch (error) {
     console.error('获取用户信息失败:', error);
@@ -70,4 +51,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

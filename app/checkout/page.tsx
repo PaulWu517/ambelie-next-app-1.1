@@ -159,9 +159,22 @@ const CheckoutPage = () => {
             </h2>
             
             <div style={{ marginBottom: '30px' }}>
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', fontWeight: '500' }}>
-                Contact Information
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '500', margin: 0 }}>
+                  Contact Information
+                </h3>
+                {!authLoading && (
+                  isLoggedIn && user ? (
+                    <span style={{ fontSize: '0.9rem' }}>
+                      Logged in as {user.email} (<a href="/auth/signin" style={{ color: 'var(--brand-green)', textDecoration: 'underline' }}>Switch</a>)
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.9rem' }}>
+                      Have an account? <a href="/auth/signin" style={{ color: 'var(--brand-green)', textDecoration: 'underline' }}>Log in</a>
+                    </span>
+                  )
+                )}
+              </div>
               
               <div style={{ display: 'grid', gap: '20px' }}>
                 <div>
