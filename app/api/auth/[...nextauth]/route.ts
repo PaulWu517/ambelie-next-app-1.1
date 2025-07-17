@@ -1,16 +1,16 @@
-import NextAuth from 'next-auth'
+import NextAuth, { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import { NextAuthOptions } from 'next-auth'
 
 const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
     CredentialsProvider({
-      name: 'credentials',
+      id: 'credentials',
+      name: 'Email Verification',
       credentials: {
         email: { label: 'Email', type: 'email' },
         code: { label: 'Verification Code', type: 'text' }
@@ -22,7 +22,8 @@ const authOptions: NextAuthOptions = {
 
         try {
           // 验证验证码
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-code`, {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'
+          const response = await fetch(`${apiUrl}/api/auth/verify-code`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -37,10 +38,10 @@ const authOptions: NextAuthOptions = {
 
           if (response.ok && data.success) {
             return {
-              id: data.user.id.toString(),
-              email: data.user.email,
-              name: data.user.name || data.user.email,
-              accessToken: data.jwt
+              id: data.user?.id?.toString() || credentials.email,
+              email: data.user?.email || credentials.email,
+              name: data.user?.name || credentials.email,
+              accessToken: data.jwt || data.token
             }
           }
         } catch (error) {
@@ -70,11 +71,14 @@ const authOptions: NextAuthOptions = {
     error: '/auth/error'
   },
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt',
+    maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
 }
 
 const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST }
+export { authOptions }

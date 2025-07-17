@@ -43,20 +43,10 @@ const CheckoutPage = () => {
     }
   }, [isLoggedIn, user]);
 
-  // 检查购物车是否为空并重定向
-  useEffect(() => {
-    if (items.length === 0) {
-      router.push('/cart');
-    }
-  }, [items.length, router]);
-
-  // 如果购物车为空，显示加载状态
+  // 如果购物车为空，重定向到购物车页面
   if (items.length === 0) {
-    return (
-      <div style={{ paddingTop: '120px', textAlign: 'center' }}>
-        <p>Redirecting to cart...</p>
-      </div>
-    );
+    router.push('/cart');
+    return null;
   }
 
   // 处理创建支付会话
@@ -123,9 +113,7 @@ const CheckoutPage = () => {
 
       if (success && data.url) {
         // 重定向到Stripe Checkout
-        if (typeof window !== 'undefined') {
-          window.location.href = data.url;
-        }
+        window.location.href = data.url;
       } else {
         throw new Error('创建支付会话失败');
       }
@@ -159,22 +147,9 @@ const CheckoutPage = () => {
             </h2>
             
             <div style={{ marginBottom: '30px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: '500', margin: 0 }}>
-                  Contact Information
-                </h3>
-                {!authLoading && (
-                  isLoggedIn && user ? (
-                    <span style={{ fontSize: '0.9rem' }}>
-                      Logged in as {user.email} (<a href="/auth/signin" style={{ color: 'var(--brand-green)', textDecoration: 'underline' }}>Switch</a>)
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '0.9rem' }}>
-                      Have an account? <a href="/auth/signin" style={{ color: 'var(--brand-green)', textDecoration: 'underline' }}>Log in</a>
-                    </span>
-                  )
-                )}
-              </div>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', fontWeight: '500' }}>
+                Contact Information
+              </h3>
               
               <div style={{ display: 'grid', gap: '20px' }}>
                 <div>
@@ -341,4 +316,4 @@ const CheckoutPage = () => {
   );
 };
 
-export default CheckoutPage;
+export default CheckoutPage; 

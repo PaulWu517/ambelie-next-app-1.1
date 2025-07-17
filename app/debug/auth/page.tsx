@@ -11,11 +11,6 @@ const AuthDebugPage = () => {
   useEffect(() => {
     // 收集调试信息
     const collectDebugInfo = () => {
-      // 检查是否在客户端环境
-      if (typeof window === 'undefined') {
-        return;
-      }
-
       const info = {
         // 环境变量
         environment: {
@@ -55,9 +50,6 @@ const AuthDebugPage = () => {
   }, [user, isLoggedIn, isLoading]);
 
   const getCookie = (name: string) => {
-    if (typeof document === 'undefined') {
-      return null;
-    }
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
     if (parts.length === 2) return parts.pop()?.split(';').shift();
@@ -110,10 +102,6 @@ const AuthDebugPage = () => {
   };
 
   const clearAllAuth = () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    
     // 清除所有认证相关数据
     document.cookie = 'website-user-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     document.cookie = 'ambelie-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
@@ -195,8 +183,8 @@ const AuthDebugPage = () => {
           <p><strong>认证状态:</strong> {isLoggedIn ? '已登录' : '未登录'}</p>
           <p><strong>加载状态:</strong> {isLoading ? '加载中' : '已完成'}</p>
           <p><strong>用户信息:</strong> {user ? `${user.email} (${user.name})` : '无'}</p>
-          <p><strong>Website Token:</strong> {typeof window !== 'undefined' && getCookie('website-user-token') ? '存在' : '不存在'}</p>
-          <p><strong>Session:</strong> {typeof window !== 'undefined' && getCookie('ambelie-session') ? '存在' : '不存在'}</p>
+          <p><strong>Website Token:</strong> {getCookie('website-user-token') ? '存在' : '不存在'}</p>
+          <p><strong>Session:</strong> {getCookie('ambelie-session') ? '存在' : '不存在'}</p>
         </div>
       </div>
 
