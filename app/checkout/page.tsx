@@ -43,10 +43,20 @@ const CheckoutPage = () => {
     }
   }, [isLoggedIn, user]);
 
-  // 如果购物车为空，重定向到购物车页面
+  // 检查购物车是否为空并重定向
+  useEffect(() => {
+    if (items.length === 0) {
+      router.push('/cart');
+    }
+  }, [items.length, router]);
+
+  // 如果购物车为空，显示加载状态
   if (items.length === 0) {
-    router.push('/cart');
-    return null;
+    return (
+      <div style={{ paddingTop: '120px', textAlign: 'center' }}>
+        <p>Redirecting to cart...</p>
+      </div>
+    );
   }
 
   // 处理创建支付会话
@@ -113,7 +123,9 @@ const CheckoutPage = () => {
 
       if (success && data.url) {
         // 重定向到Stripe Checkout
-        window.location.href = data.url;
+        if (typeof window !== 'undefined') {
+          window.location.href = data.url;
+        }
       } else {
         throw new Error('创建支付会话失败');
       }
@@ -316,4 +328,4 @@ const CheckoutPage = () => {
   );
 };
 
-export default CheckoutPage; 
+export default CheckoutPage;
