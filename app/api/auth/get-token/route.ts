@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../[...nextauth]/route';
+import { authOptions } from '@/lib/auth.config';
 import { getUserSession } from '@/lib/auth-storage';
 
 export async function GET(request: NextRequest) {
