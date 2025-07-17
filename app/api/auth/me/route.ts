@@ -5,10 +5,9 @@ import { cookies } from 'next/headers';
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const sessionId = cookieStore.get('ambelie-session')?.value;
     const websiteUserToken = cookieStore.get('website-user-token')?.value;
-    
-    // 优先使用Website User token
+
+    // 优先使用 Website User token
     if (websiteUserToken) {
       try {
         const backendResponse = await fetch(`${process.env.STRAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'}/api/website-users/me`, {
@@ -19,54 +18,40 @@ export async function GET(request: NextRequest) {
 
         if (backendResponse.ok) {
           const userData = await backendResponse.json();
-          return NextResponse.json(userData);
+          return NextResponse.json({ ...userData, isGuest: false });
         }
+        
+        // 如果 token 无效 (e.g., 401 from backend), 清除无效的 token cookie
+        const response = NextResponse.json(
+          { error: '用户未认证' },
+          { status: 401 }
+        );
+        response.cookies.set('website-user-token', '', { maxAge: -1, path: '/' });
+        return response;
+
       } catch (error) {
         console.error('Error fetching user from backend:', error);
-        // 如果后端验证失败，可以考虑清除无效的token
+        return NextResponse.json(
+          { error: '后端服务错误' },
+          { status: 500 }
+        );
       }
     }
 
-    // 如果没有website-user-token，则回退到本地session
+    // 如果没有 website-user-token，则检查访客 session
+    const sessionId = cookieStore.get('ambelie-session')?.value;
     if (sessionId) {
       const session = getUserSession(sessionId);
       if (session) {
         return NextResponse.json({ 
           email: session.email, 
           name: session.name,
-          isGuest: true // 标记为访客
+          isGuest: true // 明确标记为访客
         });
-      }
-    }
-      try {
-        const backendResponse = await fetch(`${process.env.STRAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'}/api/website-users/me`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${websiteUserToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (backendResponse.ok) {
-          const backendResult = await backendResponse.json();
-          return NextResponse.json({
-            user: {
-              email: backendResult.user.email,
-              name: backendResult.user.name || null,
-              loginTime: backendResult.user.lastLoginAt,
-              firstName: backendResult.user.firstName,
-              lastName: backendResult.user.lastName,
-              phone: backendResult.user.phone,
-            }
-          });
-        }
-      } catch (backendError) {
-        console.error('Backend user info retrieval failed:', backendError);
-        // 如果后端失败，继续使用本地session
       }
     }
     
-    // 如果没有有效的 websiteUserToken，则视为未登录
+    // 如果两种凭证都没有，则视为未登录
     return NextResponse.json(
       { error: '用户未认证' },
       { status: 401 }
