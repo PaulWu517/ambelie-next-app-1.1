@@ -105,16 +105,16 @@ const AuthDebugPage = () => {
   const clearAllAuth = () => {
     // 清除所有认证相关数据
     if (typeof document !== 'undefined') {
-      document.cookie = 'website-user-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'ambelie-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      document.cookie = 'next-auth.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'website-user-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'ambelie-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    document.cookie = 'next-auth.session-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
     }
     
     if (typeof window !== 'undefined') {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.reload();
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.reload();
     }
   };
 

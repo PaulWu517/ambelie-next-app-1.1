@@ -74,22 +74,23 @@ const CheckoutPage = () => {
         'Content-Type': 'application/json',
       };
 
-      // 获取用户token（如果存在）
-      if (isLoggedIn) {
-        try {
-          const tokenResponse = await fetch('/api/auth/get-token', {
-            method: 'GET',
-            credentials: 'include',
-          });
-          if (tokenResponse.ok) {
-            const tokenData = await tokenResponse.json();
-            if (tokenData.token) {
-              headers.Authorization = `Bearer ${tokenData.token}`;
-            }
+      // 尝试获取用户token（无论是否登录都尝试）
+      try {
+        const tokenResponse = await fetch('/api/auth/get-token', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (tokenResponse.ok) {
+          const tokenData = await tokenResponse.json();
+          if (tokenData.success && tokenData.token) {
+            headers.Authorization = `Bearer ${tokenData.token}`;
+            console.log('使用认证token进行支付:', tokenData.source);
+          } else {
+            console.log('游客模式支付:', tokenData.message || 'No valid token');
           }
-        } catch (tokenError) {
-          console.log('无法获取用户token，继续作为游客:', tokenError);
         }
+      } catch (tokenError) {
+        console.log('无法获取token，继续作为游客:', tokenError);
       }
 
       // 调用后端API创建支付会话
@@ -114,7 +115,7 @@ const CheckoutPage = () => {
       if (success && data.url) {
         // 重定向到Stripe Checkout
         if (typeof window !== 'undefined') {
-          window.location.href = data.url;
+        window.location.href = data.url;
         }
       } else {
         throw new Error('创建支付会话失败');
@@ -318,4 +319,4 @@ const CheckoutPage = () => {
   );
 };
 
-export default CheckoutPage; 
+export default CheckoutPage;

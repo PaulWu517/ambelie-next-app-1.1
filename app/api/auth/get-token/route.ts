@@ -30,33 +30,35 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // 方法3: 检查本地session (备选)
+    // 方法3: 检查本地session (备选) - 但不生成临时token
     const sessionId = cookieStore.get('ambelie-session')?.value;
     if (sessionId) {
       const userSession = getUserSession(sessionId);
       if (userSession) {
-        console.log('Found local session, generating temporary token');
-        // 为本地session生成一个临时token
-        const tempToken = `temp_${sessionId}_${Date.now()}`;
+        console.log('Found local session, but no valid backend token - proceeding as guest');
+        // 返回成功但不提供token，允许游客模式支付
         return NextResponse.json({
           success: true,
-          token: tempToken,
-          source: 'local',
-          user: userSession
+          token: null,
+          source: 'guest',
+          user: userSession,
+          message: 'Guest checkout mode'
         });
       }
     }
     
-    console.log('No valid token found in any source');
+    console.log('No valid token found in any source - guest mode');
     return NextResponse.json({
-      success: false,
-      message: 'No token found',
+      success: true,
+      token: null,
+      source: 'guest',
+      message: 'Guest checkout mode',
       debug: {
         hasWebsiteToken: !!websiteUserToken,
         hasNextAuthSession: !!session,
         hasLocalSession: !!sessionId
       }
-    }, { status: 404 });
+    });
     
   } catch (error) {
     console.error('Error retrieving token:', error);
