@@ -105,6 +105,10 @@ export async function POST(request: NextRequest) {
       const backendResult = await backendResponse.json();
 
       if (backendResponse.ok && backendResult.success) {
+        console.log('=== 前端登录成功处理 ===');
+        console.log('后端返回的token长度:', backendResult.token?.length);
+        console.log('用户信息:', backendResult.user);
+        
         // 存储后端返回的token
         const response = NextResponse.json({
           message: 'Login successful!',
@@ -112,13 +116,17 @@ export async function POST(request: NextRequest) {
           token: backendResult.token
         });
 
-        // 设置包含后端token的cookie
-        response.cookies.set('website-user-token', backendResult.token, {
-          httpOnly: true,
+        // 设置包含后端token的cookie - 修复：允许前端访问
+        const cookieOptions = {
+          httpOnly: false, // 改为false，允许前端JavaScript访问
           secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
+          sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'strict' | 'lax' | 'none',
           maxAge: 7 * 24 * 60 * 60 // 7 days
-        });
+        };
+        
+        console.log('前端Cookie设置选项:', cookieOptions);
+        response.cookies.set('website-user-token', backendResult.token, cookieOptions);
+        console.log('✅ 前端Cookie设置完成');
 
         return response;
       } else {
@@ -152,4 +160,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

@@ -11,7 +11,19 @@ export async function GET(request: NextRequest) {
     // 调试信息：列出所有cookie
     const allCookies = cookieStore.getAll();
     console.log('=== Token获取调试信息 ===');
-    console.log('所有Cookie:', allCookies.map(c => ({ name: c.name, hasValue: !!c.value })));
+    console.log('请求URL:', request.url);
+    console.log('请求头:', Object.fromEntries(request.headers.entries()));
+    console.log('所有Cookie数量:', allCookies.length);
+    console.log('所有Cookie详情:', allCookies.map(c => ({ 
+      name: c.name, 
+      hasValue: !!c.value, 
+      valueLength: c.value?.length || 0
+    })));
+    
+    // 尝试从document.cookie读取（如果在客户端）
+    if (typeof window !== 'undefined') {
+      console.log('客户端document.cookie:', document.cookie);
+    }
     
     // 方法1: 检查后端token (优先)
     const websiteUserToken = cookieStore.get('website-user-token')?.value;

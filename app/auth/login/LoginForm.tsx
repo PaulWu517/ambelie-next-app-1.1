@@ -83,9 +83,33 @@ export default function LoginForm() {
       });
 
       const result = await response.json();
-
+      
+      console.log('=== 前端登录响应调试 ===');
+      console.log('响应状态:', response.status);
+      console.log('响应头:', Object.fromEntries(response.headers.entries()));
+      console.log('响应数据:', result);
+      
+      // 检查Set-Cookie头
+      const setCookieHeader = response.headers.get('set-cookie');
+      console.log('Set-Cookie头:', setCookieHeader);
+      
       if (response.ok) {
         setMessage('Login successful!');
+        
+        // 检查cookie是否被设置
+        setTimeout(() => {
+          console.log('登录后检查cookie:');
+          console.log('document.cookie:', document.cookie);
+          
+          // 测试token获取
+          fetch('/api/auth/get-token', { credentials: 'include' })
+            .then(r => r.json())
+            .then(tokenData => {
+              console.log('登录后token获取测试:', tokenData);
+            })
+            .catch(err => console.error('Token获取测试失败:', err));
+        }, 500);
+        
         // Redirect to homepage or user-specified page
         setTimeout(() => {
           router.push('/');
@@ -234,4 +258,4 @@ export default function LoginForm() {
       )}
     </div>
   );
-} 
+}
