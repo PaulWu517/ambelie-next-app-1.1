@@ -75,42 +75,68 @@ const CheckoutPage = () => {
       };
 
       // 尝试获取用户token（无论是否登录都尝试）
+      console.log('=== 支付流程开始 ===');
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+      
       try {
+        console.log('正在获取用户token...');
         const tokenResponse = await fetch('/api/auth/get-token', {
           method: 'GET',
           credentials: 'include',
         });
+        
+        console.log('Token响应状态:', tokenResponse.status);
+        
         if (tokenResponse.ok) {
           const tokenData = await tokenResponse.json();
+          console.log('Token数据:', tokenData);
+          
           if (tokenData.success && tokenData.token) {
             headers.Authorization = `Bearer ${tokenData.token}`;
-            console.log('使用认证token进行支付:', tokenData.source);
+            console.log('✅ 使用认证token进行支付:', tokenData.source);
+            console.log('Token长度:', tokenData.token.length);
           } else {
-            console.log('游客模式支付:', tokenData.message || 'No valid token');
+            console.log('⚠️ 游客模式支付:', tokenData.message || 'No valid token');
           }
+        } else {
+          console.log('❌ Token请求失败:', tokenResponse.status);
         }
       } catch (tokenError) {
-        console.log('无法获取token，继续作为游客:', tokenError);
+        console.log('❌ 无法获取token，继续作为游客:', tokenError);
       }
 
       // 调用后端API创建支付会话
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/create-checkout-session`, {
+      const paymentUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/payments/create-checkout-session`;
+      const paymentPayload = {
+        orderItems,
+        customerEmail: customerInfo.email,
+        customerName: customerInfo.name,
+        successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/order/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/cart`,
+        metadata: {
+          customerPhone: customerInfo.phone,
+          items: JSON.stringify(orderItems)
+        }
+      };
+      
+      console.log('=== 支付API请求 ===');
+      console.log('请求URL:', paymentUrl);
+      console.log('请求头:', headers);
+      console.log('请求体:', paymentPayload);
+      
+      const response = await fetch(paymentUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          orderItems,
-          customerEmail: customerInfo.email,
-          customerName: customerInfo.name,
-          successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/order/success?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/cart`,
-          metadata: {
-            customerPhone: customerInfo.phone,
-            items: JSON.stringify(orderItems)
-          }
-        }),
+        body: JSON.stringify(paymentPayload),
       });
-
-      const { success, data } = await response.json();
+      
+      console.log('支付API响应状态:', response.status);
+      console.log('响应头:', Object.fromEntries(response.headers.entries()));
+      
+      const responseData = await response.json();
+      console.log('支付API响应数据:', responseData);
+      
+      const { success, data } = responseData;
 
       if (success && data.url) {
         // 重定向到Stripe Checkout

@@ -8,10 +8,17 @@ export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     
+    // 调试信息：列出所有cookie
+    const allCookies = cookieStore.getAll();
+    console.log('=== Token获取调试信息 ===');
+    console.log('所有Cookie:', allCookies.map(c => ({ name: c.name, hasValue: !!c.value })));
+    
     // 方法1: 检查后端token (优先)
     const websiteUserToken = cookieStore.get('website-user-token')?.value;
+    console.log('website-user-token存在:', !!websiteUserToken);
+    
     if (websiteUserToken) {
-      console.log('Found website-user-token');
+      console.log('Found website-user-token, length:', websiteUserToken.length);
       return NextResponse.json({
         success: true,
         token: websiteUserToken,
