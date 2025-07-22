@@ -9,8 +9,8 @@ export default function Footer() {
         <div className="footer-left">
           <div className="footer-brand">AMBELIE</div>
           <div className="footer-address">
-            <p>Shanghai: No. 376 Wukang Road, Xuhui District</p>
-            <p>Hangzhou: No. 87 Hefang Street, Shangcheng District</p>
+            <p>Shanghai: No. 21, Kangping Road, Xuhui District</p>
+            <p>Hangzhou: No. 1788 Hongning Road, Xiaoshan District</p>
             <p>Email: info@ambelie.com</p>
           </div>
           <div className="footer-copyright">© 2024, AMBELIE. ALL RIGHTS RESERVED</div>

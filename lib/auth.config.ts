@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
 
         try {
           // 验证验证码
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'
+          const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app'
           const response = await fetch(`${apiUrl}/api/auth/verify-code`, {
             method: 'POST',
             headers: {
@@ -76,4 +76,4 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development',
-} 
+}

@@ -168,7 +168,9 @@
 }
 
 .scrolled .mainNavigation a:hover,
-.menuActive .mainNavigation a:hover {
+.menuActive .mainNavigation a:hover,
+.scrolled .menuItem.active > a,
+.menuActive .menuItem.active > a {
     color: #880913 !important;
 }
 

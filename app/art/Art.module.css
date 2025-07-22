@@ -1,0 +1,353 @@
+/* 容器样式 */
+.container {
+  max-width: 85%;
+  margin: 140px auto 40px;
+  padding: 0 20px;
+}
+
+/* 页面标题区域 */
+.pageHeader {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.pageTitle {
+  font-family: var(--font-heading);
+  font-size: 2.5em;
+  font-weight: 400;
+  margin-bottom: 20px;
+  color: var(--brand-black);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.pageDescription {
+  font-family: var(--font-body);
+  font-size: 1.1em;
+  color: #666;
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* 分类导航 */
+.categoryNav {
+  margin-bottom: 60px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.categoryTabs {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+.categoryTabContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-bottom: 5px;
+}
+
+.categoryTabContainer:hover .dropdown {
+  display: block;
+}
+
+.categoryTab {
+  background: none;
+  border: none;
+  padding: 15px 20px 15px 25px;
+  font-family: var(--font-body);
+  font-size: 1em;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+}
+
+.dropdownIndicator {
+  padding: 15px 5px;
+  font-family: var(--font-body);
+  font-size: 0.8em;
+  color: #666;
+  transition: all 0.3s ease;
+  margin-left: -5px;
+  pointer-events: none;
+}
+
+.categoryTabContainer:hover .dropdownIndicator,
+.dropdownIndicator.active {
+  color: #880913;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 100%;
+  width: max-content;
+  margin-top: 0;
+  padding-top: 5px;
+}
+
+.dropdownItem {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 12px 20px;
+  font-family: var(--font-body);
+  font-size: 0.9em;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dropdownItem:hover {
+  background-color: #f5f5f5;
+  color: #880913;
+}
+
+.dropdownItem.active {
+  background-color: #880913;
+  color: white;
+}
+
+.dropdownItem:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+.dropdownItem:last-child {
+  border-radius: 0 0 4px 4px;
+}
+
+/* 为所有分类按钮添加下划线，默认宽度为0 */
+.categoryTab::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background-color: #880913;
+  transition: width 0.3s ease;
+}
+
+/* 悬停时显示红色字体和下划线动画 */
+.categoryTab:hover {
+  color: #880913;
+}
+
+.categoryTab:hover::after {
+  width: 80%;
+}
+
+/* 激活状态的红色字体和下划线始终显示 */
+.categoryTab.active {
+  color: #880913;
+  font-weight: 500;
+}
+
+.categoryTab.active::after {
+  width: 80%;
+}
+
+/* 产品区域 */
+.productsSection {
+  min-height: 400px;
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #666;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--brand-black);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 无产品状态 */
+.noProducts {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+  color: #666;
+}
+
+.noProducts p {
+  font-family: var(--font-body);
+  font-size: 1.1em;
+  margin-bottom: 15px;
+}
+
+.noProductsSubtext {
+  font-size: 0.95em !important;
+  color: #999 !important;
+  margin-bottom: 30px !important;
+}
+
+.browseLink {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: var(--brand-black);
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.browseLink:hover {
+  background-color: #333;
+  transform: translateY(-2px);
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .productGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    max-width: 95%;
+    margin-top: 120px;
+    padding: 0 15px;
+  }
+
+  .pageTitle {
+    font-size: 2em;
+  }
+
+  .pageDescription {
+    font-size: 1em;
+  }
+
+  .categoryTabs {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .categoryTabContainer {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .categoryTab {
+    padding: 12px 20px;
+    font-size: 0.9em;
+  }
+
+  .productGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .dropdown {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    border-radius: 0;
+    margin-top: 10px;
+    padding-top: 0;
+  }
+
+  .dropdownItem {
+    padding: 10px 15px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .dropdownItem:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .productGrid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .pageTitle {
+    font-size: 1.8em;
+  }
+
+  .categoryTab {
+    padding: 10px 15px;
+    font-size: 0.85em;
+  }
+
+  .noProducts {
+    padding: 60px 15px;
+  }
+
+  .noProducts p {
+    font-size: 1em;
+  }
+
+  .browseLink {
+    padding: 10px 20px;
+    font-size: 0.85em;
+  }
+}
+
+/* 隐藏下拉菜单的默认状态 */
+.dropdown {
+  display: none;
+}
+
+/* 当容器被悬停时显示下拉菜单 */
+.categoryTabContainer:hover .dropdown {
+  display: block;
+}
+
+/* 确保下拉菜单在移动设备上的可见性 */
+@media (max-width: 768px) {
+  .categoryTabContainer:hover .dropdown,
+  .categoryTabContainer:focus-within .dropdown {
+    display: block;
+  }
+}

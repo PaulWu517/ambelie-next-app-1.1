@@ -147,7 +147,7 @@ export default async function HomePage() {
         </div>
         <div className="new-arrivals-grid">
           <article className="product-item">
-            <Link href="/category/oriental-furniture" className="product-link">
+            <Link href="/oriental-furniture" className="product-link">
               <div className="product-image">
                 <Image src="/assets/feature_collection/ORIENTAL FURNITURE_1.jpg" alt="Oriental Furniture Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
                 <Image src="/assets/feature_collection/ORIENTAL FURNITURE_2.jpg" alt="Oriental Furniture Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
@@ -221,65 +221,66 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Category Showcase Section (Featured Collections) */}
+      {/* Category Showcase Section (Featured Fashion) */}
       <section className="category-showcase-section">
         <div className="section-header">
-          <h2 className="section-heading">Featured Collections</h2>
+          <h2 className="section-heading">Featured Fashion</h2>
         </div>
-        <Link href="/category/all" className="view-more-link see-more-link">View All Categories</Link>
+        <Link href="/category/fashion" className="view-more-link see-more-link">View All Categories</Link>
         <div className="category-showcase-grid">
           {/*竖版4张*/}
           <article className="product-item">
-            <Link href="/category/cabinets" className="product-link">
+            <Link href="/category/fashion" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/Cabinets-1.jpg" alt="Antique and Modern Cabinets Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/Cabinets-2.jpg" alt="Display of Cabinets" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_fashion/SHOP BY CATEGORY-1.JPG" alt="Shop by Category Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_fashion/SHOP BY CATEGORY-2.JPG" alt="Shop by Category Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Cabinets</h2>
-                <p className="product-period">Antique & Modern</p>
+                <h2 className="product-title">SHOP BY CATEGORY</h2>
+                <p className="product-period">Fashion Collections</p>
               </div>
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/chairs" className="product-link">
+            <Link href="/category/fashion" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/Chairs-1.jpg" alt="Collection of Antique and Modern Chairs" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/Chairs-2.jpg" alt="Side view of Chair Collection" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_fashion/RUNWAY ARCHIVE-1.jpg" alt="Runway Archive Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_fashion/RUNWAY ARCHIVE-2.jpg" alt="Runway Archive Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Chairs</h2>
-                <p className="product-period">Antique & Modern</p>
+                <h2 className="product-title">RUNWAY ARCHIVE</h2>
+                <p className="product-period">Designer Collections</p>
               </div>
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/sofas" className="product-link">
+            <Link href="/category/fashion" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/Sofa-1.jpg" alt="Various Styles of Sofas" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/Sofa-2.jpg" alt="Sofa Collection Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_fashion/CURATED COLLECTION-1.JPG" alt="Curated Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_fashion/CURATED COLLECTION-2.JPG" alt="Curated Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Sofas</h2>
-                <p className="product-period">Various Styles</p>
+                <h2 className="product-title">CURATED COLLECTION</h2>
+                <p className="product-period">Exclusive Pieces</p>
               </div>
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/coffee-tables" className="product-link">
+            <Link href="/category/fashion" className="product-link">
               <div className="product-image">
-                <Image src="/assets/images/Coffee Tables-1.jpg" alt="Collection of Coffee Tables" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/images/Coffee Tables-2.jpg" alt="Top view of Coffee Table Collection" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+                <Image src="/assets/feature_fashion/BRAND PARTNERS-1.JPG" alt="Brand Partners Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_fashion/BRAND PARTNERS-2.JPG" alt="Brand Partners Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
               </div>
               <div className="product-info">
-                <h2 className="product-title">Coffee Tables</h2>
-                <p className="product-period">Various Styles</p>
+                <h2 className="product-title">BRAND PARTNERS</h2>
+                <p className="product-period">Collaborative Works</p>
               </div>
             </Link>
           </article>
         </div>
         
-        {/* 横版展示区域 */}
+        {/* 横版展示区域 - 已注释 */}
+        {/*
         <div className="featured-categories">
           <article className="product-item featured-item">
               <Link href="/category/dividers" className="product-link">
@@ -310,6 +311,7 @@ export default async function HomePage() {
               </Link>
           </article>
         </div>
+        */}
       </section>
 
       {/* Second Fullscreen Exhibition Section (Dynamic Project) */}

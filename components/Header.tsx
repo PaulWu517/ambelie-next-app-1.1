@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation'; // 引入 usePathname 来获取当前路径
+import { usePathname, useRouter } from 'next/navigation'; // 引入 usePathname 和 useRouter
 import { Search, User, ShoppingCart, LogOut, FileText } from 'lucide-react'; // Import icons
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useCartStore } from '@/lib/stores/cartStore';
@@ -18,6 +18,7 @@ import UserMenu from './UserMenu';
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const isHomepage = pathname === '/';
   
   // 用户认证状态
@@ -388,85 +389,85 @@ export default function Header() {
 
   // 更新导航链接结构
   const orientalFurnitureLinks = [
-      { name: 'SCREENS', href: '/category/screens' },
-    { name: 'CHAIRS', href: '/category/chairs' },
-    { name: 'TABLES', href: '/category/tables' },
-      { name: 'CABINETS & CUPBOARDS', href: '/category/cabinets-cupboards' },
-      { name: 'RUGS', href: '/category/rugs' },
-    { name: 'OTHERS', href: '/category/others' },
+      { name: 'SCREENS', href: '/oriental-furniture?category=screens' },
+    { name: 'CHAIRS', href: '/oriental-furniture?category=chairs' },
+    { name: 'TABLES', href: '/oriental-furniture?category=tables' },
+      { name: 'CABINETS & CUPBOARDS', href: '/oriental-furniture?category=cabinets-and-cupboards' },
+      { name: 'RUGS', href: '/oriental-furniture?category=rugs' },
+    { name: 'OTHERS', href: '/oriental-furniture?category=others' },
   ];
 
   const antiqueFurnitureLinks = {
       seating: [
-      { name: 'CHAIRS', href: '/category/antique-chairs' },
-        { name: 'ARMCHAIRS', href: '/category/armchairs' },
-        { name: 'SOFA', href: '/category/sofa' },
+      { name: 'CHAIRS', href: '/antique-furniture?category=seating&subcategory=antique-chairs' },
+        { name: 'ARMCHAIRS', href: '/antique-furniture?category=seating&subcategory=armchairs' },
+        { name: 'SOFA', href: '/antique-furniture?category=seating&subcategory=sofa' },
       ],
       storage: [
-        { name: 'CABINETS', href: '/category/cabinets' },
-        { name: 'DRAWERS', href: '/category/drawers' },
-        { name: 'NIGHT STANDS', href: '/category/night-stands' },
+        { name: 'CABINETS', href: '/antique-furniture?category=storage&subcategory=cabinets' },
+        { name: 'DRAWERS', href: '/antique-furniture?category=storage&subcategory=drawers' },
+        { name: 'NIGHT STANDS', href: '/antique-furniture?category=storage&subcategory=night-stands' },
       ],
       tables: [
-        { name: 'DINING TABLES', href: '/category/dining-tables' },
-        { name: 'COFFEE TABLES', href: '/category/coffee-tables' },
-        { name: 'SIDE TABLES', href: '/category/side-tables' },
+        { name: 'DINING TABLES', href: '/antique-furniture?category=tables&subcategory=dining-tables' },
+        { name: 'COFFEE TABLES', href: '/antique-furniture?category=tables&subcategory=coffee-tables' },
+        { name: 'SIDE TABLES', href: '/antique-furniture?category=tables&subcategory=side-tables' },
       ],
       others: [
-      { name: 'DESIGNER COLLECTIONS', href: '/category/designer-collections' },
+      { name: 'DESIGNER COLLECTIONS', href: '/antique-furniture?category=others&subcategory=designer-collections' },
       ],
   };
 
   const lightingLinks = {
       regular: [
-        { name: 'WALL LIGHTS', href: '/category/wall-lights' },
-        { name: 'TABLE LAMPS', href: '/category/table-lamps' },
-        { name: 'FLOOR LAMPS', href: '/category/floor-lamps' },
-        { name: 'PENDANT', href: '/category/pendant' },
+        { name: 'WALL LIGHTS', href: '/lighting?category=category&subcategory=wall-lights' },
+        { name: 'TABLE LAMPS', href: '/lighting?category=category&subcategory=table-lamps' },
+        { name: 'FLOOR LAMPS', href: '/lighting?category=category&subcategory=floor-lamps' },
+        { name: 'PENDANT', href: '/lighting?category=category&subcategory=pendant' },
       ],
       fortuny: [
-        { name: 'SILK LAMPS', href: '/category/silk-lamps' },
-        { name: 'GLASS LAMPS', href: '/category/glass-lamps' },
+        { name: 'SILK LAMPS', href: '/lighting?category=fortuny-collection&subcategory=silk-lamps' },
+        { name: 'GLASS LAMPS', href: '/lighting?category=fortuny-collection&subcategory=glass-lamps' },
       ],
       yamagiwa: [
-      { name: 'FRANK LLOYD WRIGHT COLLECTION', href: '/category/frank-lloyd-wright' },
-      { name: 'JACOBSSON COLLECTION', href: '/category/jacobsson' },
+      { name: 'FRANK LLOYD WRIGHT COLLECTION', href: '/lighting?category=yamagiwa-collection&subcategory=frank-lloyd-wright-collection' },
+      { name: 'JACOBSSON COLLECTION', href: '/lighting?category=yamagiwa-collection&subcategory=jacobsson-collection' },
       ],
   };
 
   const artLinks = {
       regular: [
-        { name: 'SCULPTURE', href: '/category/sculpture' },
-        { name: 'PAINTINGS', href: '/category/paintings' },
-        { name: 'DRAWINGS & WATERCOLOR', href: '/category/drawings-watercolor' }, 
+        { name: 'SCULPTURE', href: '/art?category=category&subcategory=sculpture' },
+        { name: 'PAINTINGS', href: '/art?category=category&subcategory=paintings' },
+        { name: 'DRAWINGS & WATERCOLOR', href: '/art?category=category&subcategory=drawings-watercolor' }, 
       ],
     oriental: [
-        { name: 'CALLIGRAPHY', href: '/category/calligraphy' },
-        { name: 'EMBROIDERY', href: '/category/embroidery' },
+        { name: 'CALLIGRAPHY', href: '/art?category=oriental-art&subcategory=calligraphy' },
+        { name: 'EMBROIDERY', href: '/art?category=oriental-art&subcategory=embroidery' },
       ],
   };
 
   const fashionLinks = {
     shopByCategory: [
-      { name: 'TOPS', href: '/category/tops' },
-      { name: 'JACKETS', href: '/category/jackets' },
-      { name: 'DRESSES', href: '/category/dresses' },
+      { name: 'TOPS', href: '/fashion?category=category&subcategory=tops' },
+      { name: 'JACKETS', href: '/fashion?category=category&subcategory=jackets' },
+      { name: 'DRESSES', href: '/fashion?category=category&subcategory=dresses' },
     ],
     runwayArchive: [
-      { name: 'TOPS', href: '/category/runway-tops' },
-      { name: 'JACKETS', href: '/category/runway-jackets' },
-      { name: 'DRESSES', href: '/category/runway-dresses' },
+      { name: 'TOPS', href: '/fashion?category=runway-archive&subcategory=runway-tops' },
+      { name: 'JACKETS', href: '/fashion?category=runway-archive&subcategory=runway-jackets' },
+      { name: 'DRESSES', href: '/fashion?category=runway-archive&subcategory=runway-dresses' },
     ],
     curatedCollection: [
-      { name: 'TOPS', href: '/category/curated-tops' },
-      { name: 'JACKETS', href: '/category/curated-jackets' },
-      { name: 'DRESSES', href: '/category/curated-dresses' },
+      { name: 'TOPS', href: '/fashion?category=curated-collection&subcategory=curated-tops' },
+      { name: 'JACKETS', href: '/fashion?category=curated-collection&subcategory=curated-jackets' },
+      { name: 'DRESSES', href: '/fashion?category=curated-collection&subcategory=curated-dresses' },
     ],
     brandPartners: [
-      { name: 'FORTUNY', href: '/category/fortuny' },
-      { name: 'T.BA', href: '/category/tba' },
-      { name: 'DANIEL HANSON', href: '/category/daniel-hanson' },
-      { name: 'ARCHIVIO J.M.RIBOT', href: '/category/archivio-jm-ribot' },
+      { name: 'FORTUNY', href: '/fashion?category=brand-partners&subcategory=fortuny' },
+      { name: 'T.BA', href: '/fashion?category=brand-partners&subcategory=t-ba' },
+      { name: 'DANIEL HANSON', href: '/fashion?category=brand-partners&subcategory=daniel-hanson' },
+      { name: 'ARCHIVIO J.M.RIBOT', href: '/fashion?category=brand-partners&subcategory=archivio-jm-ribot' },
     ],
   };
 
@@ -501,6 +502,8 @@ export default function Header() {
             className={styles.headerSearchIcon}
           onMouseEnter={() => setIsSearchHovered(true)}
           onMouseLeave={() => setIsSearchHovered(false)}
+          onClick={() => router.push('/search')}
+          style={{ cursor: 'pointer' }}
         >
             <Search size={20} className={styles.searchIcon} style={{ color: searchIconColor }} />
           {isSearchHovered && <span className="search-text" style={{ color: searchIconColor }}>SEARCH</span>}
@@ -615,12 +618,12 @@ export default function Header() {
               <div className={`furniture-sub-column animate-item ${runOrientalFurnitureAnimation ? 'animated delay-100' : ''}`}>
                 <h3><Link href="/oriental-furniture">SHOP BY CATEGORY</Link></h3>
                 <div className="oriental-single-row-container">
-                  <Link href="/category/screens" className="oriental-category-link">SCREENS</Link>
-                  <Link href="/category/chairs" className="oriental-category-link">CHAIRS</Link>
-                  <Link href="/category/tables" className="oriental-category-link">TABLES</Link>
-                  <Link href="/category/cabinets-cupboards" className="oriental-category-link">CABINETS & CUPBOARDS</Link>
-                  <Link href="/category/rugs" className="oriental-category-link">RUGS</Link>
-                  <Link href="/category/others" className="oriental-category-link">OTHERS</Link>
+                  <Link href="/oriental-furniture?category=screens" className="oriental-category-link">SCREENS</Link>
+                  <Link href="/oriental-furniture?category=chairs" className="oriental-category-link">CHAIRS</Link>
+                  <Link href="/oriental-furniture?category=tables" className="oriental-category-link">TABLES</Link>
+                  <Link href="/oriental-furniture?category=cabinets-and-cupboards" className="oriental-category-link">CABINETS & CUPBOARDS</Link>
+                  <Link href="/oriental-furniture?category=rugs" className="oriental-category-link">RUGS</Link>
+                  <Link href="/oriental-furniture?category=others" className="oriental-category-link">OTHERS</Link>
                 </div>
               </div>
             </div>
@@ -639,7 +642,7 @@ export default function Header() {
             <div className={`furniture-column antique-group animate-item ${runAntiqueFurnitureAnimation ? 'animated delay-50' : ''}`}>
               <div className="antique-sub-columns-container">
                 <div className={`furniture-sub-column animate-item ${runAntiqueFurnitureAnimation ? 'animated delay-100' : ''}`}>
-                  <h3><Link href="/antique-furniture/seating">SEATING</Link></h3>
+                  <h3><Link href="/antique-furniture?category=seating">SEATING</Link></h3>
                   <ul>
                     {antiqueFurnitureLinks.seating.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -647,7 +650,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runAntiqueFurnitureAnimation ? 'animated delay-150' : ''}`}>
-                  <h3><Link href="/antique-furniture/storage">STORAGE</Link></h3>
+                  <h3><Link href="/antique-furniture?category=storage">STORAGE</Link></h3>
                   <ul>
                     {antiqueFurnitureLinks.storage.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -655,7 +658,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runAntiqueFurnitureAnimation ? 'animated delay-200' : ''}`}>
-                  <h3><Link href="/antique-furniture/tables">TABLES</Link></h3>
+                  <h3><Link href="/antique-furniture?category=tables">TABLES</Link></h3>
                   <ul>
                     {antiqueFurnitureLinks.tables.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -663,7 +666,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runAntiqueFurnitureAnimation ? 'animated delay-250' : ''}`}>
-                  <h3><Link href="/antique-furniture/others">OTHERS</Link></h3>
+                  <h3><Link href="/antique-furniture?category=others">OTHERS</Link></h3>
                   <ul>
                     {antiqueFurnitureLinks.others.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -687,7 +690,7 @@ export default function Header() {
             <div className={`furniture-column lighting-group animate-item ${runLightingAnimation ? 'animated delay-50' : ''}`}>
               <div className="decor-sub-columns-container"> 
                 <div className={`furniture-sub-column animate-item ${runLightingAnimation ? 'animated delay-100' : ''}`}>
-                  <h3><Link href="/lighting">SHOP BY CATEGORY</Link></h3>
+                  <h3><Link href="/lighting?category=category">SHOP BY CATEGORY</Link></h3>
                   <ul>
                     {lightingLinks.regular.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -695,7 +698,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runLightingAnimation ? 'animated delay-150' : ''}`}>
-                  <h3><Link href="/lighting/fortuny">FORTUNY COLLECTION</Link></h3>
+                  <h3><Link href="/lighting?category=fortuny-collection">FORTUNY COLLECTION</Link></h3>
                   <ul>
                     {lightingLinks.fortuny.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -703,7 +706,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runLightingAnimation ? 'animated delay-200' : ''}`}>
-                  <h3><Link href="/lighting/yamagiwa">YAMAGIWA COLLECTION</Link></h3>
+                  <h3><Link href="/lighting?category=yamagiwa-collection">YAMAGIWA COLLECTION</Link></h3>
                   <ul>
                     {lightingLinks.yamagiwa.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -727,7 +730,7 @@ export default function Header() {
             <div className={`furniture-column art-group animate-item ${runArtAnimation ? 'animated delay-50' : ''}`}>
               <div className="decor-sub-columns-container"> 
                 <div className={`furniture-sub-column animate-item ${runArtAnimation ? 'animated delay-100' : ''}`}>
-                  <h3><Link href="/art">SHOP BY CATEGORY</Link></h3>
+                  <h3><Link href="/art?category=category">CATEGORY</Link></h3>
                   <ul>
                     {artLinks.regular.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -735,7 +738,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runArtAnimation ? 'animated delay-150' : ''}`}>
-                  <h3><Link href="/art/oriental-art">ORIENTAL ART</Link></h3>
+                  <h3><Link href="/art?category=oriental-art">ORIENTAL ART</Link></h3>
                   <ul>
                     {artLinks.oriental.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -759,7 +762,7 @@ export default function Header() {
             <div className={`furniture-column fashion-main-group animate-item ${runFashionAnimation ? 'animated delay-50' : ''}`}>
               <div className="fashion-columns-container"> 
                 <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-100' : ''}`}>
-                  <h3><Link href="/fashion">SHOP BY CATEGORY</Link></h3>
+                  <h3><Link href="/fashion?category=category">SHOP BY CATEGORY</Link></h3>
                   <ul>
                     {fashionLinks.shopByCategory.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -767,7 +770,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-150' : ''}`}>
-                  <h3><Link href="/fashion/runway-archive">RUNWAY ARCHIVE</Link></h3>
+                  <h3><Link href="/fashion?category=runway-archive">RUNWAY ARCHIVE</Link></h3>
                   <ul>
                     {fashionLinks.runwayArchive.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -775,7 +778,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-200' : ''}`}>
-                  <h3><Link href="/fashion/curated-collection">CURATED COLLECTION</Link></h3>
+                  <h3><Link href="/fashion?category=curated-collection">CURATED COLLECTION</Link></h3>
                   <ul>
                     {fashionLinks.curatedCollection.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -783,7 +786,7 @@ export default function Header() {
                   </ul>
                 </div>
                 <div className={`furniture-sub-column animate-item ${runFashionAnimation ? 'animated delay-250' : ''}`}>
-                  <h3><Link href="/fashion/brand-partners">BRAND PARTNERS</Link></h3>
+                  <h3><Link href="/fashion?category=brand-partners">BRAND PARTNERS</Link></h3>
                   <ul>
                     {fashionLinks.brandPartners.map((link) => (
                       <li key={link.name} className="dropdown-menu-item"><Link href={link.href}>{link.name}</Link></li>
@@ -820,4 +823,4 @@ export default function Header() {
       )}
     </>
   );
-} 
+}

@@ -1,0 +1,294 @@
+/* 搜索页面容器 */
+.container {
+  min-height: 100vh;
+  padding: 120px 20px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 搜索头部 */
+.searchHeader {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.pageTitle {
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin-bottom: 30px;
+  color: #333;
+  letter-spacing: 2px;
+}
+
+/* 搜索表单 */
+.searchForm {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.searchInputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+.searchInputContainer:focus-within {
+  border-color: #333;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 15px 20px;
+  border: none;
+  outline: none;
+  font-size: 1.1rem;
+  background: transparent;
+}
+
+.searchInput::placeholder {
+  color: #999;
+}
+
+.searchButton {
+  padding: 15px 20px;
+  border: none;
+  background: #333;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchButton:hover {
+  background: #555;
+}
+
+/* 结果区域 */
+.resultsSection {
+  margin-top: 40px;
+}
+
+.resultsHeader {
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.resultsCount {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0;
+}
+
+.searchTerm {
+  font-weight: 500;
+  color: #333;
+}
+
+/* 加载状态 */
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loading p {
+  font-size: 1.2rem;
+  color: #666;
+  margin: 0;
+}
+
+/* 错误状态 */
+.error {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.error p {
+  font-size: 1.2rem;
+  color: #e74c3c;
+  margin: 0;
+}
+
+/* 无结果状态 */
+.noResults {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.noResults p {
+  font-size: 1.2rem;
+  color: #666;
+  margin: 0 0 10px 0;
+}
+
+.noResultsHint {
+  font-size: 1rem !important;
+  color: #999 !important;
+}
+
+/* 产品网格 */
+.productsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+  margin-top: 20px;
+}
+
+/* 产品卡片 */
+.productCard {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+  text-align: left;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.productCard:hover {
+  transform: translateY(-5px);
+}
+
+.productImage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 15px;
+  background-color: #f7f5f2;
+}
+
+.productImage img {
+  width: 100%;
+  height: auto;
+  display: block;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  transition: filter 0.4s ease, opacity 0.4s ease;
+}
+
+.mainImage {
+  opacity: 1;
+}
+
+.hoverImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  object-fit: cover;
+  transition: opacity 0.4s ease;
+  z-index: 1;
+}
+
+.productCard:hover .mainImage {
+  opacity: 0;
+}
+
+.productCard:hover .hoverImage {
+  opacity: 1;
+}
+
+.noImage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #f0f0f0;
+  color: #999;
+}
+
+.noImage p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* 产品信息 */
+.productInfo {
+  padding: 0;
+  margin-top: 15px;
+}
+
+.productName {
+  font-family: var(--font-body);
+  font-size: 1em;
+  font-weight: 400;
+  margin: 0 0 5px 0;
+  color: var(--brand-black);
+  transition: color 0.3s ease;
+}
+
+.productPeriod {
+  font-family: var(--font-body);
+  font-size: 0.85em;
+  color: #666;
+  margin: 0;
+}
+
+.productCard:hover .productName {
+  color: var(--brand-red);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .container {
+    padding: 100px 15px 30px;
+  }
+
+  .pageTitle {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+
+  .searchForm {
+    max-width: 100%;
+  }
+
+  .searchInput {
+    padding: 12px 15px;
+    font-size: 1rem;
+  }
+
+  .searchButton {
+    padding: 12px 15px;
+  }
+
+  .productsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
+
+  .resultsCount {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 90px 10px 20px;
+  }
+
+  .pageTitle {
+    font-size: 1.8rem;
+  }
+
+  .productsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+  }
+
+  .productName {
+    font-size: 1rem;
+  }
+
+  .productPeriod {
+    font-size: 0.85rem;
+  }
+}

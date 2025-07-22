@@ -52,13 +52,14 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    margin-left: -10rem;  /* 向左移动文字区域 */
 }
 
 /* 信息内容 */
 .productInfoContent {
     flex: 1;
     overflow-y: auto;
-    max-width: 90%;
+    max-width: 95%;  /* 增加内容宽度 */
     margin: 0 auto;
 }
 
@@ -176,11 +177,11 @@
     background: transparent;
     color: var(--brand-black);
     text-decoration: none;
-    padding: 18px 32px;
+    padding: 14px 24px;  /* 减小按钮内边距 */
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    min-width: 220px;
+    min-width: 180px;  /* 减小按钮最小宽度 */
     white-space: nowrap;
 }
 
@@ -248,7 +249,7 @@
 
 .buttonText {
     font-family: var(--font-body);
-    font-size: 14px;
+    font-size: 12px;  /* 减小字体大小 */
     font-weight: 500;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -377,6 +378,23 @@
     margin: 0;
 }
 
+/* 加载状态和无产品状态样式 */
+.loading {
+    text-align: center;
+    padding: 40px 0;
+    font-family: var(--font-body);
+    font-size: 1.1em;
+    color: #666;
+}
+
+.noProducts {
+    text-align: center;
+    padding: 40px 0;
+    font-family: var(--font-body);
+    font-size: 1.1em;
+    color: #666;
+}
+
 /* 响应式调整 */
 @media (max-width: 992px) {
     .productDetailContainer {
@@ -475,4 +493,4 @@
     .relatedPeriod {
         font-size: 0.85em;
     }
-} 
+}

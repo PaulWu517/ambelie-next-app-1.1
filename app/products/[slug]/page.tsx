@@ -9,6 +9,12 @@ interface ImageItem {
   alternativeText?: string | null;
 }
 
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -22,6 +28,7 @@ interface Product {
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;
   slug: string;
+  category?: Category;
 }
 
 interface StrapiResponse {
@@ -37,7 +44,7 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
-    const res = await fetch(`${API_URL}/api/products?filters[slug][$eq]=${slug}&populate=images`, {
+    const res = await fetch(`${API_URL}/api/products?filters[slug][$eq]=${slug}&populate[0]=images&populate[1]=category`, {
       cache: 'no-store',
       signal: controller.signal,
       headers: {
@@ -95,7 +102,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   return (
     <main className={`product-detail-page ${styles.subpageContent}`}>
       <ProductDisplay product={product} API_URL={API_URL} />
-      <RelatedProducts />
+      <RelatedProducts currentProduct={product} />
     </main>
   );
-} 
+}

@@ -74,9 +74,12 @@ const CheckoutPage = () => {
         'Content-Type': 'application/json',
       };
 
+      // 使用正确的API URL，提供多个回退选项
+      const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app';
+      
       // 尝试获取用户token（无论是否登录都尝试）
       console.log('=== 支付流程开始 ===');
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+      console.log('API URL:', apiUrl);
       
       try {
         console.log('正在获取用户token...');
@@ -106,12 +109,12 @@ const CheckoutPage = () => {
       }
 
       // 调用后端API创建支付会话
-      const paymentUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/payments/create-checkout-session`;
+      const paymentUrl = `${apiUrl}/api/payments/create-checkout-session`;
       const paymentPayload = {
         orderItems,
         customerEmail: customerInfo.email,
         customerName: customerInfo.name,
-        successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/order/success?session_id={CHECKOUT_SESSION_ID}`,
+        successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/orders`,
         cancelUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/cart`,
         metadata: {
           customerPhone: customerInfo.phone,
