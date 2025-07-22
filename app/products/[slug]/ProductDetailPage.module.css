@@ -52,7 +52,7 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    margin-left: -10rem;  /* 向左移动文字区域 */
+    margin-left: 20px;  /* 适当的间距，避免与图片重叠 */
 }
 
 /* 信息内容 */
@@ -407,6 +407,7 @@
     .textColumn {
         position: static;
         min-height: auto;
+        margin-left: 0; /* 移动端重置margin */
     }
 
     .productInfoContent {
