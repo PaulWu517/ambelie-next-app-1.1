@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -37,7 +37,7 @@ interface SubCategoryItem {
 }
 
 // --- COMPONENT ---
-export default function LightingPage() {
+function LightingContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('category');
@@ -403,5 +403,23 @@ export default function LightingPage() {
         )}
       </section>
     </main>
+  );
+}
+
+export default function LightingPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    }>
+      <LightingContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -21,7 +21,7 @@ interface Product {
   hover_image: ImageItem | null;
 }
 
-const SearchPage = () => {
+const SearchContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
@@ -204,6 +204,26 @@ const SearchPage = () => {
         )}
       </section>
     </main>
+  );
+};
+
+// 主要导出组件，使用 Suspense 包装
+const SearchPage = () => {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '50vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading search page...
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 };
 

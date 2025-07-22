@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -29,7 +29,7 @@ interface SubCategory {
 }
 
 // --- COMPONENT ---
-export default function OrientalFurniturePage() {
+function OrientalFurnitureContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('screens');
@@ -195,5 +195,23 @@ export default function OrientalFurniturePage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function OrientalFurniturePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    }>
+      <OrientalFurnitureContent />
+    </Suspense>
   );
 }

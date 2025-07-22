@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -37,7 +37,7 @@ interface SubCategoryItem {
 }
 
 // --- COMPONENT ---
-export default function AntiqueFurniturePage() {
+function AntiqueFurnitureContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('seating');
@@ -408,5 +408,23 @@ export default function AntiqueFurniturePage() {
       </section>
 
     </main>
+  );
+}
+
+export default function AntiqueFurniturePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    }>
+      <AntiqueFurnitureContent />
+    </Suspense>
   );
 }

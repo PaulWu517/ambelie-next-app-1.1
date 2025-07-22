@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -37,7 +37,7 @@ interface SubCategoryItem {
 }
 
 // --- COMPONENT ---
-export default function ArtPage() {
+function ArtContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('category');
@@ -389,5 +389,25 @@ export default function ArtPage() {
         )}
       </section>
     </main>
+  );
+}
+
+// 主要导出组件，使用 Suspense 包装
+export default function ArtPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '50vh',
+        fontSize: '18px',
+        color: '#666'
+      }}>
+        Loading art collection...
+      </div>
+    }>
+      <ArtContent />
+    </Suspense>
   );
 }
