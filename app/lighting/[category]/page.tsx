@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
-import styles from './Lighting.module.css';
+import styles from '../Lighting.module.css';
 
 // --- TYPE DEFINITIONS ---
 interface ImageItem {
