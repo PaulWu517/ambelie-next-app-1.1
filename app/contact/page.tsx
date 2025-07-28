@@ -19,19 +19,17 @@ export default function ContactPage() {
             <h2 className="contact-section-title">Our Locations</h2>
             
             <div className="location-item">
-              <h3>Shanghai Showroom</h3>
-              <p className="address">No. 376 Wukang Road, Xuhui District</p>
-              <p className="phone">+86 21 6473 7638</p>
-              <p className="email">shanghai@ambelie.com</p>
-              <p className="hours">Monday - Sunday: 10:00 - 19:00</p>
+              <h3>Ambelie Shanghai</h3>
+              <p className="address">No. 21, Kangping Road, Xuhui District</p>
+              <p className="email">Info@ambelie.com</p>
+              <p className="hours">Monday - Sunday: 10:00 - 20:00</p>
             </div>
             
             <div className="location-item">
-              <h3>Hangzhou Showroom</h3>
-              <p className="address">No. 87 Hefang Street, Shangcheng District</p>
-              <p className="phone">+86 571 8871 9025</p>
-              <p className="email">hangzhou@ambelie.com</p>
-              <p className="hours">Tuesday - Sunday: 10:00 - 18:00</p>
+              <h3>Ambelie Hangzhou</h3>
+              <p className="address">No. 1788 Hongning Road, Xiaoshan District</p>
+              <p className="email">Info@ambelie.com</p>
+              <p className="hours">Monday - Sunday: 10:00 - 20:00</p>
             </div>
             
             <div className="social-links">
@@ -39,8 +37,7 @@ export default function ContactPage() {
               <div className="social-icons">
                 <a href="#" target="_blank" rel="noopener noreferrer"><i className="fab fa-instagram"></i></a>
                 <a href="#" target="_blank" rel="noopener noreferrer"><i className="fab fa-weixin"></i></a>
-                <a href="#" target="_blank" rel="noopener noreferrer"><i className="fab fa-weibo"></i></a>
-                <a href="#" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书官方账号">
+                <a href="https://www.xiaohongshu.com/user/profile/5ac6c62b4eacab09381921ec" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书官方账号">
                   <Image src="/assets/vi/xiaohongshuicon-01.png" alt="小红书" width={18} height={18} className="xiaohongshu-logo-white" />
                 </a>
               </div>
@@ -53,4 +50,4 @@ export default function ContactPage() {
       </section>
     </main>
   );
-} 
+}

@@ -31,6 +31,23 @@ export async function GET(request: NextRequest) {
     
     if (websiteUserToken) {
       console.log('Found website-user-token, length:', websiteUserToken.length);
+      
+      // 调试：尝试解码token以验证格式
+      try {
+        const decoded = Buffer.from(websiteUserToken, 'base64').toString('utf-8');
+        const parts = decoded.split(':');
+        console.log('Token解码成功:', {
+          parts: parts.length,
+          userId: parts[0],
+          email: parts[1],
+          timestamp: parts[2],
+          isValidFormat: parts.length === 3
+        });
+      } catch (decodeError) {
+        console.log('Token解码失败:', decodeError);
+        console.log('Token前10个字符:', websiteUserToken.substring(0, 10));
+      }
+      
       return NextResponse.json({
         success: true,
         token: websiteUserToken,

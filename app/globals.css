@@ -3573,7 +3573,7 @@ body:has(.product-detail-container) main {
 /* 图文排列块样式 */
 .about-image-text-block {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 60px;
     margin-bottom: 100px;
     padding: 0 20px;

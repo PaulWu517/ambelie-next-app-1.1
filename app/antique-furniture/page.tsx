@@ -58,6 +58,8 @@ function AntiqueFurnitureContent() {
     
     if (category) {
       setActiveCategory(category);
+      // 当从URL参数设置状态时，禁用重置逻辑
+      setShouldResetSubCategory(false);
       if (subcategory) {
         setActiveSubCategory(subcategory);
       } else {

@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     // 验证邮箱格式
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
-        { error: '请输入有效的邮箱地址' },
+        { error: 'Please enter a valid email address' },
         { status: 400 }
       );
     }
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     // 验证验证码格式
     if (!code || code.length !== 6) {
       return NextResponse.json(
-        { error: '请输入6位验证码' },
+        { error: 'Please enter a 6-digit verification code' },
         { status: 400 }
       );
     }
@@ -27,20 +27,20 @@ export async function POST(request: NextRequest) {
     const isTestCode = isDevelopment && code === '888888';
     
     // 验证验证码（添加调试信息）
-    console.log(`=== 验证码验证调试 ===`);
-    console.log(`邮箱: ${email}`);
-    console.log(`用户输入验证码: ${code}`);
-    console.log(`开发环境: ${isDevelopment}`);
-    console.log(`测试验证码: ${isTestCode}`);
+    console.log(`=== Verification Code Debug ===`);
+    console.log(`Email: ${email}`);
+    console.log(`User input code: ${code}`);
+    console.log(`Development environment: ${isDevelopment}`);
+    console.log(`Test code: ${isTestCode}`);
     
     const isValidCode = isTestCode || verifyCode(email, code);
-    console.log(`验证结果: ${isValidCode}`);
-    console.log('========================');
+    console.log(`Verification result: ${isValidCode}`);
+    console.log('===============================');
     
     if (!isValidCode) {
       const errorMessage = isDevelopment 
-        ? '验证码无效或已过期，请重新获取（开发环境可使用 888888 作为测试验证码）'
-        : '验证码无效或已过期，请重新获取';
+        ? 'Verification code is invalid or expired, please get a new one (you can use 888888 as test code in development environment)'
+        : 'Verification code is invalid or expired, please get a new one';
       
       return NextResponse.json(
         { error: errorMessage },
@@ -61,14 +61,14 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
     
-    console.log(`用户登录成功: ${email}`);
+    console.log(`User login successful: ${email}`);
     
     // 调用后端API进行用户验证和创建
     try {
       const backendUrl = `${process.env.STRAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'}/api/website-users/verify-email-login`;
       const baseUrl = process.env.STRAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
       
-      console.log('=== 调用后端API ===');
+      console.log('=== Calling Backend API ===');
       console.log('Base URL:', baseUrl);
       console.log('Full URL:', backendUrl);
       console.log('Body:', { email, code, name });
@@ -105,9 +105,9 @@ export async function POST(request: NextRequest) {
       const backendResult = await backendResponse.json();
 
       if (backendResponse.ok && backendResult.success) {
-        console.log('=== 前端登录成功处理 ===');
-        console.log('后端返回的token长度:', backendResult.token?.length);
-        console.log('用户信息:', backendResult.user);
+        console.log('=== Frontend Login Success Processing ===');
+        console.log('Backend returned token length:', backendResult.token?.length);
+        console.log('User info:', backendResult.user);
         
         // 存储后端返回的token
         const response = NextResponse.json({
@@ -124,9 +124,9 @@ export async function POST(request: NextRequest) {
           maxAge: 7 * 24 * 60 * 60 // 7 days
         };
         
-        console.log('前端Cookie设置选项:', cookieOptions);
+        console.log('Frontend Cookie setting options:', cookieOptions);
         response.cookies.set('website-user-token', backendResult.token, cookieOptions);
-        console.log('✅ 前端Cookie设置完成');
+        console.log('✅ Frontend Cookie setting completed');
 
         return response;
       } else {
@@ -141,12 +141,12 @@ export async function POST(request: NextRequest) {
       console.error('Error type:', (backendError as Error).constructor.name);
       console.error('Error message:', (backendError as Error).message);
       console.error('Full error:', backendError);
-      console.log('使用前端本地验证逻辑作为备选方案');
+      console.log('Using frontend local verification logic as fallback');
       // 如果后端不可用，使用原有逻辑
     }
 
     return NextResponse.json({
-      message: '登录成功',
+      message: 'Login successful',
       user: {
         email,
         name: name || null,
@@ -154,9 +154,9 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error('验证登录失败:', error);
+    console.error('Login verification failed:', error);
     return NextResponse.json(
-      { error: '登录失败，请稍后重试' },
+      { error: 'Login failed, please try again later' },
       { status: 500 }
     );
   }

@@ -32,7 +32,7 @@ interface SubCategory {
 function OrientalFurnitureContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('screens');
+  const [activeCategory, setActiveCategory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +45,9 @@ function OrientalFurnitureContent() {
     const category = searchParams.get('category');
     if (category) {
       setActiveCategory(category);
+    } else {
+      // 如果没有URL参数，设置默认分类
+      setActiveCategory('screens');
     }
   }, [searchParams]);
 
@@ -74,6 +77,9 @@ function OrientalFurnitureContent() {
 
   // 获取产品数据
   useEffect(() => {
+    // 只有在activeCategory有值时才获取产品
+    if (!activeCategory) return;
+    
     const fetchProducts = async () => {
       setLoading(true);
       try {

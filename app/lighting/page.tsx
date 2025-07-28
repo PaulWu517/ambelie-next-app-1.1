@@ -112,6 +112,8 @@ function LightingContent() {
     // 确保在URL参数变化时正确更新状态
     if (categoryParam && categoryParam !== activeCategory) {
       setActiveCategory(categoryParam);
+      // 当从URL参数设置状态时，禁用重置逻辑
+      setShouldResetSubCategory(false);
       // 如果没有指定子分类参数，重置为'all'
       if (!subcategoryParam) {
         setActiveSubCategory('all');

@@ -162,6 +162,16 @@
     /* Active state styles */
 }
 
+/* 下拉菜单激活状态样式 */
+.menuItem.dropdownActive > a {
+    color: #880913 !important;
+}
+
+.menuItem.dropdownActive > a::after {
+    width: 100%;
+    background-color: #880913;
+}
+
 .scrolled .mainNavigation a,
 .menuActive .mainNavigation a {
     color: #231815 !important;
@@ -170,7 +180,9 @@
 .scrolled .mainNavigation a:hover,
 .menuActive .mainNavigation a:hover,
 .scrolled .menuItem.active > a,
-.menuActive .menuItem.active > a {
+.menuActive .menuItem.active > a,
+.scrolled .menuItem.dropdownActive > a,
+.menuActive .menuItem.dropdownActive > a {
     color: #880913 !important;
 }
 

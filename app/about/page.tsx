@@ -44,10 +44,10 @@ export default function AboutPage() {
               <div className="about-text-content animate-on-scroll slide-from-left">
                 <h2 className="about-section-title">Our Global Journey</h2>
                 <p className="about-paragraph">
-                  Traveling through Europe, Asia, the Middle East, and North America, moving through more than 500 buying and antique stores, AMBELIE brings beauty across time, place, society, and lifestyle back to Shanghai & Hangzhou. Each piece in our collection tells a story of craftsmanship that transcends geographical boundaries, connecting diverse cultures through the universal language of exceptional design.
+                  AMBELIE is like a dreamscape that traverses time and space, crafting a fantastical world devoted to spatial aesthetics. We begin our journey in Asia, as pilgrims of art, traveling through the artistic sanctuaries of Europe and the cultural treasures of the Middle East. We gather timeless aesthetic treasures to weave an artistic, poetic space with historical resonance.
                 </p>
                 <p className="about-paragraph">
-                  Under the plain white dome supported by Collins columns, the same classic and mid-century timeless furniture from different cultures build a living place with an implicit aesthetic. Order - the relics of various civilizations, born from the works of other masters, are so harmonious and integrated into the same room, creating a hidden resonance and connection.
+                  These masterpieces, hailing from diverse cultural backgrounds yet unified by their classic and enduring nature, come together to form a living space with an inherent aesthetic harmony—these scattered pearls from various civilizations, crafted by different masters, blend seamlessly, creating a subtle resonance and connection, and together they tell a shared philosophy of life.
                 </p>
               </div>
               <div className="about-image-content animate-on-scroll slide-from-right delay-200">
@@ -60,10 +60,10 @@ export default function AboutPage() {
               <div className="about-text-content animate-on-scroll slide-from-right">
                 <h2 className="about-section-title">Our Collection</h2>
                 <p className="about-paragraph">
-                  AMBELIE is a collection of fashion, interior design, mid-century furniture, art, and lifestyle, where we believe that the beauty of art becomes more evident in its use and more solid with age. Every piece we curate has been chosen not just for its aesthetic appeal, but for its ability to enhance daily life while preserving the artisan's original vision and intent.
+                  Here, each embroidered screen is akin to an elegant poem, and every piece of embroidery resembles a canvas painted by time, imbued with the fluidity and charm of Asian craftsmanship, gently whispering tales of stories and legends.
                 </p>
                 <p className="about-paragraph">
-                  It speaks of a shared philosophy of life, where beauty becomes the common thread that unites disparate elements into a cohesive whole, creating spaces that inspire and elevate the human experience.
+                  The deep elegance of Europe, the minimalist innovation of North America, and the enigmatic allure of the Middle East breathe a broader artistic vision into AMBELIE's space in Shanghai, where the subtle harmony and resonance between diverse cultures flow seamlessly. To look at a chair, a stone table, or any other object is to behold a sculpture, a chronicle, or a living plant.
                 </p>
               </div>
               <div className="about-image-content animate-on-scroll slide-from-left delay-200">
@@ -76,10 +76,10 @@ export default function AboutPage() {
               <div className="about-text-content animate-on-scroll slide-from-left">
                 <h2 className="about-section-title">Our Mission</h2>
                 <p className="about-paragraph">
-                  It is our mission to bring them into the present life, to give them a new lease of life, and to shape our "self" in the material environment. We believe that surrounding ourselves with objects of beauty and significance creates spaces that nurture creativity, inspire contemplation, and foster meaningful connections between past and present.
+                  AMBELIE brings together artworks, furniture, fashion, and interior design. We hold the belief that the true value of art's beauty is best revealed through its use, and that beauty enriched with time becomes more enduring.
                 </p>
                 <p className="about-paragraph">
-                  Through careful curation and thoughtful presentation, we aim to bridge the gap between historical significance and contemporary relevance, ensuring that each piece continues to tell its story while adapting to modern living.
+                  Our mission is to bring these elements into the present, breathe new life into them, and shape our "self" within the material world we inhabit.
                 </p>
               </div>
               <div className="about-image-content animate-on-scroll slide-from-right delay-200">
@@ -100,4 +100,4 @@ export default function AboutPage() {
 export const metadata = {
   title: 'About Ambelie | Our Story, Mission, and Collection',
   description: 'Learn about Ambelie\'s journey in curating timeless antique furniture, modern designs, and art. Discover our mission to blend beauty, culture, and lifestyle.',
-}; 
+};

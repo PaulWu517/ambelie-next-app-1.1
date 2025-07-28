@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     
     if (!enquiryType || !email || !name || !country || !message) {
       return NextResponse.json(
-        { error: '请填写所有必填字段' },
+        { error: 'Please fill in all required fields' },
         { status: 400 }
       );
     }
@@ -33,15 +33,15 @@ export async function POST(request: NextRequest) {
           },
         });
       } catch (error) {
-        console.log('无法创建测试账户，使用开发模式');
+        console.log('Unable to create test account, using development mode');
         // 如果无法创建测试账户，使用一个虚拟的transporter
         transporter = {
           sendMail: async (mailOptions: any) => {
-            console.log('=== 开发模式邮件 ===');
-            console.log('发送给:', mailOptions.to);
-            console.log('主题:', mailOptions.subject);
-            console.log('内容:', mailOptions.html || mailOptions.text);
-            console.log('==================');
+            console.log('=== Development Mode Email ===');
+            console.log('Send to:', mailOptions.to);
+            console.log('Subject:', mailOptions.subject);
+            console.log('Content:', mailOptions.html || mailOptions.text);
+            console.log('==============================');
             return {
               messageId: 'dev-' + Date.now(),
               envelope: { from: mailOptions.from, to: [mailOptions.to] },
@@ -56,13 +56,19 @@ export async function POST(request: NextRequest) {
     } else {
       // 生产环境：使用真实的邮件服务
       if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-        throw new Error('生产环境需要配置SMTP凭据');
+        throw new Error('Production environment requires SMTP credentials configuration');
       }
       
+      const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+      const isSecurePort = smtpPort === 465;
+      
       transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.qq.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false,
+        host: process.env.SMTP_HOST || 'smtp.exmail.qq.com',
+        port: smtpPort,
+        secure: isSecurePort, // 端口465使用隐式TLS，端口587使用STARTTLS
+        tls: {
+          rejectUnauthorized: false
+        },
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASSWORD,
@@ -72,11 +78,17 @@ export async function POST(request: NextRequest) {
     
     // 如果环境变量中有SMTP配置，即使在开发环境也使用真实邮件服务
     if (process.env.SMTP_USER && process.env.SMTP_PASSWORD && process.env.NODE_ENV === 'development') {
-      console.log('检测到SMTP配置，使用真实邮件服务发送');
+      console.log('SMTP configuration detected, using real email service');
+      const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+      const isSecurePort = smtpPort === 465;
+      
       transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.qq.com',
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: false,
+        host: process.env.SMTP_HOST || 'smtp.exmail.qq.com',
+        port: smtpPort,
+        secure: isSecurePort, // 端口465使用隐式TLS，端口587使用STARTTLS
+        tls: {
+          rejectUnauthorized: false
+        },
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASSWORD,
@@ -86,16 +98,16 @@ export async function POST(request: NextRequest) {
     
     // 邮件内容
     const emailContent = `
-      <h2>新的联系表单提交</h2>
-      <p><strong>询问类型:</strong> ${enquiryType}</p>
-      <p><strong>姓名:</strong> ${name}</p>
-      <p><strong>邮箱:</strong> ${email}</p>
-      <p><strong>国家/地区:</strong> ${country}</p>
-      <p><strong>了解渠道:</strong> ${hearAboutUs || '未提供'}</p>
-      <p><strong>消息内容:</strong></p>
+      <h2>New Contact Form Submission</h2>
+      <p><strong>Inquiry Type:</strong> ${enquiryType}</p>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Country/Region:</strong> ${country}</p>
+      <p><strong>How did you hear about us:</strong> ${hearAboutUs || 'Not provided'}</p>
+      <p><strong>Message:</strong></p>
       <p>${message.replace(/\n/g, '<br>')}</p>
       <hr>
-      <p><small>提交时间: ${new Date().toLocaleString('zh-CN')}</small></p>
+      <p><small>Submitted at: ${new Date().toLocaleString('en-US')}</small></p>
     `;
     
     // 发送邮件到指定邮箱
@@ -103,7 +115,7 @@ export async function POST(request: NextRequest) {
     const mailOptions = {
       from: fromEmail,
       to: 'pwu709724@gmail.com',
-      subject: `Ambelie 联系表单 - ${enquiryType} - ${name}`,
+      subject: `Ambelie Contact Form - ${enquiryType} - ${name}`,
       html: emailContent,
       replyTo: email,
     };
@@ -114,35 +126,35 @@ export async function POST(request: NextRequest) {
     const confirmationEmail = {
       from: fromEmail,
       to: email,
-      subject: '感谢您联系 Ambelie',
+      subject: 'Thank you for contacting Ambelie',
       html: `
-        <h2>感谢您的联系</h2>
-        <p>亲爱的 ${name}，</p>
-        <p>感谢您联系 Ambelie。我们已收到您的消息，将在 24 小时内回复您。</p>
-        <p>如有紧急事项，请直接致电：</p>
+        <h2>Thank you for your contact</h2>
+        <p>Dear ${name},</p>
+        <p>Thank you for contacting Ambelie. We have received your message and will reply to you within 24 hours.</p>
+        <p>For urgent matters, please call directly:</p>
         <ul>
-          <li>上海展厅：+86 21 6473 7638</li>
-          <li>杭州展厅：+86 571 8871 9025</li>
+          <li>Shanghai Showroom: +86 21 6473 7638</li>
+          <li>Hangzhou Showroom: +86 571 8871 9025</li>
         </ul>
-        <p>此致，<br>Ambelie 团队</p>
+        <p>Best regards,<br>Ambelie Team</p>
         <hr>
-        <p><small>这是一封测试邮件，实际部署时将使用真实的邮件服务</small></p>
+        <p><small>This is an automated email from Ambelie contact system</small></p>
       `,
     };
     
     await transporter.sendMail(confirmationEmail);
     
-    console.log('邮件发送成功:', info.messageId);
+    console.log('Email sent successfully:', info.messageId);
     
     // 只在使用真实Ethereal账户时显示预览链接
     const previewUrl = testAccount ? nodemailer.getTestMessageUrl(info) : null;
     if (previewUrl) {
-      console.log('预览链接:', previewUrl);
+      console.log('Preview URL:', previewUrl);
     }
     
     return NextResponse.json(
       { 
-        message: '消息发送成功！我们会尽快回复您。',
+        message: 'Message sent successfully! We will reply to you as soon as possible.',
         testInfo: process.env.NODE_ENV === 'development' ? {
           messageId: info.messageId,
           previewUrl: previewUrl
@@ -152,10 +164,10 @@ export async function POST(request: NextRequest) {
     );
     
   } catch (error) {
-    console.error('邮件发送错误:', error);
+    console.error('Email sending error:', error);
     return NextResponse.json(
-      { error: '发送失败，请稍后重试' },
+      { error: 'Sending failed, please try again later' },
       { status: 500 }
     );
   }
-} 
+}

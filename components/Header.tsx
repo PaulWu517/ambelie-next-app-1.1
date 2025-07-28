@@ -216,6 +216,8 @@ export default function Header() {
   };
   const handleOrientalFurnitureDropdownMouseEnter = () => {
     if (orientalFurnitureDropdownTimeoutRef.current) clearTimeout(orientalFurnitureDropdownTimeoutRef.current);
+    // 确保当鼠标在下拉菜单内时，对应的一级标题保持激活状态
+    setIsOrientalFurnitureDropdownOpen(true);
   };
   const handleOrientalFurnitureDropdownMouseLeave = () => setIsOrientalFurnitureDropdownOpen(false);
 
@@ -237,6 +239,8 @@ export default function Header() {
   };
   const handleAntiqueFurnitureDropdownMouseEnter = () => {
     if (antiqueFurnitureDropdownTimeoutRef.current) clearTimeout(antiqueFurnitureDropdownTimeoutRef.current);
+    // 确保当鼠标在下拉菜单内时，对应的一级标题保持激活状态
+    setIsAntiqueFurnitureDropdownOpen(true);
   };
   const handleAntiqueFurnitureDropdownMouseLeave = () => setIsAntiqueFurnitureDropdownOpen(false);
 
@@ -258,6 +262,8 @@ export default function Header() {
   };
   const handleLightingDropdownMouseEnter = () => {
     if (lightingDropdownTimeoutRef.current) clearTimeout(lightingDropdownTimeoutRef.current);
+    // 确保当鼠标在下拉菜单内时，对应的一级标题保持激活状态
+    setIsLightingDropdownOpen(true);
   };
   const handleLightingDropdownMouseLeave = () => setIsLightingDropdownOpen(false);
 
@@ -279,6 +285,8 @@ export default function Header() {
   };
   const handleArtDropdownMouseEnter = () => {
     if (artDropdownTimeoutRef.current) clearTimeout(artDropdownTimeoutRef.current);
+    // 确保当鼠标在下拉菜单内时，对应的一级标题保持激活状态
+    setIsArtDropdownOpen(true);
   };
   const handleArtDropdownMouseLeave = () => setIsArtDropdownOpen(false);
 
@@ -300,6 +308,8 @@ export default function Header() {
   };
   const handleFashionDropdownMouseEnter = () => {
     if (fashionDropdownTimeoutRef.current) clearTimeout(fashionDropdownTimeoutRef.current);
+    // 确保当鼠标在下拉菜单内时，对应的一级标题保持激活状态
+    setIsFashionDropdownOpen(true);
   };
   const handleFashionDropdownMouseLeave = () => setIsFashionDropdownOpen(false);
 
@@ -321,6 +331,8 @@ export default function Header() {
   };
   const handleAboutDropdownMouseEnter = () => {
     if (aboutDropdownTimeoutRef.current) clearTimeout(aboutDropdownTimeoutRef.current);
+    // 确保当鼠标在下拉菜单内时，对应的一级标题保持激活状态
+    setIsAboutDropdownOpen(true);
   };
   const handleAboutDropdownMouseLeave = () => setIsAboutDropdownOpen(false);
 
@@ -539,63 +551,63 @@ export default function Header() {
           <nav className={styles.mainNavigation}>
           <ul>
             <li 
-                className={`${styles.menuItem} ${pathname === '/oriental-furniture' || pathname.startsWith('/oriental-furniture/') ? styles.active : ''} ${isOrientalFurnitureDropdownOpen ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/oriental-furniture' || pathname.startsWith('/oriental-furniture/') ? styles.active : ''} ${isOrientalFurnitureDropdownOpen ? styles.dropdownActive : ''}`}
                 onMouseEnter={handleOrientalFurnitureNavMouseEnter}
                 onMouseLeave={handleOrientalFurnitureNavMouseLeave}
               >
                 <Link href="/oriental-furniture">ORIENTAL FURNITURE</Link>
               </li>
               <li
-                className={`${styles.menuItem} ${pathname === '/antique-furniture' || pathname.startsWith('/antique-furniture/') ? styles.active : ''} ${isAntiqueFurnitureDropdownOpen ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/antique-furniture' || pathname.startsWith('/antique-furniture/') ? styles.active : ''} ${isAntiqueFurnitureDropdownOpen ? styles.dropdownActive : ''}`}
                 onMouseEnter={handleAntiqueFurnitureNavMouseEnter}
                 onMouseLeave={handleAntiqueFurnitureNavMouseLeave}
               >
                 <Link href="/antique-furniture">ANTIQUE FURNITURE</Link>
               </li>
               <li
-                className={`${styles.menuItem} ${pathname === '/lighting' || pathname.startsWith('/lighting/') ? styles.active : ''} ${isLightingDropdownOpen ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/lighting' || pathname.startsWith('/lighting/') ? styles.active : ''} ${isLightingDropdownOpen ? styles.dropdownActive : ''}`}
                 onMouseEnter={handleLightingNavMouseEnter}
                 onMouseLeave={handleLightingNavMouseLeave}
               >
                 <Link href="/lighting">LIGHTING</Link>
               </li>
               <li
-                className={`${styles.menuItem} ${pathname === '/art' || pathname.startsWith('/art/') ? styles.active : ''} ${isArtDropdownOpen ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/art' || pathname.startsWith('/art/') ? styles.active : ''} ${isArtDropdownOpen ? styles.dropdownActive : ''}`}
                 onMouseEnter={handleArtNavMouseEnter}
                 onMouseLeave={handleArtNavMouseLeave}
               >
                 <Link href="/art">ART</Link>
               </li>
               <li
-                className={`${styles.menuItem} ${pathname === '/fashion' || pathname.startsWith('/fashion/') ? styles.active : ''} ${isFashionDropdownOpen ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/fashion' || pathname.startsWith('/fashion/') ? styles.active : ''} ${isFashionDropdownOpen ? styles.dropdownActive : ''}`}
                 onMouseEnter={handleFashionNavMouseEnter}
                 onMouseLeave={handleFashionNavMouseLeave}
               >
                 <Link href="/fashion">FASHION</Link>
               </li>
               <li 
-                className={`${styles.menuItem} ${pathname === '/exhibitions' || pathname.startsWith('/exhibitions/') ? styles.active : ''} ${isExhibitionHovered ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/exhibitions' || pathname.startsWith('/exhibitions/') ? styles.active : ''} ${isExhibitionHovered ? styles.dropdownActive : ''}`}
               onMouseEnter={handleExhibitionsEnter}
               onMouseLeave={handleSimpleLinkMouseLeave}
             >
                 <Link href="/exhibitions">EXHIBITION</Link>
             </li>
             <li 
-                className={`${styles.menuItem} ${pathname === '/projects' || pathname.startsWith('/projects/') ? styles.active : ''} ${isProjectHovered ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/projects' || pathname.startsWith('/projects/') ? styles.active : ''} ${isProjectHovered ? styles.dropdownActive : ''}`}
               onMouseEnter={handleProjectsEnter}
               onMouseLeave={handleSimpleLinkMouseLeave}
             >
                 <Link href="/projects">PROJECT</Link>
               </li>
               <li 
-                className={`${styles.menuItem} ${pathname === '/press' || pathname.startsWith('/press/') ? styles.active : ''} ${isPressHovered ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/press' || pathname.startsWith('/press/') ? styles.active : ''} ${isPressHovered ? styles.dropdownActive : ''}`}
                 onMouseEnter={handlePressEnter}
                 onMouseLeave={handleSimpleLinkMouseLeave}
               >
                 <Link href="/press">PRESS</Link>
             </li>
             <li 
-                className={`${styles.menuItem} ${pathname === '/about' || pathname.startsWith('/about/') ? styles.active : ''} ${isAboutDropdownOpen ? 'dropdown-active' : ''}`}
+                className={`${styles.menuItem} ${pathname === '/about' || pathname.startsWith('/about/') ? styles.active : ''} ${isAboutDropdownOpen ? styles.dropdownActive : ''}`}
               onMouseEnter={handleAboutNavMouseEnter}
               onMouseLeave={handleAboutNavMouseLeave}
             >

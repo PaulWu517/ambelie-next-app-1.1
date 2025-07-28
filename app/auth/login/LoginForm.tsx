@@ -84,30 +84,30 @@ export default function LoginForm() {
 
       const result = await response.json();
       
-      console.log('=== 前端登录响应调试 ===');
-      console.log('响应状态:', response.status);
-      console.log('响应头:', Object.fromEntries(response.headers.entries()));
-      console.log('响应数据:', result);
+      console.log('=== Frontend Login Response Debug ===');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('Response data:', result);
       
       // 检查Set-Cookie头
       const setCookieHeader = response.headers.get('set-cookie');
-      console.log('Set-Cookie头:', setCookieHeader);
+      console.log('Set-Cookie header:', setCookieHeader);
       
       if (response.ok) {
         setMessage('Login successful!');
         
         // 检查cookie是否被设置
         setTimeout(() => {
-          console.log('登录后检查cookie:');
+          console.log('Post-login cookie check:');
           console.log('document.cookie:', document.cookie);
           
           // 测试token获取
           fetch('/api/auth/get-token', { credentials: 'include' })
             .then(r => r.json())
             .then(tokenData => {
-              console.log('登录后token获取测试:', tokenData);
+              console.log('Post-login token retrieval test:', tokenData);
             })
-            .catch(err => console.error('Token获取测试失败:', err));
+            .catch(err => console.error('Token retrieval test failed:', err));
         }, 500);
         
         // Redirect to homepage or user-specified page

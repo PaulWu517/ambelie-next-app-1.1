@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { User, ShoppingCart, Heart, MessageSquare, MapPin, LogOut, FileText } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cartStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
+import { useCollectionStore } from '@/lib/stores/collectionStore';
 
 interface UserMenuProps {
   user: {
@@ -27,6 +28,7 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserM
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cartItemCount = useCartStore((state) => state.getItemCount());
   const inquiryCount = useInquiryStore((state) => state.getItemCount());
+  const collectionCount = useCollectionStore((state) => state.getCollectionCount());
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) {
@@ -62,11 +64,11 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserM
   }
 
   const menuItems = [
-    {
-      label: 'Profile',
-      href: '/account/profile',
-      icon: User,
-    },
+    // {
+    //   label: 'Profile',
+    //   href: '/account/profile',
+    //   icon: User,
+    // },
     {
       label: 'Cart',
       href: '/cart',
@@ -79,9 +81,10 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserM
       icon: MessageSquare,
     },
     {
-      label: 'Wishlist',
-      href: '/account/wishlist',
+      label: 'Collection',
+      href: '/collection',
       icon: Heart,
+      badge: collectionCount > 0 ? collectionCount : undefined,
     },
     {
       label: 'Inquiries',
@@ -108,7 +111,7 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserM
         aria-label="User menu"
         style={{ color: iconColor }}
       >
-        {(cartItemCount > 0 || inquiryCount > 0) && <div className="notification-dot"></div>}
+        {(cartItemCount > 0 || inquiryCount > 0 || collectionCount > 0) && <div className="notification-dot"></div>}
         
         {user?.avatar ? (
           <Image
@@ -187,4 +190,4 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserM
       )}
     </div>
   );
-} 
+}

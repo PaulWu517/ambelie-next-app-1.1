@@ -1,7 +1,20 @@
+'use client';
+
 import Link from 'next/link';
-import Image from 'next/image'; // 如果页脚中有图片，则需要
+import Image from 'next/image';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Footer() {
+  const [email, setEmail] = useState('');
+  const router = useRouter();
+
+  const handleNewsletterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      router.push(`/contact?email=${encodeURIComponent(email.trim())}`);
+    }
+  };
   return (
     <footer className="site-footer">
       <div className="footer-divider"></div>
@@ -49,22 +62,25 @@ export default function Footer() {
         </div>
         
         <div className="footer-right">
-          {/* Newsletter 表单的提交逻辑需要后续处理 */}
-          <form className="newsletter-form">
-            <input type="email" placeholder="Email address" required />
+          <form className="newsletter-form" onSubmit={handleNewsletterSubmit}>
+            <input 
+              type="email" 
+              placeholder="Email address" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required 
+            />
             <button type="submit">Subscribe</button>
           </form>
           <div className="footer-social">
             <Link href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></Link>
-            <Link href="#" aria-label="小红书" title="小红书官方账号">
-              {/* 确保图片路径正确，并且图片在 public/assets/vi/ 目录下 */}
+            <Link href="https://www.xiaohongshu.com/user/profile/5ac6c62b4eacab09381921ec" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书官方账号">
               <Image src="/assets/vi/小红书-copy.png" alt="小红书" width={18} height={18} className="xiaohongshu-logo" />
             </Link>
             <Link href="#" aria-label="WeChat" title="请扫描二维码关注我们"><i className="fab fa-weixin"></i></Link>
-            <Link href="#" aria-label="Weibo"><i className="fab fa-weibo"></i></Link>
           </div>
         </div>
       </div>
     </footer>
   );
-} 
+}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_STRAPI_API_URL || 'https://ambelie-backend-production.up.railway.app';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +15,13 @@ export async function GET(request: NextRequest) {
     }
 
     // 构建Strapi搜索查询
-    const strapiUrl = new URL(`${API_URL}/api/products`);
+    const strapiUrl = new URL(`${API_URL}/api/exhibitions`);
     
-    // 使用$containsi进行不区分大小写的模糊搜索
-    strapiUrl.searchParams.set('filters[name][$containsi]', query.trim());
-    strapiUrl.searchParams.set('populate[0]', 'main_image');
-    strapiUrl.searchParams.set('populate[1]', 'hover_image');
-    strapiUrl.searchParams.set('populate[2]', 'category');
+    // 使用$or进行多字段搜索，根据exhibition schema使用正确的字段
+    strapiUrl.searchParams.set('filters[$or][0][name][$containsi]', query.trim());
+    strapiUrl.searchParams.set('filters[$or][1][introduction][$containsi]', query.trim());
+    strapiUrl.searchParams.set('filters[$or][2][description][$containsi]', query.trim());
+    strapiUrl.searchParams.set('populate', 'mainImage');
     
     // 可选：添加分页参数
     const page = searchParams.get('page') || '1';
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     strapiUrl.searchParams.set('pagination[page]', page);
     strapiUrl.searchParams.set('pagination[pageSize]', pageSize);
     
-    console.log('Search API - Strapi URL:', strapiUrl.toString());
+    console.log('Exhibitions Search API - Strapi URL:', strapiUrl.toString());
     
     const response = await fetch(strapiUrl.toString(), {
       method: 'GET',
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      console.error('Strapi search failed:', response.status, response.statusText);
+      console.error('Strapi exhibitions search failed:', response.status, response.statusText);
       return NextResponse.json(
         { error: '搜索服务暂时不可用' },
         { status: 500 }
@@ -60,30 +60,29 @@ export async function GET(request: NextRequest) {
 
     // 转换数据格式以匹配前端期望的结构
     const transformedData = {
-      data: data.data.map((product: any) => {
+      data: data.data.map((exhibition: any) => {
         try {
-          const attributes = product.attributes || product;
           return {
-              id: product.id,
-              slug: attributes.slug,
-              name: attributes.name,
-              period: attributes.period,
-              mainImage: attributes.main_image ? {
-                 url: attributes.main_image.url?.startsWith('http') 
-                   ? attributes.main_image.url 
-                   : `${API_URL}${attributes.main_image.url}`,
-                 alternativeText: attributes.main_image.alternativeText || '',
-               } : null,
-               hoverImage: attributes.hover_image ? {
-                 url: attributes.hover_image.url?.startsWith('http') 
-                   ? attributes.hover_image.url 
-                   : `${API_URL}${attributes.hover_image.url}`,
-                 alternativeText: attributes.hover_image.alternativeText || '',
-               } : null,
-               category: attributes.category || null,
-            };
+            id: exhibition.id,
+            slug: exhibition.slug,
+            name: exhibition.name,
+            type: 'exhibition',
+            exhibitionType: exhibition.exhibitionType,
+            date: exhibition.startDate, // 使用startDate作为主要日期
+            startDate: exhibition.startDate,
+            endDate: exhibition.endDate,
+            location: exhibition.location,
+            introduction: exhibition.introduction,
+            description: exhibition.description,
+            mainImage: exhibition.mainImage ? {
+              url: exhibition.mainImage.url?.startsWith('http') 
+                ? exhibition.mainImage.url 
+                : `${API_URL}${exhibition.mainImage.url}`,
+              alternativeText: exhibition.mainImage.alternativeText || '',
+            } : null,
+          };
         } catch (error) {
-          console.error('Error transforming product:', product, error);
+          console.error('Error transforming exhibition:', exhibition, error);
           return null;
         }
       }).filter(Boolean), // 过滤掉null值
@@ -100,7 +99,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(transformedData);
     
   } catch (error) {
-    console.error('Search API error:', error);
+    console.error('Exhibitions Search API error:', error);
     return NextResponse.json(
       { error: '搜索服务发生错误' },
       { status: 500 }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
+import { useCollectionStore } from '@/lib/stores/collectionStore';
 import { Product as CartProduct } from '@/types';
 import styles from '../app/products/[slug]/ProductDetailPage.module.css';
 
@@ -38,12 +39,12 @@ function SuccessModal({
   isOpen, 
   onClose, 
   productName, 
-  isInquiry = false 
+  actionType = 'cart'
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
   productName: string;
-  isInquiry?: boolean;
+  actionType?: 'cart' | 'inquiry' | 'collection';
 }) {
   useEffect(() => {
     if (isOpen) {
@@ -62,14 +63,28 @@ function SuccessModal({
       <div className="success-modal" onClick={(e) => e.stopPropagation()}>
         <div className="success-modal-content">
           <div className="success-icon">✓</div>
-          <h3>{isInquiry ? 'Added to Inquiry' : 'Added to Cart'}</h3>
-          <p>{productName} has been added to your {isInquiry ? 'inquiry list' : 'cart'}</p>
+          <h3>
+            {actionType === 'inquiry' ? 'Added to Inquiry' : 
+             actionType === 'collection' ? 'Added to Collection' : 
+             'Added to Cart'}
+          </h3>
+          <p>
+            {productName} has been added to your {actionType === 'inquiry' ? 'inquiry list' : 
+                                                   actionType === 'collection' ? 'collection' : 
+                                                   'cart'}
+          </p>
           <div className="success-modal-actions">
             <button onClick={onClose} className="continue-shopping-btn">
               Continue Shopping
             </button>
-            <Link href={isInquiry ? "/inquiry" : "/cart"} className="view-cart-btn">
-              {isInquiry ? 'View Inquiry' : 'View Cart'}
+            <Link href={
+              actionType === 'inquiry' ? "/inquiry" : 
+              actionType === 'collection' ? "/collection" : 
+              "/cart"
+            } className="view-cart-btn">
+              {actionType === 'inquiry' ? 'View Inquiry' : 
+               actionType === 'collection' ? 'View Collection' : 
+               'View Cart'}
             </Link>
           </div>
         </div>
@@ -82,10 +97,11 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isIntroExpanded, setIsIntroExpanded] = useState(false);
-  const [lastAction, setLastAction] = useState<'cart' | 'inquiry'>('cart');
+  const [lastAction, setLastAction] = useState<'cart' | 'inquiry' | 'collection'>('cart');
   
   const { addToCart } = useCartStore();
   const { addToInquiry } = useInquiryStore();
+  const { addToCollection } = useCollectionStore();
   
   const actualPrice = product.price || 0;
   const isInquiryOnly = product.isInquiryOnly || false;
@@ -193,6 +209,52 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     }
   };
 
+  const handleAddToCollection = async () => {
+    const collectionProduct: CartProduct = {
+      id: product.id.toString(),
+      name: product.name,
+      period: product.period,
+      description: product.description,
+      materials: product.materials,
+      origin: product.origin,
+      dimensions: product.dimensions,
+      designer: product.designer,
+      price: actualPrice,
+      slug: product.slug,
+      main_image: product.images && product.images.length > 0 ? {
+        data: {
+          id: 1,
+          attributes: {
+            name: 'main_image',
+            alternativeText: product.images[0].alternativeText || null,
+            caption: null,
+            width: 500,
+            height: 667,
+            formats: {},
+            hash: '',
+            ext: '.jpg',
+            mime: 'image/jpeg',
+            size: 100,
+            url: product.images[0].url,
+            previewUrl: null,
+            provider: 'local',
+            provider_metadata: {},
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        }
+      } : undefined
+    };
+
+    try {
+      addToCollection(collectionProduct);
+      setShowSuccessModal(true);
+      setLastAction('collection');
+    } catch (error) {
+      console.error('Error adding to collection:', error);
+    }
+  };
+
   const toggleIntroExpanded = () => {
     setIsIntroExpanded(!isIntroExpanded);
   };
@@ -291,8 +353,11 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
                 </span>
               </button>
             )}
-            <button className={styles.actionButton}>
-              <span className={styles.buttonText}>AR VIEWING</span>
+            <button 
+              className={`${styles.actionButton} ${styles.addToCollectionButton}`}
+              onClick={handleAddToCollection}
+            >
+              <span className={styles.buttonText}>ADD TO COLLECTION</span>
             </button>
           </div>
           </div>
@@ -303,8 +368,8 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         productName={product.name}
-        isInquiry={lastAction === 'inquiry'}
+        actionType={lastAction}
       />
     </>
   );
-} 
+}

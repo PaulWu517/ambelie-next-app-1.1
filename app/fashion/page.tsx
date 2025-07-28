@@ -36,6 +36,170 @@ interface SubCategoryItem {
   parentSlug: string;
 }
 
+interface BrandPartner {
+  id: number;
+  name: string;
+  slug: string;
+  image1: string;
+  image2: string;
+  logo: string;
+  description: string;
+  foundedYear?: string;
+  origin?: string;
+}
+
+// --- BRAND PARTNERS COMPONENT ---
+function BrandPartnersDisplay({ activeSubCategory }: { activeSubCategory: string }) {
+  const [hoveredBrand, setHoveredBrand] = useState<string | null>(null);
+  const router = useRouter();
+
+  const brandPartners: BrandPartner[] = [
+    {
+      id: 1,
+      name: 'FORTUNY',
+      slug: 'fortuny',
+      image1: '/assets/brand_partners/Fortuny-1.JPG',
+      image2: '/assets/brand_partners/Fortuny-2.JPG',
+      logo: '/assets/brand_partners/Fortuny-logo.png',
+      description: 'Fortuny is a luxury fashion house renowned for its exquisite pleated fabrics and timeless designs. Founded by Mariano Fortuny, the brand continues to create sophisticated garments that blend traditional craftsmanship with contemporary elegance.',
+      foundedYear: '1906',
+      origin: 'Venice, Italy'
+    },
+    {
+      id: 2,
+      name: 'T.BA',
+      slug: 't-ba',
+      image1: '/assets/brand_partners/T.ba-1.JPG',
+      image2: '/assets/brand_partners/T.ba-2.JPG',
+      logo: '/assets/brand_partners/T.ba-logo.png',
+      description: 'T.BA represents modern luxury with a focus on innovative design and premium materials. The brand creates contemporary pieces that embody sophistication and style for the discerning fashion enthusiast.',
+      foundedYear: '2010',
+      origin: 'Milan, Italy'
+    },
+    {
+      id: 3,
+      name: 'DANIEL HANSON',
+      slug: 'daniel-hanson',
+      image1: '/assets/brand_partners/Daniel hanson-1.jpg',
+      image2: '/assets/brand_partners/Daniel hanson-2.jpg',
+      logo: '/assets/brand_partners/Daniel hanson-logo.png',
+      description: 'Daniel Hanson is synonymous with luxury loungewear and intimate apparel. The brand combines traditional British tailoring with the finest fabrics to create pieces that epitomize comfort and elegance.',
+      foundedYear: '1996',
+      origin: 'London, UK'
+    },
+    {
+      id: 4,
+      name: 'ARCHIVIO J.M.RIBOT',
+      slug: 'archivio-jm-ribot',
+      image1: '/assets/brand_partners/Archivio-1.jpg',
+      image2: '/assets/brand_partners/Archivio-2.JPG',
+      logo: '/assets/brand_partners/Archivio-logo.PNG',
+      description: 'Archivio J.M.Ribot preserves and celebrates the heritage of exceptional fashion design. The brand curates and presents historical pieces alongside contemporary interpretations, bridging past and present in luxury fashion.',
+      foundedYear: '1985',
+      origin: 'Paris, France'
+    }
+  ];
+
+  // 根据activeSubCategory过滤品牌
+  const filteredBrands = activeSubCategory === 'all' 
+    ? brandPartners 
+    : brandPartners.filter(brand => brand.slug === activeSubCategory);
+
+  const handleBrandClick = (brandSlug: string) => {
+    // 点击品牌卡片时，跳转到对应的品牌子分类
+    const params = new URLSearchParams();
+    params.set('category', 'brand-partners');
+    params.set('subcategory', brandSlug);
+    router.replace(`/fashion?${params.toString()}`);
+  };
+
+  // 如果选择了特定品牌，显示品牌详情页面
+  if (activeSubCategory !== 'all' && filteredBrands.length === 1) {
+    const brand = filteredBrands[0];
+    return (
+      <div className={styles.brandDetailContainer}>
+        {/* 主要内容区域 - 三列布局 */}
+        <div className={styles.brandMainContent}>
+          {/* 左侧第一张图片 */}
+          <div className={styles.brandImageWrapper}>
+            <img 
+              src={brand.image1}
+              alt={`${brand.name} showcase 1`}
+              className={styles.brandDetailImage}
+            />
+          </div>
+
+          {/* 中间第二张图片 */}
+          <div className={styles.brandImageWrapper}>
+            <img 
+              src={brand.image2}
+              alt={`${brand.name} showcase 2`}
+              className={styles.brandDetailImage}
+            />
+          </div>
+
+          {/* 右侧品牌信息区域 */}
+          <div className={styles.brandInfoSection}>
+            {/* 品牌标题 */}
+            <h1 className={styles.brandTitle}>{brand.name}</h1>
+            {brand.foundedYear && brand.origin && (
+              <p className={styles.brandMeta}>
+                Founded {brand.foundedYear} • {brand.origin}
+              </p>
+            )}
+            
+            {/* 品牌简介 */}
+            <div className={styles.brandDescription}>
+              <p>{brand.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 返回链接 */}
+        <div className={styles.backToPartnersContainer}>
+          <button 
+            onClick={() => handleBrandClick('all')}
+            className={styles.backToPartnersLink}
+          >
+            ← Back to Brand Partners
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 显示品牌网格（当选择 'all' 或多个品牌时）
+  return (
+    <div className={styles.brandPartnersGrid}>
+      {filteredBrands.map(brand => (
+        <div 
+          key={brand.id}
+          className={styles.brandPartnerCard}
+          onMouseEnter={() => setHoveredBrand(brand.slug)}
+          onMouseLeave={() => setHoveredBrand(null)}
+          onClick={() => handleBrandClick(brand.slug)}
+        >
+          <div className={styles.brandImageContainer}>
+            <img 
+              src={hoveredBrand === brand.slug ? brand.image2 : brand.image1}
+              alt={brand.name}
+              className={styles.brandImage}
+            />
+            <div className={styles.brandLogoOverlay}>
+              <img 
+                src={brand.logo}
+                alt={`${brand.name} logo`}
+                className={styles.brandLogo}
+              />
+            </div>
+          </div>
+          <h3 className={styles.brandName}>{brand.name}</h3>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // --- COMPONENT ---
 function FashionContent() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -121,6 +285,8 @@ function FashionContent() {
     // 确保在URL参数变化时正确更新状态
     if (categoryParam && categoryParam !== activeCategory) {
       setActiveCategory(categoryParam);
+      // 当从URL参数设置状态时，禁用重置逻辑
+      setShouldResetSubCategory(false);
       // 如果没有指定子分类参数，重置为'all'
       if (!subcategoryParam) {
         setActiveSubCategory('all');
@@ -156,7 +322,8 @@ function FashionContent() {
         if (activeSubCategory === 'all') {
           // 根据主分类显示所有相关产品
           if (activeCategory === 'category') {
-            query = `filters[category][slug][$in][0]=tops&filters[category][slug][$in][1]=jackets&filters[category][slug][$in][2]=dresses&populate[0]=main_image&populate[1]=hover_image`;
+            // category的all显示runway archive和curated collection的所有产品
+            query = `filters[category][slug][$in][0]=runway-tops&filters[category][slug][$in][1]=runway-jackets&filters[category][slug][$in][2]=runway-dresses&filters[category][slug][$in][3]=curated-tops&filters[category][slug][$in][4]=curated-jackets&filters[category][slug][$in][5]=curated-dresses&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'runway-archive') {
             // 对于RUNWAY ARCHIVE，查询所有runway相关产品
             query = `filters[category][slug][$in][0]=runway-tops&filters[category][slug][$in][1]=runway-jackets&filters[category][slug][$in][2]=runway-dresses&populate[0]=main_image&populate[1]=hover_image`;
@@ -166,6 +333,15 @@ function FashionContent() {
           } else if (activeCategory === 'brand-partners') {
             // 对于BRAND PARTNERS，查询所有品牌产品
             query = `filters[brand][$in][0]=FORTUNY&filters[brand][$in][1]=T.BA&filters[brand][$in][2]=DANIEL HANSON&filters[brand][$in][3]=ARCHIVIO J.M.RIBOT&populate[0]=main_image&populate[1]=hover_image`;
+          }
+        } else if (activeCategory === 'category' && activeSubCategory && activeSubCategory !== 'all') {
+          // 对于CATEGORY分类的子分类，查询对应的runway和curated产品
+          if (activeSubCategory === 'tops') {
+            query = `filters[category][slug][$in][0]=runway-tops&filters[category][slug][$in][1]=curated-tops&populate[0]=main_image&populate[1]=hover_image`;
+          } else if (activeSubCategory === 'jackets') {
+            query = `filters[category][slug][$in][0]=runway-jackets&filters[category][slug][$in][1]=curated-jackets&populate[0]=main_image&populate[1]=hover_image`;
+          } else if (activeSubCategory === 'dresses') {
+            query = `filters[category][slug][$in][0]=runway-dresses&filters[category][slug][$in][1]=curated-dresses&populate[0]=main_image&populate[1]=hover_image`;
           }
         } else if (activeCategory === 'brand-partners' && activeSubCategory && activeSubCategory !== 'all') {
           // 对于BRAND PARTNERS分类，使用品牌名称查询
@@ -185,7 +361,8 @@ function FashionContent() {
         } else if (activeCategory) {
           // 如果只选择了主分类，显示该分类下的所有产品
           if (activeCategory === 'category') {
-            query = `filters[category][slug][$in][0]=tops&filters[category][slug][$in][1]=jackets&filters[category][slug][$in][2]=dresses&populate[0]=main_image&populate[1]=hover_image`;
+            // category显示runway archive和curated collection的所有产品
+            query = `filters[category][slug][$in][0]=runway-tops&filters[category][slug][$in][1]=runway-jackets&filters[category][slug][$in][2]=runway-dresses&filters[category][slug][$in][3]=curated-tops&filters[category][slug][$in][4]=curated-jackets&filters[category][slug][$in][5]=curated-dresses&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'runway-archive') {
             query = `filters[category][slug][$in][0]=runway-tops&filters[category][slug][$in][1]=runway-jackets&filters[category][slug][$in][2]=runway-dresses&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'curated-collection') {
@@ -407,13 +584,15 @@ function FashionContent() {
         </div>
       </nav>
 
-      {/* 产品网格 */}
+      {/* 产品网格或品牌展示 */}
       <section className={styles.productsSection}>
         {loading ? (
           <div className={styles.loading}>
             <div className={styles.spinner}></div>
             <p>Loading products...</p>
           </div>
+        ) : activeCategory === 'brand-partners' ? (
+          <BrandPartnersDisplay activeSubCategory={activeSubCategory} />
         ) : (
           <div className={styles.productGrid}>
             {products.length > 0 ? (

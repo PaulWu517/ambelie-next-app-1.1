@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import styles from './contact.module.css';
 
 export default function ContactForm() {
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     enquiryType: '',
     email: '',
@@ -14,6 +16,17 @@ export default function ContactForm() {
     hearAboutUs: '',
     agree: false
   });
+
+  // 从URL参数中获取邮件地址
+  useEffect(() => {
+    const emailFromUrl = searchParams.get('email');
+    if (emailFromUrl) {
+      setFormData(prev => ({
+        ...prev,
+        email: emailFromUrl
+      }));
+    }
+  }, [searchParams]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -218,4 +231,4 @@ export default function ContactForm() {
       </form>
     </div>
   );
-} 
+}

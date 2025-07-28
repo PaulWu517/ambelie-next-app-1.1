@@ -232,6 +232,25 @@
     color: white;
 }
 
+/* ADD TO COLLECTION 按钮特殊样式 */
+.addToCollectionButton {
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+}
+
+.addToCollectionButton .buttonText {
+    color: var(--brand-red);
+}
+
+.addToCollectionButton:hover {
+    background-color: var(--brand-red);
+    color: white;
+}
+
+.addToCollectionButton:hover .buttonText {
+    color: white;
+}
+
 .actionButton::after {
     content: '';
     position: absolute;

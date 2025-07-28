@@ -25,7 +25,7 @@
   font-family: var(--font-body);
   font-size: 1.1em;
   color: #666;
-  max-width: 700px;
+  max-width: 800px;
   margin: 0 auto;
   line-height: 1.6;
 }
@@ -281,14 +281,87 @@
   color: var(--brand-black);
 }
 
+/* BRAND PARTNERS 样式 */
+.brandPartnersGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+  margin-bottom: 60px;
+}
+
+.brandPartnerCard {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.brandPartnerCard:hover {
+  transform: translateY(-5px);
+}
+
+.brandImageContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.brandImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: all 0.4s ease;
+}
+
+.brandLogoOverlay {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.brandLogo {
+  height: 40px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+.brandName {
+  font-family: var(--font-heading);
+  font-size: 1.1em;
+  font-weight: 400;
+  color: var(--brand-black);
+  text-align: center;
+  margin-top: 15px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
+}
+
+.brandPartnerCard:hover .brandName {
+  color: #880913;
+}
+
 /* 响应式设计 */
 @media (max-width: 1200px) {
   .productGrid {
     grid-template-columns: repeat(3, 1fr);
   }
   
+  .brandPartnersGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
   .pageTitle {
     font-size: 2.2em;
+  }
+  
+  .pageDescription {
+    max-width: 800px;
   }
 }
 
@@ -297,8 +370,32 @@
     grid-template-columns: repeat(2, 1fr);
   }
   
+  .brandPartnersGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+  }
+  
+  .brandPartnerCard {
+    height: 350px;
+  }
+  
+  .brandLogo {
+    height: 35px;
+    max-width: 70px;
+  }
+  
+  .brandLogoOverlay {
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
   .pageTitle {
     font-size: 2em;
+  }
+  
+  .pageDescription {
+    max-width: 600px;
   }
   
   .categoryTabs {
@@ -339,6 +436,27 @@
     gap: 30px;
   }
   
+  .brandPartnersGrid {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+  
+  .brandLogo {
+    height: 30px;
+    max-width: 60px;
+  }
+  
+  .brandLogoOverlay {
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  
+  .brandName {
+    font-size: 1em;
+    margin-top: 12px;
+  }
+  
   .pageTitle {
     font-size: 1.8em;
     letter-spacing: 1px;
@@ -346,6 +464,7 @@
   
   .pageDescription {
     font-size: 1em;
+    max-width: 100%;
   }
   
   .categoryTab {
@@ -374,5 +493,294 @@
   
   .categoryNav {
     margin-bottom: 40px;
+  }
+}
+
+/* 品牌详情页面样式 */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  margin-bottom: 40px;
+  font-family: var(--font-body);
+  font-size: 0.9em;
+  color: #666;
+}
+
+.breadcrumbLink {
+  background: none;
+  border: none;
+  color: #666;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.9em;
+  transition: color 0.3s ease;
+}
+
+.breadcrumbLink:hover {
+  color: #880913;
+}
+
+.breadcrumbSeparator {
+  margin: 0 10px;
+  color: #ccc;
+}
+
+.breadcrumbCurrent {
+  color: #880913;
+  font-weight: 500;
+}
+
+.brandDetailSection {
+  margin-bottom: 60px;
+}
+
+.brandDetailContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.brandHeader {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.brandTitle {
+  font-family: var(--font-heading);
+  font-size: 1.8em;
+  font-weight: 400;
+  color: var(--brand-black);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0 0 10px 0;
+  text-align: left;
+}
+
+.brandMeta {
+  font-family: var(--font-body);
+  font-size: 0.9em;
+  color: var(--brand-green);
+  margin: 0 0 30px 0;
+  font-style: italic;
+}
+
+.brandMainContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+  margin-bottom: 60px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: -30px;
+}
+
+.brandInfoSection {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.brandImageWrapper {
+  width: 100%;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.brandDetailImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.brandImageWrapper:hover .brandDetailImage {
+  transform: scale(1.05);
+}
+
+.brandDescriptionContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 0;
+}
+
+.brandDescription {
+  margin-bottom: 40px;
+}
+
+.brandDescription p {
+  font-family: var(--font-body);
+  font-size: 1em;
+  line-height: 1.6;
+  color: #333;
+  margin: 0;
+  text-align: left;
+}
+
+.brandLogoContainer {
+  text-align: left;
+  margin-top: auto;
+}
+
+.brandDetailLogo {
+  max-height: 60px;
+  max-width: 150px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.backToPartnersContainer {
+  text-align: center;
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.backToPartnersLink {
+  background: none;
+  border: none;
+  color: #666;
+  text-decoration: none;
+  font-family: var(--font-body);
+  font-size: 1em;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backToPartnersLink:hover {
+  color: #880913;
+}
+
+.backLinkContainer {
+  text-align: center;
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.backLink {
+  color: #666;
+  text-decoration: none;
+  font-family: var(--font-body);
+  font-size: 1em;
+  transition: color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backLink:hover {
+  color: #880913;
+}
+
+/* 品牌详情页面响应式设计 */
+@media (max-width: 900px) {
+  .brandMainContent {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    max-width: 100%;
+    padding: 0 20px;
+  }
+  
+  .brandImageWrapper {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+  
+  .brandTitle {
+    font-size: 1.6em;
+    text-align: center;
+  }
+  
+  .brandMeta {
+    text-align: center;
+  }
+  
+  .brandInfoSection {
+    padding: 0;
+    text-align: center;
+  }
+  
+  .brandDescription p {
+    font-size: 1em;
+    line-height: 1.6;
+    text-align: center;
+  }
+  
+  .brandLogoContainer {
+    text-align: center;
+  }
+  
+  .brandDetailLogo {
+    max-height: 60px;
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 600px) {
+  .breadcrumb {
+    font-size: 0.8em;
+    margin-bottom: 30px;
+  }
+  
+  .breadcrumbSeparator {
+    margin: 0 8px;
+  }
+  
+  .brandHeader {
+    margin-bottom: 30px;
+  }
+  
+  .brandTitle {
+    font-size: 1.5em;
+    letter-spacing: 1px;
+  }
+  
+  .brandImagesSection {
+    gap: 20px;
+  }
+  
+  .brandInfoSection {
+    padding: 0;
+  }
+  
+  .brandDescription {
+    margin-bottom: 30px;
+  }
+  
+  .brandDescription p {
+    font-size: 0.95em;
+  }
+  
+  .brandDetailLogo {
+    max-height: 50px;
+    max-width: 120px;
+  }
+  
+  .backToPartnersContainer {
+    margin-top: 40px;
+    padding-top: 30px;
+  }
+  
+  .backToPartnersLink {
+    font-size: 0.9em;
+  }
+  
+  .backLinkContainer {
+    margin-top: 40px;
+    padding-top: 30px;
+  }
+  
+  .backLink {
+    font-size: 0.9em;
   }
 }

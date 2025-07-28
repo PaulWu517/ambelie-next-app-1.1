@@ -3,10 +3,16 @@ import nodemailer from 'nodemailer';
 
 // 创建邮件发送器
 const createTransporter = () => {
+  const smtpPort = parseInt(process.env.SMTP_PORT || '465');
+  const isSecurePort = smtpPort === 465;
+  
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for 465, false for other ports
+    host: process.env.SMTP_HOST || 'smtp.exmail.qq.com',
+    port: smtpPort,
+    secure: isSecurePort, // 端口465使用隐式TLS，端口587使用STARTTLS
+    tls: {
+      rejectUnauthorized: false
+    },
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASSWORD,
@@ -115,7 +121,7 @@ export async function POST(request: NextRequest) {
 
         <div style="margin-top: 30px; text-align: center; color: #999; font-size: 0.9em; border-top: 1px solid #ddd; padding-top: 20px;">
           <p>This email was automatically sent by the AMBELIE Inquiry System</p>
-          <p><strong>Website:</strong> <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://ambelie.com'}" style="color: #3498db;">ambelie.com</a></p>
+          <p><strong>Website:</strong> <a href="https://www.ambelie.com/" style="color: #3498db;">ambelie.com</a></p>
           <p>For questions, please contact the system administrator</p>
         </div>
       </body>
@@ -166,14 +172,14 @@ export async function POST(request: NextRequest) {
           <p>In the meantime, feel free to browse our collection or contact us if you have any immediate questions.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://ambelie.com'}" style="display: inline-block; background-color: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: 500;">Visit Our Website</a>
+            <a href="https://www.ambelie.com/" style="display: inline-block; background-color: #6c757d; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: 500;">Visit Our Website</a>
           </div>
           
-          <p style="margin-top: 30px;">Best regards,<br><strong>The AMBELIE Team</strong></p>
+          <p style="margin-top: 30px;">Best regards,<br><strong>AMBELIE</strong></p>
         </div>
 
         <div style="margin-top: 20px; text-align: center; color: #999; font-size: 0.9em;">
-          <p>AMBELIE | <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://ambelie.com'}" style="color: #3498db;">ambelie.com</a></p>
+          <p>AMBELIE | <a href="https://www.ambelie.com/" style="color: #3498db;">ambelie.com</a></p>
           <p>This is an automated confirmation email. Please do not reply to this message.</p>
         </div>
       </body>
@@ -201,4 +207,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

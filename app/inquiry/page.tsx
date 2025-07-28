@@ -91,17 +91,27 @@ const InquiryPage = () => {
     }
   };
 
+  // 添加自动跳转功能
+  useEffect(() => {
+    if (submitSuccess) {
+      const timer = setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [submitSuccess]);
+
   if (submitSuccess) {
     return (
       <main style={{ paddingTop: '80px', paddingBottom: '100px' }}>
         <div className="section-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0 50px', textAlign: 'center' }}>
           <div style={{ backgroundColor: '#f0f8ff', padding: '40px', borderRadius: '10px', marginBottom: '40px' }}>
-            <div style={{ fontSize: '48px', color: '#4caf50', marginBottom: '20px' }}>✓</div>
             <h1 style={{ fontSize: '2rem', marginBottom: '20px', color: '#333' }}>Inquiry Sent Successfully!</h1>
             <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '30px' }}>
               We have received your inquiry and will respond within 24 hours. Thank you for your interest in AMBELIE!
             </p>
-            <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Link 
                 href="/" 
                 style={{
@@ -116,21 +126,10 @@ const InquiryPage = () => {
               >
                 Back to Home
               </Link>
-              <Link 
-                href="/products" 
-                style={{
-                  display: 'inline-block',
-                  backgroundColor: '#4caf50',
-                  color: 'white',
-                  padding: '12px 24px',
-                  textDecoration: 'none',
-                  borderRadius: '5px',
-                  fontWeight: '500'
-                }}
-              >
-                Continue Shopping
-              </Link>
             </div>
+            <p style={{ fontSize: '0.9rem', color: '#999', marginTop: '20px' }}>
+              You will be redirected to the homepage in 3 seconds...
+            </p>
           </div>
         </div>
       </main>
@@ -138,7 +137,7 @@ const InquiryPage = () => {
   }
 
   return (
-    <main style={{ paddingTop: '80px', paddingBottom: '100px' }}>
+    <main style={{ paddingTop: '40px', paddingBottom: '100px' }}>
       <div className="section-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 50px' }}>
         <h1 className="section-heading" style={{ marginBottom: '40px', textAlign: 'center' }}>
           PRODUCT INQUIRY
@@ -397,4 +396,4 @@ const InquiryPage = () => {
   );
 };
 
-export default InquiryPage; 
+export default InquiryPage;

@@ -16,16 +16,69 @@ interface Product {
   id: number;
   slug: string;
   name: string;
-  period?: string;
-  main_image: ImageItem | null;
-  hover_image: ImageItem | null;
+  type: 'product';
+  category: string;
+  period: string;
+  price?: number;
+  mainImage?: {
+    url: string;
+    alternativeText?: string;
+  } | null;
+  hoverImage?: {
+    url: string;
+    alternativeText?: string;
+  } | null;
+}
+
+interface Exhibition {
+  id: number;
+  slug: string;
+  name: string;
+  type: 'exhibition';
+  exhibitionType: string;
+  date: string;
+  location?: string;
+  introduction?: string;
+  content?: string;
+  mainImage?: {
+    url: string;
+    alternativeText?: string;
+  } | null;
+}
+
+interface Project {
+  id: number;
+  slug: string;
+  name: string;
+  type: 'project';
+  projectType: string;
+  date: string;
+  location?: string;
+  introduction?: string;
+  content?: string;
+  mainImage?: {
+    url: string;
+    alternativeText?: string;
+  } | null;
+}
+
+interface SearchResults {
+  products: Product[];
+  exhibitions: Exhibition[];
+  projects: Project[];
+  totalResults: number;
 }
 
 const SearchContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResults>({
+    products: [],
+    exhibitions: [],
+    projects: [],
+    totalResults: 0
+  });
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +94,12 @@ const SearchContent = () => {
 
   const performSearch = async (query: string) => {
     if (!query.trim()) {
-      setProducts([]);
+      setSearchResults({
+        products: [],
+        exhibitions: [],
+        projects: [],
+        totalResults: 0
+      });
       setHasSearched(false);
       return;
     }
@@ -51,37 +109,40 @@ const SearchContent = () => {
     setHasSearched(true);
 
     try {
-      // 使用我们的搜索API接口
-      const searchUrl = `/api/search?q=${encodeURIComponent(query)}`;
+      // 使用本地API路由进行搜索，避免直接调用远程API导致的网络问题
+      const [productsResponse, exhibitionsResponse, projectsResponse] = await Promise.all([
+        fetch(`/api/search?q=${encodeURIComponent(query)}`),
+        fetch(`/api/search/exhibitions?q=${encodeURIComponent(query)}`),
+        fetch(`/api/search/projects?q=${encodeURIComponent(query)}`)
+      ]);
       
-      console.log('Search URL:', searchUrl);
-      
-      const response = await fetch(searchUrl, {
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `搜索请求失败: ${response.status}`);
+      if (!productsResponse.ok || !exhibitionsResponse.ok || !projectsResponse.ok) {
+        throw new Error('搜索失败');
       }
-
-      const data = await response.json();
       
-      if (!data || !Array.isArray(data.data)) {
-        console.warn('Invalid search response structure');
-        setProducts([]);
-        return;
-      }
-
-      // 数据已经在API中转换过了，直接使用
-      setProducts(data.data);
+      const [productsData, exhibitionsData, projectsData] = await Promise.all([
+        productsResponse.json(),
+        exhibitionsResponse.json(),
+        projectsResponse.json()
+      ]);
+      
+      const results: SearchResults = {
+        products: productsData.data || [],
+        exhibitions: exhibitionsData.data || [],
+        projects: projectsData.data || [],
+        totalResults: (productsData.data?.length || 0) + (exhibitionsData.data?.length || 0) + (projectsData.data?.length || 0)
+      };
+      
+      setSearchResults(results);
     } catch (err) {
       console.error('Search failed:', err);
       setError(err instanceof Error ? err.message : '搜索失败，请稍后重试');
-      setProducts([]);
+      setSearchResults({
+        products: [],
+        exhibitions: [],
+        projects: [],
+        totalResults: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -91,8 +152,24 @@ const SearchContent = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       // 更新URL参数
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      const newUrl = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
+      router.push(newUrl);
+      
+      // 执行搜索
       performSearch(searchQuery.trim());
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
     }
   };
 
@@ -139,7 +216,7 @@ const SearchContent = () => {
         {hasSearched && !loading && !error && (
           <div className={styles.resultsHeader}>
             <p className={styles.resultsCount}>
-              Found {products.length} related products
+              Found {searchResults.totalResults} results
               {searchQuery && (
                 <span className={styles.searchTerm}>
                   , keyword: "{searchQuery}"
@@ -149,57 +226,140 @@ const SearchContent = () => {
           </div>
         )}
 
-        {hasSearched && !loading && products.length === 0 && !error && (
+        {hasSearched && !loading && searchResults.totalResults === 0 && !error && (
           <div className={styles.noResults}>
-            <p>No related products found</p>
+            <p>No results found</p>
             <p className={styles.noResultsHint}>Please try searching with other keywords</p>
           </div>
         )}
 
-        {products.length > 0 && (
-          <div className={styles.productsGrid}>
-            {products.map((product) => (
-              <Link 
-                key={product.id} 
-                href={`/products/${product.slug}`}
-                className={styles.productCard}
-              >
-                <div className={styles.productImage}>
-                  {product.main_image ? (
-                    <>
-                      <Image
-                        src={product.main_image.url}
-                        alt={product.main_image.alternativeText || product.name}
-                        width={500}
-                        height={667}
-                        className={styles.mainImage}
-                        style={{ aspectRatio: '3/4', objectFit: 'cover' }}
-                      />
-                      {product.hover_image && (
-                        <Image
-                          src={product.hover_image.url}
-                          alt={product.hover_image.alternativeText || product.name}
-                          width={500}
-                          height={667}
-                          className={styles.hoverImage}
-                          style={{ aspectRatio: '3/4', objectFit: 'cover' }}
-                        />
-                      )}
-                    </>
-                  ) : (
-                    <div className={styles.noImage}>
-                      <p>No Image</p>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.productInfo}>
-                  <h3 className={styles.productName}>{product.name}</h3>
-                  {product.period && (
-                    <p className={styles.productPeriod}>{product.period}</p>
-                  )}
-                </div>
-              </Link>
-            ))}
+        {searchResults.products.length > 0 && (
+          <div>
+            <h2 className={styles.sectionTitle}>Products ({searchResults.products.length})</h2>
+            <div className={styles.productsGrid}>
+              {searchResults.products.map((product) => (
+                <Link 
+                  key={product.id} 
+                  href={`/products/${product.slug}`}
+                  className={styles.productCard}
+                >
+                  <div className={styles.productImage}>
+                    {product.mainImage ? (
+                       <>
+                         <Image
+                           src={product.mainImage.url}
+                           alt={product.mainImage.alternativeText || product.name}
+                           width={500}
+                           height={667}
+                           className={styles.mainImage}
+                           style={{ aspectRatio: '3/4', objectFit: 'cover' }}
+                         />
+                         {product.hoverImage && (
+                           <Image
+                             src={product.hoverImage.url}
+                             alt={product.hoverImage.alternativeText || product.name}
+                             width={500}
+                             height={667}
+                             className={styles.hoverImage}
+                             style={{ aspectRatio: '3/4', objectFit: 'cover' }}
+                           />
+                         )}
+                       </>
+                    ) : (
+                      <div className={styles.noImage}>
+                        <p>No Image</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.productInfo}>
+                    <h3 className={styles.productName}>{product.name}</h3>
+                    {product.period && (
+                      <p className={styles.productPeriod}>{product.period}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {searchResults.exhibitions.length > 0 && (
+          <div>
+            <h2 className={styles.sectionTitle}>Exhibitions ({searchResults.exhibitions.length})</h2>
+            <div className={styles.resultsGrid}>
+              {searchResults.exhibitions.map((exhibition) => (
+                <Link 
+                  key={exhibition.id} 
+                  href={`/exhibitions/${exhibition.slug}`}
+                  className={styles.resultCard}
+                >
+                  <div className={styles.resultImage}>
+                    {exhibition.mainImage ? (
+                       <Image
+                         src={exhibition.mainImage.url}
+                         alt={exhibition.mainImage.alternativeText || exhibition.name}
+                         width={400}
+                         height={300}
+                         className={styles.image}
+                         style={{ aspectRatio: '4/3', objectFit: 'cover' }}
+                       />
+                    ) : (
+                      <div className={styles.noImage}>
+                        <p>No Image</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.resultInfo}>
+                     <h3 className={styles.resultName}>{exhibition.name}</h3>
+                     <p className={styles.resultType}>{exhibition.exhibitionType}</p>
+                     <p className={styles.resultDate}>{formatDate(exhibition.date)}</p>
+                     {exhibition.location && (
+                       <p className={styles.resultLocation}>{exhibition.location}</p>
+                     )}
+                   </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {searchResults.projects.length > 0 && (
+          <div>
+            <h2 className={styles.sectionTitle}>Projects ({searchResults.projects.length})</h2>
+            <div className={styles.resultsGrid}>
+              {searchResults.projects.map((project) => (
+                <Link 
+                  key={project.id} 
+                  href={`/projects/${project.slug}`}
+                  className={styles.resultCard}
+                >
+                  <div className={styles.resultImage}>
+                    {project.mainImage ? (
+                       <Image
+                         src={project.mainImage.url}
+                         alt={project.mainImage.alternativeText || project.name}
+                         width={400}
+                         height={300}
+                         className={styles.image}
+                         style={{ aspectRatio: '4/3', objectFit: 'cover' }}
+                       />
+                    ) : (
+                      <div className={styles.noImage}>
+                        <p>No Image</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.resultInfo}>
+                     <h3 className={styles.resultName}>{project.name}</h3>
+                     <p className={styles.resultType}>{project.projectType}</p>
+                     <p className={styles.resultDate}>{formatDate(project.date)}</p>
+                     {project.location && (
+                       <p className={styles.resultLocation}>{project.location}</p>
+                     )}
+                   </div>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
       </section>

@@ -171,18 +171,6 @@ export default async function HomePage() {
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/art" className="product-link">
-              <div className="product-image">
-                <Image src="/assets/feature_collection/ART_1.jpg" alt="Art Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
-                <Image src="/assets/feature_collection/ART_2.jpg" alt="Art Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
-              </div>
-              <div className="product-info">
-                <h2 className="product-title">ART</h2>
-                <p className="product-period">Contemporary & Classic</p>
-              </div>
-            </Link>
-          </article>
-          <article className="product-item">
             <Link href="/category/lighting" className="product-link">
               <div className="product-image">
                 <Image src="/assets/feature_collection/LIGHTING_1.jpg" alt="Lighting Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
@@ -191,6 +179,18 @@ export default async function HomePage() {
               <div className="product-info">
                 <h2 className="product-title">LIGHTING</h2>
                 <p className="product-period">Design & Vintage</p>
+              </div>
+            </Link>
+          </article>
+          <article className="product-item">
+            <Link href="/category/art" className="product-link">
+              <div className="product-image">
+                <Image src="/assets/feature_collection/ART_1.jpg" alt="Art Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
+                <Image src="/assets/feature_collection/ART_2.jpg" alt="Art Collection - Detail" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
+              </div>
+              <div className="product-info">
+                <h2 className="product-title">ART</h2>
+                <p className="product-period">Contemporary & Classic</p>
               </div>
             </Link>
           </article>
@@ -226,11 +226,11 @@ export default async function HomePage() {
         <div className="section-header">
           <h2 className="section-heading">Featured Fashion</h2>
         </div>
-        <Link href="/category/fashion" className="view-more-link see-more-link">View All Categories</Link>
+        <Link href="/fashion" className="view-more-link see-more-link">View All Categories</Link>
         <div className="category-showcase-grid">
           {/*竖版4张*/}
           <article className="product-item">
-            <Link href="/category/fashion" className="product-link">
+            <Link href="/fashion?category=category" className="product-link">
               <div className="product-image">
                 <Image src="/assets/feature_fashion/SHOP BY CATEGORY-1.JPG" alt="Shop by Category Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
                 <Image src="/assets/feature_fashion/SHOP BY CATEGORY-2.JPG" alt="Shop by Category Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
@@ -242,7 +242,7 @@ export default async function HomePage() {
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/fashion" className="product-link">
+            <Link href="/fashion?category=runway-archive" className="product-link">
               <div className="product-image">
                 <Image src="/assets/feature_fashion/RUNWAY ARCHIVE-1.jpg" alt="Runway Archive Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
                 <Image src="/assets/feature_fashion/RUNWAY ARCHIVE-2.jpg" alt="Runway Archive Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
@@ -254,7 +254,7 @@ export default async function HomePage() {
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/fashion" className="product-link">
+            <Link href="/fashion?category=curated-collection" className="product-link">
               <div className="product-image">
                 <Image src="/assets/feature_fashion/CURATED COLLECTION-1.JPG" alt="Curated Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
                 <Image src="/assets/feature_fashion/CURATED COLLECTION-2.JPG" alt="Curated Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
@@ -266,7 +266,7 @@ export default async function HomePage() {
             </Link>
           </article>
           <article className="product-item">
-            <Link href="/category/fashion" className="product-link">
+            <Link href="/fashion?category=brand-partners" className="product-link">
               <div className="product-image">
                 <Image src="/assets/feature_fashion/BRAND PARTNERS-1.JPG" alt="Brand Partners Fashion Collection" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}} />
                 <Image src="/assets/feature_fashion/BRAND PARTNERS-2.JPG" alt="Brand Partners Fashion Display" className="hover-image" width={500} height={667} style={{aspectRatio: '3/4', objectFit: 'cover'}}/>
