@@ -7,8 +7,8 @@ interface CollectionState {
   isLoading: boolean;
   lastSyncTime: string | null;
   addToCollection: (product: Product) => void;
-  removeFromCollection: (productId: string) => void;
-  isInCollection: (productId: string) => boolean;
+  removeFromCollection: (productSlug: string) => void;
+  isInCollection: (productSlug: string) => boolean;
   clearCollection: () => void;
   getCollectionCount: () => number;
   syncWithBackend: () => Promise<void>;
@@ -77,9 +77,9 @@ export const useCollectionStore = create<CollectionState>()(persist(
       }
     },
     
-    removeFromCollection: async (productId: string) => {
+    removeFromCollection: async (productSlug: string) => {
       set(state => ({
-        items: state.items.filter(item => item.id !== productId)
+        items: state.items.filter(item => item.slug !== productSlug)
       }));
       
       // 尝试同步到后端
@@ -90,9 +90,9 @@ export const useCollectionStore = create<CollectionState>()(persist(
       }
     },
     
-    isInCollection: (productId: string) => {
+    isInCollection: (productSlug: string) => {
       const { items } = get();
-      return items.some(item => item.id === productId);
+      return items.some(item => item.slug === productSlug);
     },
     
     clearCollection: async () => {
@@ -125,14 +125,14 @@ export const useCollectionStore = create<CollectionState>()(persist(
       set({ isLoading: true });
       
       try {
-        const productIds = get().items.map(item => item.id);
-        console.log('📦 [Collection Debug] Product IDs to sync:', productIds);
+        const productSlugs = get().items.map(item => item.slug);
+        console.log('📦 [Collection Debug] Product slugs to sync:', productSlugs);
         
         const apiUrl = `${API_BASE_URL}/api/wishlist/sync`;
         console.log('🌐 [Collection Debug] API URL:', apiUrl);
         
-        const requestBody = { productIds };
-        console.log('� [Collection Debug] Request body:', requestBody);
+        const requestBody = { productSlugs };
+        console.log('📋 [Collection Debug] Request body:', requestBody);
         
         const response = await fetch(apiUrl, {
           method: 'POST',

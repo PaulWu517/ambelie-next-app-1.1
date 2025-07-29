@@ -69,7 +69,7 @@ export default function RelatedProducts({ currentProduct }: RelatedProductsProps
         
         // 转换产品数据
         const transformedProducts: Product[] = data.data.map((product: any) => ({
-          id: product.id || 0,
+          id: product.id,
           slug: product.slug || '',
           name: product.name || 'Unnamed Product',
           period: product.period || '',

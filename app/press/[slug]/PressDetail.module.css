@@ -1,0 +1,313 @@
+/* Press Detail Container */
+.pressDetailContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 160px 20px 40px;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Header Section */
+.pressHeader {
+  text-align: center;
+  margin-bottom: 0px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 40px;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 300;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  color: #2c2c2c;
+  text-transform: uppercase;
+}
+
+.metaInfo {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  font-size: 1rem;
+  color: #666;
+  letter-spacing: 1px;
+}
+
+.category {
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.date {
+  font-style: italic;
+}
+
+.source {
+  color: #888;
+  font-weight: 400;
+}
+
+/* Main Content Layout - Single Column for CKEditor Content */
+.mainContent {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.textColumn {
+  width: 100%;
+}
+
+/* Featured Image */
+.featuredImageContainer {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.featuredImage {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.excerpt {
+  font-size: 1.4rem;
+  line-height: 1.8;
+  color: #333;
+  margin-bottom: 40px;
+  font-weight: 400;
+  text-align: center;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  font-style: italic;
+  border-left: 4px solid #ddd;
+  padding-left: 20px;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.excerpt p {
+  margin-bottom: 20px;
+}
+
+.content {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #555;
+  max-width: 100%;
+  margin: 0 auto;
+  
+  /* 确保CKEditor内容保持原始格式 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  
+  /* 处理可能的表格 */
+  overflow-x: auto;
+}
+
+/* CKEditor 标题样式 */
+.content h1, .content h2, .content h3 {
+  color: #2c2c2c;
+  margin-top: 30px;
+  margin-bottom: 15px;
+  font-weight: normal;
+}
+
+.content h1 {
+  font-size: 2.2rem;
+}
+
+.content h2 {
+  font-size: 1.8rem;
+}
+
+.content h3 {
+  font-size: 1.4rem;
+}
+
+.content p {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  overflow-wrap: break-word;
+}
+
+/* CKEditor 列表样式 */
+.content ul, .content ol {
+  margin: 20px 0;
+  padding-left: 30px;
+}
+
+.content li {
+  margin-bottom: 8px;
+}
+
+/* CKEditor 引用样式 */
+.content blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 20px;
+  margin: 30px 0;
+  font-style: italic;
+  color: #666;
+}
+
+/* CKEditor 文本样式 */
+.content strong {
+  font-weight: 600;
+  color: #333;
+}
+
+.content em {
+  font-style: italic;
+}
+
+.content a {
+  color: #007bff;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.3s ease;
+}
+
+.content a:hover {
+  border-bottom-color: #007bff;
+}
+
+/* CKEditor 表格样式 */
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 1rem;
+}
+
+.content table th,
+.content table td {
+  border: 1px solid #ddd;
+  padding: 12px 8px;
+  text-align: left;
+}
+
+.content table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.content table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* CKEditor 代码块样式 */
+.content pre {
+  background-color: #f4f4f4;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  overflow-x: auto;
+  margin: 20px 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.content code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+/* CKEditor 分隔线样式 */
+.content hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 30px 0;
+}
+
+/* CKEditor 图片样式 */
+.content img {
+  max-width: 100%;
+  height: auto;
+  margin: 20px auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: block;
+  text-align: center;
+}
+
+/* 确保所有图片都居中显示 */
+.content figure,
+.content figure.image {
+  text-align: center;
+  margin: 20px auto;
+  display: block;
+}
+
+.content figure img {
+  margin: 0 auto;
+  display: block;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .pressDetailContainer {
+    padding: 120px 15px 30px;
+  }
+  
+  .title {
+    font-size: 2rem;
+    letter-spacing: 1px;
+  }
+  
+  .metaInfo {
+    gap: 15px;
+    font-size: 0.9rem;
+  }
+  
+  .excerpt {
+    font-size: 1.2rem;
+    padding: 15px;
+  }
+  
+  .content {
+    font-size: 1rem;
+  }
+  
+  .content h1 {
+    font-size: 1.8rem;
+  }
+  
+  .content h2 {
+    font-size: 1.5rem;
+  }
+  
+  .content h3 {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pressDetailContainer {
+    padding: 100px 10px 20px;
+  }
+  
+  .title {
+    font-size: 1.5rem;
+  }
+  
+  .metaInfo {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .excerpt {
+    font-size: 1.1rem;
+    padding: 12px;
+  }
+  
+  .content {
+    font-size: 0.95rem;
+  }
+}

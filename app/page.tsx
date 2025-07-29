@@ -213,7 +213,7 @@ export default async function HomePage() {
             {homepageExhibition?.name?.toUpperCase() || 'CROSSING THE RIVER OF TIME'}
           </h2>
           <Link 
-            href={homepageExhibition ? `/exhibitions/${homepageExhibition.slug}` : '/events'} 
+            href="/exhibitions" 
             className="exhibition-button"
           >
             Explore More
@@ -330,7 +330,7 @@ export default async function HomePage() {
                 {homepageProject?.name?.toUpperCase() || 'THE FUSION OF ART AND LIFE'}
               </h2>
               <Link 
-                href={homepageProject ? `/projects/${homepageProject.slug}` : '/projects'} 
+                href="/projects" 
                 className="exhibition-button"
               >
                 Learn More

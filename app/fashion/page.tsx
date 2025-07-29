@@ -411,7 +411,7 @@ function FashionContent() {
         const transformedProducts: Product[] = data.data.map((product: any) => {
           try {
             return {
-              id: product.id || 0,
+              id: product.id,
               slug: product.slug || '',
               name: product.name || 'Unnamed Product',
               period: product.period || '',

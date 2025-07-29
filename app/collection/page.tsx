@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Trash2, ShoppingCart, FileText } from 'lucide-react';
@@ -41,11 +41,21 @@ function SuccessToast({
 }
 
 export default function CollectionPage() {
-  const { items, removeFromCollection, clearCollection } = useCollectionStore();
+  const { items, removeFromCollection, clearCollection, loadFromBackend } = useCollectionStore();
   const { addToCart } = useCartStore();
   const { addToInquiry } = useInquiryStore();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+
+  // 组件加载时从后端加载收藏列表
+  useEffect(() => {
+    loadFromBackend();
+  }, [loadFromBackend]);
+
+  // 组件加载时从后端加载收藏列表
+  useEffect(() => {
+    loadFromBackend();
+  }, [loadFromBackend]);
 
   const handleAddToCart = (item: any) => {
     addToCart(item);
@@ -121,7 +131,7 @@ export default function CollectionPage() {
                 )}
               </Link>
               <button
-                onClick={() => removeFromCollection(item.id)}
+                onClick={() => removeFromCollection(item.slug)}
                 className={styles.removeBtn}
                 aria-label="Remove from collection"
               >

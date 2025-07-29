@@ -21,8 +21,9 @@ export interface Image {
 }
 
 export interface Product {
-  id: string;
+  id: number;
   name: string;
+  slug: string;
   period: string;
   description: string;
   materials?: string;
@@ -31,7 +32,6 @@ export interface Product {
   designer?: string;
   price?: number; // 商品价格
   isInquiryOnly?: boolean; // 是否仅支持询价
-  slug: string;
   images?: { data: Image[] };
   main_image?: { data: Image };
   hover_image?: { data: Image };
@@ -60,4 +60,4 @@ export interface Exhibition {
     updatedAt: string;
     publishedAt: string;
   };
-} 
+}

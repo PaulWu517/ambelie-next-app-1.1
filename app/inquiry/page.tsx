@@ -7,7 +7,7 @@ import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 const InquiryPage = () => {
-  const { items, removeFromInquiry, getItemCount, clearInquiry } = useInquiryStore();
+  const { items, removeFromInquiry, getItemCount, clearInquiry, loadFromBackend, submitInquiry } = useInquiryStore();
   const { user, isLoggedIn } = useAuth();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,6 +21,11 @@ const InquiryPage = () => {
     subject: 'Product Inquiry', // 设置默认值
     message: '' // 保留但不显示，用于兼容后端
   });
+
+  // 组件加载时从后端加载问询清单
+  useEffect(() => {
+    loadFromBackend();
+  }, [loadFromBackend]);
 
   // 当用户登录时，自动填充表单信息
   useEffect(() => {
@@ -59,33 +64,47 @@ const InquiryPage = () => {
     setIsSubmitting(true);
 
     try {
-      // 构建询价邮件内容
-      const inquiryData = {
-        customerInfo,
-        inquiryItems: items,
-        submissionDate: new Date().toISOString(),
-        totalItems: items.length
-      };
-
-      // 发送询价邮件到后端
-      const response = await fetch('/api/inquiry/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(inquiryData),
+      // 首先使用 inquiryStore 的 submitInquiry 方法提交到后端
+      const backendSuccess = await submitInquiry({
+        email: customerInfo.email,
+        firstName: customerInfo.firstName,
+        lastName: customerInfo.lastName,
+        phone: customerInfo.phone,
+        message: customerInfo.message || 'Product inquiry request'
       });
 
-      if (response.ok) {
-        setSubmitSuccess(true);
-        // 清空询价清单
-        clearInquiry();
+      if (backendSuccess) {
+        // 后端提交成功后，发送邮件通知
+        const inquiryData = {
+          customerInfo,
+          inquiryItems: items,
+          submissionDate: new Date().toISOString(),
+          totalItems: items.length
+        };
+
+        const emailResponse = await fetch('/api/inquiry/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(inquiryData),
+        });
+
+        if (emailResponse.ok) {
+          setSubmitSuccess(true);
+          // 重新从后端加载数据以确保同步
+          await loadFromBackend();
+        } else {
+          console.warn('Email notification failed, but inquiry was saved');
+          setSubmitSuccess(true);
+          await loadFromBackend();
+        }
       } else {
-        throw new Error('Failed to send inquiry');
+        throw new Error('Failed to submit inquiry to backend');
       }
     } catch (error) {
-      console.error('Failed to send inquiry:', error);
-      alert('Failed to send inquiry. Please try again.');
+      console.error('Failed to submit inquiry:', error);
+      alert('Failed to submit inquiry. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -249,10 +268,10 @@ const InquiryPage = () => {
                     {/* 价格和移除按钮 */}
                     <div style={{ textAlign: 'right', marginLeft: '20px' }}>
                       <div style={{ marginBottom: '10px', fontSize: '1rem', fontWeight: '500' }}>
-                        {item.price && item.price > 0 ? `$${item.price.toLocaleString()}` : 'Price on inquiry'}
+                        {item.price && typeof item.price === 'number' && item.price > 0 ? `$${item.price.toLocaleString()}` : 'Price on inquiry'}
                       </div>
                       <button
-                        onClick={() => removeFromInquiry(item.id)}
+                        onClick={() => removeFromInquiry(item.slug)}
                         style={{
                           backgroundColor: '#dc3545',
                           color: 'white',

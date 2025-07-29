@@ -117,7 +117,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     setIsAddingToCart(true);
     
     const cartProduct: CartProduct = {
-      id: product.id.toString(),
+      id: product.id,
       name: product.name,
       period: product.period,
       description: product.description,
@@ -165,7 +165,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
 
   const handleAddToInquiry = async () => {
     const inquiryProduct = {
-      id: product.id.toString(),
+      id: product.id,
       name: product.name,
       period: product.period,
       description: product.description,
@@ -211,7 +211,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
 
   const handleAddToCollection = async () => {
     const collectionProduct: CartProduct = {
-      id: product.id.toString(),
+      id: product.id,
       name: product.name,
       period: product.period,
       description: product.description,
