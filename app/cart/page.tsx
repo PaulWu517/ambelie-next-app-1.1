@@ -107,7 +107,7 @@ const CartPage = () => {
                     type="number"
                     min="1"
                     value={item.quantity}
-                    onChange={(e) => updateQuantity(item.id, parseInt(e.target.value, 10))}
+                    onChange={(e) => updateQuantity(item.id.toString(), parseInt(e.target.value, 10))}
                     style={{ 
                       width: '60px', 
                       padding: '8px 5px', 
@@ -125,7 +125,7 @@ const CartPage = () => {
                 }}>${((item.price || 0) * item.quantity).toFixed(2)}</div>
                 <div>
                   <button
-                    onClick={() => removeFromCart(item.id)}
+                    onClick={() => removeFromCart(item.id.toString())}
                     style={{ 
                       color: '#dc3545', 
                       background: 'none', 
@@ -217,4 +217,4 @@ const CartPage = () => {
   );
 };
 
-export default CartPage; 
+export default CartPage;

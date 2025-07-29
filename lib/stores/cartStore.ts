@@ -65,11 +65,11 @@ export const useCartStore = create<CartState>()(
       
       addToCart: async (product) => {
         set((state) => {
-          const existingItem = state.items.find((item) => item.id === product.id);
+          const existingItem = state.items.find((item) => item.id.toString() === product.id.toString());
           if (existingItem) {
             // 如果商品已存在，则数量加一
             const updatedItems = state.items.map((item) =>
-              item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+              item.id.toString() === product.id.toString() ? { ...item, quantity: item.quantity + 1 } : item
             );
             return { items: updatedItems };
           } else {
@@ -89,7 +89,7 @@ export const useCartStore = create<CartState>()(
       
       removeFromCart: async (productId) => {
         set((state) => ({
-          items: state.items.filter((item) => item.id !== productId),
+          items: state.items.filter((item) => item.id.toString() !== productId),
         }));
         
         // 尝试同步到后端
@@ -105,11 +105,11 @@ export const useCartStore = create<CartState>()(
           if (quantity <= 0) {
             // 如果数量小于等于0，则移除商品
             return {
-              items: state.items.filter((item) => item.id !== productId),
+              items: state.items.filter((item) => item.id.toString() !== productId),
             };
           }
           const updatedItems = state.items.map((item) =>
-            item.id === productId ? { ...item, quantity } : item
+            item.id.toString() === productId ? { ...item, quantity } : item
           );
           return { items: updatedItems };
         });
@@ -160,7 +160,7 @@ export const useCartStore = create<CartState>()(
         
         try {
           const cartItems = get().items.map(item => ({
-            productId: item.id,
+            productId: item.id.toString(),
             quantity: item.quantity,
             addedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()

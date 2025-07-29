@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import ContactForm from './ContactForm';
 
 // 元数据定义
@@ -45,7 +46,9 @@ export default function ContactPage() {
           </div>
           
           {/* 右侧：联系表单 */}
-          <ContactForm />
+          <Suspense fallback={<div>Loading...</div>}>
+            <ContactForm />
+          </Suspense>
         </div>
       </section>
     </main>
