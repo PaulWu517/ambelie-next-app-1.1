@@ -16,7 +16,7 @@ interface CartState {
   loadFromBackend: () => Promise<void>;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
 // 获取用户token的辅助函数
 const getUserToken = async () => {
@@ -152,7 +152,7 @@ export const useCartStore = create<CartState>()(
           return;
         }
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const apiUrl = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
         const fullUrl = `${apiUrl}/api/cart/sync`;
         console.log('🌐 [Cart Sync] API URL:', fullUrl);
         

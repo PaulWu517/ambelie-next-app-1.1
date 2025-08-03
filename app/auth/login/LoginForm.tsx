@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/useAuth';
 import styles from './login.module.css';
 
 interface User {
@@ -11,15 +12,14 @@ interface User {
 
 export default function LoginForm() {
   const router = useRouter();
-  
-  // 状态管理
+  const { refreshAuth } = useAuth();
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [countdown, setCountdown] = useState(0);
 
   // 发送验证码
@@ -110,8 +110,10 @@ export default function LoginForm() {
             .catch(err => console.error('Token retrieval test failed:', err));
         }, 500);
         
-        // Redirect to homepage or user-specified page
-        setTimeout(() => {
+        // 刷新用户认证状态
+        setTimeout(async () => {
+          await refreshAuth();
+          // Redirect to homepage or user-specified page
           router.push('/');
         }, 1000);
       } else {

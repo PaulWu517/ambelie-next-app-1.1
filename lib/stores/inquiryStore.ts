@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Product } from '@/types';
 
 interface InquiryItem extends Product {
@@ -20,7 +19,7 @@ interface InquiryState {
   submitInquiry: (inquiryData: any) => Promise<boolean>;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
 // 获取用户token的辅助函数
 const getUserToken = async () => {
@@ -60,9 +59,7 @@ const getUserToken = async () => {
   }
 };
 
-export const useInquiryStore = create<InquiryState>()(
-  persist(
-    (set, get) => ({
+export const useInquiryStore = create<InquiryState>()((set, get) => ({
       items: [],
       isLoading: false,
       lastSyncTime: null,
@@ -195,40 +192,43 @@ export const useInquiryStore = create<InquiryState>()(
       },
       
       loadFromBackend: async () => {
-        console.log('📥 [Inquiry Debug] Starting load from backend...');
+        console.log('🔄 [Inquiry Debug] Loading inquiry from backend, clearing cache...');
+        
+        // 首先清空本地数据，确保不依赖缓存
+        set({ items: [], isLoading: true });
         
         const token = await getUserToken();
         console.log('🔑 [Inquiry Debug] Token found for load:', !!token, token ? `Length: ${token.length}` : 'No token');
         
         if (!token) {
-          console.warn('❌ [Inquiry Debug] No user token found, skipping inquiry load');
+          console.warn('❌ [Inquiry Debug] No user token found, keeping empty inquiry');
+          set({ isLoading: false });
           return;
         }
         
-        set({ isLoading: true });
-        
         try {
           const apiUrl = `${API_BASE_URL}/api/inquiries`;
-          console.log('🌐 [Inquiry Debug] Load API URL:', apiUrl);
+          console.log('📡 [Inquiry Debug] Fetching inquiry from backend...');
           
           const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
             }
           });
           
-          console.log('📡 [Inquiry Debug] Load response status:', response.status);
-          console.log('📡 [Inquiry Debug] Load response ok:', response.ok);
+          console.log('📡 [Inquiry Debug] Backend response status:', response.status);
           
           if (response.ok) {
             const result = await response.json();
-            console.log('📄 [Inquiry Debug] Load response data:', result);
+            console.log('📄 [Inquiry Debug] Backend response data:', result);
             
             if (result.success && result.data) {
               // 将后端数据设置为前端问询列表
               const backendItems = result.data;
-              console.log('📦 [Inquiry Debug] Backend items received:', backendItems);
+              console.log('📦 [Inquiry Debug] Backend items received:', backendItems.length, 'items');
               
               // 将后端产品数据转换为前端格式，添加 inquiryDate
               const inquiryItems = backendItems.map((product: Product) => ({
@@ -236,7 +236,7 @@ export const useInquiryStore = create<InquiryState>()(
                 inquiryDate: new Date().toISOString() // 使用当前时间作为询价时间
               }));
               
-              console.log('🔄 [Inquiry Debug] Converted inquiry items:', inquiryItems);
+              console.log('📦 [Inquiry Debug] Setting inquiry items:', inquiryItems.length, 'items');
               
               set({ 
                 items: inquiryItems,
@@ -245,17 +245,20 @@ export const useInquiryStore = create<InquiryState>()(
               
               console.log('✅ [Inquiry Debug] Successfully loaded inquiry items from backend');
             } else {
-              console.log('⚠️ [Inquiry Debug] No data in response or unsuccessful response');
+              console.log('📭 [Inquiry Debug] No inquiry data from backend, keeping empty');
+              set({ items: [] });
             }
           } else {
             const errorText = await response.text();
-            console.error('❌ [Inquiry Debug] Failed to load inquiry items:', response.status, errorText);
+            console.error('❌ [Inquiry Debug] Failed to load inquiry:', response.status, errorText);
+            set({ items: [] });
           }
         } catch (error) {
           console.error('💥 [Inquiry Debug] Inquiry load error:', error);
+          set({ items: [] });
         } finally {
           set({ isLoading: false });
-          console.log('🏁 [Inquiry Debug] Load process completed');
+          console.log('🏁 [Inquiry Debug] Inquiry load completed');
         }
       },
       
@@ -298,9 +301,4 @@ export const useInquiryStore = create<InquiryState>()(
           set({ isLoading: false });
         }
       }
-    }),
-    {
-      name: 'inquiry-storage', // 用于本地存储的键
-    }
-  )
-);
+  }));

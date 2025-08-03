@@ -1462,7 +1462,7 @@ main.cart-page {
 /* u7b2cu4e8cu884cu5e03u5c40 - u53cdu5411u6392u5217 */
 .exhibitions-row.second-row {
     flex-direction: row-reverse; /* u53cdu5411u6392u5217 */
-    margin-bottom: 20px; /* 保持适当的底部间距 */
+    margin-bottom: 120px; /* 与first-row保持一致的底部间距 */
 }
 
 .exhibitions-row.second-row .exhibition-main-image {

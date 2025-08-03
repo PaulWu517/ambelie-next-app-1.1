@@ -131,22 +131,22 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         data: {
           id: 1,
           attributes: {
-            name: 'main_image',
+            name: product.images[0].alternativeText || product.name,
             alternativeText: product.images[0].alternativeText || null,
             caption: null,
-            width: 500,
-            height: 667,
+            width: 800,
+            height: 600,
             formats: {},
             hash: '',
             ext: '.jpg',
             mime: 'image/jpeg',
-            size: 100,
+            size: 0,
             url: product.images[0].url,
             previewUrl: null,
             provider: 'local',
-            provider_metadata: {},
+            provider_metadata: null,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           }
         }
       } : undefined
@@ -179,22 +179,22 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         data: {
           id: 1,
           attributes: {
-            name: 'main_image',
+            name: product.images[0].alternativeText || product.name,
             alternativeText: product.images[0].alternativeText || null,
             caption: null,
-            width: 500,
-            height: 667,
+            width: 800,
+            height: 600,
             formats: {},
             hash: '',
             ext: '.jpg',
             mime: 'image/jpeg',
-            size: 100,
+            size: 0,
             url: product.images[0].url,
             previewUrl: null,
             provider: 'local',
-            provider_metadata: {},
+            provider_metadata: null,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           }
         }
       } : undefined
@@ -225,22 +225,22 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         data: {
           id: 1,
           attributes: {
-            name: 'main_image',
+            name: product.images[0].alternativeText || product.name,
             alternativeText: product.images[0].alternativeText || null,
             caption: null,
-            width: 500,
-            height: 667,
+            width: 800,
+            height: 600,
             formats: {},
             hash: '',
             ext: '.jpg',
             mime: 'image/jpeg',
-            size: 100,
+            size: 0,
             url: product.images[0].url,
             previewUrl: null,
             provider: 'local',
-            provider_metadata: {},
+            provider_metadata: null,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           }
         }
       } : undefined

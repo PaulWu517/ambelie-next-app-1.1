@@ -31,6 +31,8 @@ interface PressItem {
   mainImage?: ImageItem | null;
   showOnHomepage?: boolean;
   location?: string;
+  media?: string;
+  url?: string;
 }
 
 interface StrapiResponse {
@@ -109,6 +111,17 @@ export default async function PressDetailPage({ params }: PressDetailPageProps) 
           <span className={styles.category}>{pressItem.projectType}</span>
           {dateDisplay && <span className={styles.date}>{dateDisplay}</span>}
           {pressItem.location && <span className={styles.source}>{pressItem.location}</span>}
+          {pressItem.media && (
+            <span className={styles.source}>
+              by {pressItem.url ? (
+                <a href={pressItem.url} target="_blank" rel="noopener noreferrer" className={styles.mediaLink}>
+                  {pressItem.media}
+                </a>
+              ) : (
+                pressItem.media
+              )}
+            </span>
+          )}
         </div>
       </header>
 
@@ -121,6 +134,20 @@ export default async function PressDetailPage({ params }: PressDetailPageProps) 
                 className={styles.content}
                 dangerouslySetInnerHTML={{ __html: processTextWithLineBreaks(pressItem.content) }}
               />
+            )}
+            
+            {/* Read More Button */}
+            {pressItem.url && (
+              <div className={styles.readMoreContainer}>
+                <a 
+                  href={pressItem.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className={styles.readMoreButton}
+                >
+                  Read More
+                </a>
+              </div>
             )}
           </div>
         </main>

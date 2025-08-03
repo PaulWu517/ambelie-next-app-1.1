@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Product } from '@/types';
 
 interface CollectionState {
@@ -15,7 +14,7 @@ interface CollectionState {
   loadFromBackend: () => Promise<void>;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
 // 获取用户token的辅助函数
 const getUserToken = async () => {
@@ -55,8 +54,7 @@ const getUserToken = async () => {
   }
 };
 
-export const useCollectionStore = create<CollectionState>()(persist(
-  (set, get) => ({
+export const useCollectionStore = create<CollectionState>()((set, get) => ({
     items: [],
     isLoading: false,
     lastSyncTime: null,
@@ -164,41 +162,57 @@ export const useCollectionStore = create<CollectionState>()(persist(
     },
     
     loadFromBackend: async () => {
+      console.log('🔄 [Collection Debug] Loading collection from backend, clearing cache...');
+      
+      // 首先清空本地数据，确保不依赖缓存
+      set({ items: [], isLoading: true });
+      
       const token = await getUserToken();
       if (!token) {
-        console.warn('No user token found, skipping collection load');
+        console.warn('❌ [Collection Debug] No user token found, keeping empty collection');
+        set({ isLoading: false });
         return;
       }
       
-      set({ isLoading: true });
-      
       try {
+        console.log('📡 [Collection Debug] Fetching collection from backend...');
         const response = await fetch(`${API_BASE_URL}/api/wishlist`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
           }
         });
         
+        console.log('📡 [Collection Debug] Backend response status:', response.status);
+        
         if (response.ok) {
           const result = await response.json();
+          console.log('📄 [Collection Debug] Backend response data:', result);
+          
           if (result.success && result.data) {
             // 将后端数据设置为前端收藏列表
             const backendItems = result.data;
+            console.log('📦 [Collection Debug] Setting collection items:', backendItems.length, 'items');
             set({ 
               items: backendItems,
               lastSyncTime: new Date().toISOString()
             });
+          } else {
+            console.log('📭 [Collection Debug] No collection data from backend, keeping empty');
+            set({ items: [] });
           }
+        } else {
+          console.error('❌ [Collection Debug] Failed to load collection:', response.status);
+          set({ items: [] });
         }
       } catch (error) {
-        console.error('Collection load error:', error);
+        console.error('💥 [Collection Debug] Collection load error:', error);
+        set({ items: [] });
       } finally {
         set({ isLoading: false });
+        console.log('🏁 [Collection Debug] Collection load completed');
       }
     }
-  }),
-  {
-    name: 'collection-storage',
-  }
-));
+  }));

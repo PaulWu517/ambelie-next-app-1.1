@@ -47,12 +47,7 @@ export default function CollectionPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // 组件加载时从后端加载收藏列表
-  useEffect(() => {
-    loadFromBackend();
-  }, [loadFromBackend]);
-
-  // 组件加载时从后端加载收藏列表
+  // 组件加载时总是从后端重新加载收藏列表，不依赖缓存
   useEffect(() => {
     loadFromBackend();
   }, [loadFromBackend]);
@@ -117,7 +112,9 @@ export default function CollectionPage() {
               <Link href={`/products/${item.slug}`}>
                 {item.main_image?.data?.attributes?.url ? (
                   <Image
-                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337'}${item.main_image.data.attributes.url}`}
+                    src={item.main_image.data.attributes.url.startsWith('http') 
+                      ? item.main_image.data.attributes.url 
+                      : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.data.attributes.url}`}
                     alt={item.name}
                     width={300}
                     height={400}

@@ -32,6 +32,8 @@ interface PressItem {
   mainImage?: ImageItem | null;
   showOnHomepage?: boolean;
   location?: string;
+  media?: string;
+  url?: string;
 }
 
 interface StrapiResponse {
@@ -79,15 +81,8 @@ function formatDateLocationDisplay(pressItem: PressItem): string {
   const dateStr = formatDateDisplay(pressItem);
   const locationStr = pressItem.location || '';
   
-  if (dateStr && locationStr) {
-    return `${dateStr} • ${locationStr}`;
-  } else if (dateStr) {
-    return dateStr;
-  } else if (locationStr) {
-    return locationStr;
-  }
-  
-  return '';
+  const parts = [dateStr, locationStr].filter(Boolean);
+  return parts.join(' • ');
 }
 
 // Helper function to get introduction text
@@ -160,6 +155,11 @@ export default async function PressPage() {
                 <div className="exhibition-text">
                   <h2 className="exhibition-title animate-on-scroll delay-300">{pressItem.name}</h2>
                   <p className="store-address animate-on-scroll delay-400">{pressItem.projectType}</p>
+                  {pressItem.media && (
+                    <p className="exhibition-media animate-on-scroll delay-450" style={{ color: 'var(--brand-green)', marginBottom: '0.5em' }}>
+                      By {pressItem.media}
+                    </p>
+                  )}
                   <p className="exhibition-date animate-on-scroll delay-500">{formatDateLocationDisplay(pressItem)}</p>
                   {getIntroductionText(pressItem) && (
                     <p className="exhibition-description animate-on-scroll delay-600">{getIntroductionText(pressItem)}</p>

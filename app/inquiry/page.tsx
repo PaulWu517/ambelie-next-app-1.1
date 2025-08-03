@@ -22,7 +22,7 @@ const InquiryPage = () => {
     message: '' // 保留但不显示，用于兼容后端
   });
 
-  // 组件加载时从后端加载问询清单
+  // 组件加载时总是从后端重新加载问询清单，不依赖缓存
   useEffect(() => {
     loadFromBackend();
   }, [loadFromBackend]);
@@ -206,9 +206,11 @@ const InquiryPage = () => {
                   >
                     {/* 商品图片 */}
                     <div style={{ width: '80px', height: '80px', marginRight: '20px' }}>
-                      {item.main_image?.data?.attributes?.url ? (
+                      {item.main_image?.url ? (
                         <Image
-                          src={`${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.data.attributes.url}`}
+                          src={item.main_image.url.startsWith('http') 
+                            ? item.main_image.url 
+                            : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.url}`}
                           alt={item.name}
                           width={80}
                           height={80}

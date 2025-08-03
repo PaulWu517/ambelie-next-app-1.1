@@ -6,6 +6,7 @@ import "./globals.css";
 // 引入 Header 和 Footer 组件
 import Header from "@/components/Header"; 
 import Footer from "@/components/Footer";
+import DataInitProvider from "@/app/providers/DataInitProvider";
 
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
@@ -45,9 +46,11 @@ export default function RootLayout({
       {/* 移除之前的 geistSans.variable 和 geistMono.variable */}
       {/* 您在 globals.css 中定义的字体将通过 CSS 级联应用 */}
       <body className="antialiased">
-        <Header />
-        {children}
-        <Footer />
+        <DataInitProvider>
+          <Header />
+          {children}
+          <Footer />
+        </DataInitProvider>
       </body>
     </html>
   );
