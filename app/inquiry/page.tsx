@@ -206,11 +206,11 @@ const InquiryPage = () => {
                   >
                     {/* 商品图片 */}
                     <div style={{ width: '80px', height: '80px', marginRight: '20px' }}>
-                      {item.main_image?.url ? (
+                      {item.main_image?.data?.attributes?.url ? (
                         <Image
-                          src={item.main_image.url.startsWith('http') 
-                            ? item.main_image.url 
-                            : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.url}`}
+                          src={item.main_image.data.attributes.url.startsWith('http') 
+                            ? item.main_image.data.attributes.url 
+                            : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.data.attributes.url}`}
                           alt={item.name}
                           width={80}
                           height={80}
