@@ -106,26 +106,62 @@ export default function CollectionPage() {
       </div>
 
       <div className={styles.collectionGrid}>
-        {items.map((item) => (
+        {items.map((item) => {
+          // 详细调试：输出item的完整数据结构
+          console.log('🔍 [Collection Debug] Item data:', JSON.stringify(item, null, 2));
+          console.log('🖼️ [Collection Debug] Main image data:', JSON.stringify(item.main_image, null, 2));
+          
+          // 构建图片URL - 适配两种数据结构
+          let imageUrl = '/placeholder.jpg';
+          
+          if (item.main_image) {
+            // 检查是否是新的数据结构 (直接的图片对象)
+            if ((item.main_image as any).url) {
+              const url = (item.main_image as any).url;
+              imageUrl = url.startsWith('http') ? 
+                url : 
+                `https://ambelie-backend-production.up.railway.app${url}`;
+            }
+            // 检查是否是旧的数据结构 (包含data.attributes)
+            else if (item.main_image.data?.attributes?.url) {
+              imageUrl = item.main_image.data.attributes.url.startsWith('http') ? 
+                item.main_image.data.attributes.url : 
+                `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`;
+            }
+          }
+          
+          console.log('🌐 [Collection Debug] Final image URL for', item.name, ':', imageUrl);
+          console.log('📊 [Collection Debug] URL analysis:', {
+            hasMainImage: !!item.main_image,
+            hasDirectUrl: !!(item.main_image as any)?.url,
+            hasData: !!item.main_image?.data,
+            hasAttributes: !!item.main_image?.data?.attributes,
+            hasNestedUrl: !!item.main_image?.data?.attributes?.url,
+            directUrl: (item.main_image as any)?.url,
+            nestedUrl: item.main_image?.data?.attributes?.url,
+            finalUrl: imageUrl
+          });
+          
+          return (
           <div key={item.id} className={styles.collectionItem}>
             <div className={styles.imageContainer}>
               <Link href={`/products/${item.slug}`}>
-                {item.main_image?.data?.attributes?.url ? (
-                  <Image
-                    src={item.main_image.data.attributes.url.startsWith('http') 
-                      ? item.main_image.data.attributes.url 
-                      : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.data.attributes.url}`}
-                    alt={item.name}
-                    width={300}
-                    height={400}
-                    className={styles.productImage}
-                    unoptimized
-                  />
-                ) : (
-                  <div className={styles.noImage}>
-                    <span>No Image</span>
-                  </div>
-                )}
+                <Image
+                  src={imageUrl}
+                  alt={item.name}
+                  width={300}
+                  height={400}
+                  className={styles.productImage}
+                  unoptimized
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    console.error('❌ [Collection Debug] Image load failed for:', item.name, 'URL:', imageUrl);
+                    target.src = '/placeholder.jpg';
+                  }}
+                  onLoad={() => {
+                    console.log('✅ [Collection Debug] Image loaded successfully for:', item.name, 'URL:', imageUrl);
+                  }}
+                />
               </Link>
               <button
                 onClick={() => removeFromCollection(item.slug)}
@@ -166,7 +202,8 @@ export default function CollectionPage() {
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       
       <SuccessToast 

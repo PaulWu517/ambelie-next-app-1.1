@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 export default function Footer() {
   const [email, setEmail] = useState('');
+  const [showQRCode, setShowQRCode] = useState(false);
   const router = useRouter();
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
@@ -73,11 +74,52 @@ export default function Footer() {
             <button type="submit">Subscribe</button>
           </form>
           <div className="footer-social">
-            <Link href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></Link>
+            <Link href="https://www.instagram.com/ambelie_gallery" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i className="fab fa-instagram"></i></Link>
             <Link href="https://www.xiaohongshu.com/user/profile/5ac6c62b4eacab09381921ec" target="_blank" rel="noopener noreferrer" aria-label="小红书" title="小红书官方账号">
               <Image src="/assets/vi/小红书-copy.png" alt="小红书" width={18} height={18} className="xiaohongshu-logo" />
             </Link>
-            <Link href="#" aria-label="WeChat" title="请扫描二维码关注我们"><i className="fab fa-weixin"></i></Link>
+            <div 
+              className="wechat-container"
+              onMouseEnter={() => setShowQRCode(true)}
+              onMouseLeave={() => setShowQRCode(false)}
+              style={{ position: 'relative', display: 'inline-block' }}
+            >
+              <Link href="#" aria-label="WeChat" title="请扫描二维码关注我们"><i className="fab fa-weixin"></i></Link>
+              {showQRCode && (
+                <div 
+                  className="qr-code-popup"
+                  style={{
+                     position: 'absolute',
+                     bottom: '100%',
+                     left: '50%',
+                     transform: 'translateX(-50%)',
+                     marginBottom: '12px',
+                     backgroundColor: 'white',
+                     padding: '16px',
+                     borderRadius: '12px',
+                     boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                     zIndex: 1000,
+                     border: '1px solid #e0e0e0',
+                     minWidth: '200px'
+                   }}
+                >
+                  <Image 
+                     src="/assets/images/QR code.jpg" 
+                     alt="WeChat QR Code" 
+                     width={160} 
+                     height={160}
+                     style={{ display: 'block', margin: '0 auto' }}
+                   />
+                  <p style={{ 
+                    margin: '10px 0 0 0', 
+                    fontSize: '14px', 
+                    textAlign: 'center', 
+                    color: '#666',
+                    fontWeight: '500'
+                  }}>Scan to Follow WeChat</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

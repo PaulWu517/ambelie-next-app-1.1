@@ -62,11 +62,30 @@ const CartPage = () => {
                     flexShrink: 0
                   }}>
                     <Image
-                      src={item.main_image?.data?.attributes?.url ? 
-                        (item.main_image.data.attributes.url.startsWith('http') ? 
-                          item.main_image.data.attributes.url : 
-                          `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`
-                        ) : '/placeholder.jpg'
+                      src={(() => {
+                        // 详细调试：输出购物车item的完整数据结构
+                        console.log('🛒 [Cart Debug] Item data:', JSON.stringify(item, null, 2));
+                        console.log('🖼️ [Cart Debug] Main image data:', JSON.stringify(item.main_image, null, 2));
+                        
+                        const imageUrl = item.main_image?.data?.attributes?.url ? 
+                          (item.main_image.data.attributes.url.startsWith('http') ? 
+                            item.main_image.data.attributes.url : 
+                            `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`
+                          ) : '/placeholder.jpg';
+                        
+                        console.log('🌐 [Cart Debug] Final image URL for', item.name, ':', imageUrl);
+                        console.log('📊 [Cart Debug] URL analysis:', {
+                          hasMainImage: !!item.main_image,
+                          hasData: !!item.main_image?.data,
+                          hasAttributes: !!item.main_image?.data?.attributes,
+                          hasUrl: !!item.main_image?.data?.attributes?.url,
+                          originalUrl: item.main_image?.data?.attributes?.url,
+                          startsWithHttp: item.main_image?.data?.attributes?.url?.startsWith('http'),
+                          finalUrl: imageUrl
+                        });
+                        
+                        return imageUrl;
+                      })()
                       }
                       alt={item.name}
                       width={80}
@@ -78,7 +97,11 @@ const CartPage = () => {
                       }}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
+                        console.error('❌ [Cart Debug] Image load failed for:', item.name);
                         target.src = '/placeholder.jpg';
+                      }}
+                      onLoad={() => {
+                        console.log('✅ [Cart Debug] Image loaded successfully for:', item.name);
                       }}
                     />
                   </div>

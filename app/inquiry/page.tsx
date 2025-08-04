@@ -206,30 +206,56 @@ const InquiryPage = () => {
                   >
                     {/* 商品图片 */}
                     <div style={{ width: '80px', height: '80px', marginRight: '20px' }}>
-                      {item.main_image?.data?.attributes?.url ? (
-                        <Image
-                          src={item.main_image.data.attributes.url.startsWith('http') 
-                            ? item.main_image.data.attributes.url 
-                            : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${item.main_image.data.attributes.url}`}
-                          alt={item.name}
-                          width={80}
-                          height={80}
-                          style={{ objectFit: 'cover', borderRadius: '4px' }}
-                        />
-                      ) : (
-                        <div style={{ 
-                          width: '80px', 
-                          height: '80px', 
-                          backgroundColor: '#f0f0f0', 
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#999'
-                        }}>
-                          No Image
-                        </div>
-                      )}
+                      {(() => {
+                        // 构建图片URL - 适配两种数据结构
+                        let imageUrl = null;
+                        
+                        if (item.main_image) {
+                          // 检查是否是新的数据结构 (直接的图片对象)
+                          if ((item.main_image as any).url) {
+                            const url = (item.main_image as any).url;
+                            imageUrl = url.startsWith('http') ? 
+                              url : 
+                              `https://ambelie-backend-production.up.railway.app${url}`;
+                          }
+                          // 检查是否是旧的数据结构 (包含data.attributes)
+                          else if (item.main_image.data?.attributes?.url) {
+                            imageUrl = item.main_image.data.attributes.url.startsWith('http') ? 
+                              item.main_image.data.attributes.url : 
+                              `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`;
+                          }
+                        }
+                        
+                        return imageUrl ? (
+                          <Image
+                            src={imageUrl}
+                            alt={item.name}
+                            width={80}
+                            height={80}
+                            style={{ objectFit: 'cover', borderRadius: '4px' }}
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              const parent = target.parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<div style="width: 80px; height: 80px; backgroundColor: #f0f0f0; borderRadius: 4px; display: flex; alignItems: center; justifyContent: center; color: #999; fontSize: 12px;">No Image</div>';
+                              }
+                            }}
+                          />
+                         ) : (
+                           <div style={{ 
+                             width: '80px', 
+                             height: '80px', 
+                             backgroundColor: '#f0f0f0', 
+                             borderRadius: '4px',
+                             display: 'flex',
+                             alignItems: 'center',
+                             justifyContent: 'center',
+                             color: '#999'
+                           }}>
+                             No Image
+                           </div>
+                         );
+                       })()}
                     </div>
                     
                     {/* 商品信息 */}
