@@ -98,26 +98,54 @@ export async function POST(request: NextRequest) {
       throw new Error('生产环境需要配置SMTP凭据');
     }
     
-    // 邮件内容
+    // 邮件内容 - 简约大气的黑白设计
     const emailContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333; text-align: center;">Ambelie Email Verification</h2>
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p>Hello,</p>
-          <p>You are logging into your Ambelie account. Please use the following verification code to complete the verification:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 8px; 
-                         background: #fff; padding: 15px 30px; border-radius: 8px; 
-                         border: 2px dashed #007bff;">${code}</span>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ambelie Email Verification</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+          <!-- Header -->
+          <div style="padding: 20px 30px; text-align: center; background-color: #ffffff;">
+            <img src="https://ambelie.com/assets/vi/Ambelie-EMAIL VERIFICATION.png" alt="Ambelie Email Verification" style="max-width: 400px; width: 100%; height: auto; display: block; margin: 0 auto;" />
           </div>
-          <p><strong>Verification code expires in: 10 minutes</strong></p>
-          <p>If you did not request this verification code, please ignore this email.</p>
+          
+          <!-- Content -->
+          <div style="padding: 50px 30px; background-color: #ffffff;">
+            <p style="color: #231815; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">Hello,</p>
+            
+            <p style="color: #231815; font-size: 16px; line-height: 1.6; margin: 0 0 40px 0;">
+              You are logging into your Ambelie account. Please use the following verification code to complete the verification:
+            </p>
+            
+            <!-- Verification Code -->
+            <div style="text-align: center; margin: 50px 0;">
+              <div style="display: inline-block; background-color: #ffffff; border: 2px solid #231815; padding: 25px 40px;">
+                <span style="font-size: 36px; font-weight: 600; color: #231815; letter-spacing: 8px; font-family: 'Georgia', 'Times New Roman', serif;">${code}</span>
+              </div>
+            </div>
+            
+            <p style="color: #666666; font-size: 14px; text-align: center; margin: 30px 0;">Verification code expires in: 10 minutes</p>
+            
+            <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
+              If you did not request this verification code, please ignore this email.
+            </p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="background-color: #f8f8f8; padding: 30px; text-align: center; border-top: 1px solid #e0e0e0;">
+            <p style="color: #999999; font-size: 12px; margin: 0; line-height: 1.5;">
+              This email is automatically sent by Ambelie system, please do not reply<br>
+              <span style="color: #7E7A20;">AMBELIE</span> | Curated Art & Antiques
+            </p>
+          </div>
         </div>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #666; font-size: 14px; text-align: center;">
-          This email is automatically sent by Ambelie system, please do not reply
-        </p>
-      </div>
+      </body>
+      </html>
     `;
     
     // 发送邮件

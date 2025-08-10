@@ -19,7 +19,6 @@ export default function LoginForm() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
   const [countdown, setCountdown] = useState(0);
 
   // 发送验证码
@@ -31,7 +30,6 @@ export default function LoginForm() {
 
     setIsLoading(true);
     setError('');
-    setMessage('');
 
     try {
       const response = await fetch('/api/auth/send-code', {
@@ -45,7 +43,6 @@ export default function LoginForm() {
       const result = await response.json();
 
       if (response.ok) {
-        setMessage(result.message);
         setStep('code');
         startCountdown();
         
@@ -94,28 +91,35 @@ export default function LoginForm() {
       console.log('Set-Cookie header:', setCookieHeader);
       
       if (response.ok) {
-        setMessage('Login successful!');
+        console.log('🎉 Login verification successful!');
         
         // 检查cookie是否被设置
         setTimeout(() => {
-          console.log('Post-login cookie check:');
+          console.log('🍪 Post-login cookie check:');
           console.log('document.cookie:', document.cookie);
           
           // 测试token获取
           fetch('/api/auth/get-token', { credentials: 'include' })
             .then(r => r.json())
             .then(tokenData => {
-              console.log('Post-login token retrieval test:', tokenData);
+              console.log('🔑 Post-login token retrieval test:', tokenData);
             })
-            .catch(err => console.error('Token retrieval test failed:', err));
+            .catch(err => console.error('❌ Token retrieval test failed:', err));
         }, 500);
         
-        // 刷新用户认证状态
-        setTimeout(async () => {
-          await refreshAuth();
-          // Redirect to homepage or user-specified page
-          router.push('/');
-        }, 1000);
+        console.log('🔄 Starting auth refresh process...');
+        // 立即刷新用户认证状态并跳转
+        refreshAuth().then((result) => {
+          console.log('✅ Auth refresh completed successfully:', result);
+          console.log('🏠 Redirecting to homepage with a full page reload...');
+          // 使用 window.location.assign() 来强制页面刷新，确保所有组件状态同步
+          window.location.assign('/');
+        }).catch((error) => {
+          console.error('❌ Auth refresh failed:', error);
+          console.log('🏠 Redirecting anyway with a full page reload...');
+          // 即使刷新失败也跳转，因为登录已经成功
+          window.location.assign('/');
+        });
       } else {
         setError(result.error || 'Verification failed');
       }
@@ -152,18 +156,21 @@ export default function LoginForm() {
     setStep('email');
     setCode('');
     setError('');
-    setMessage('');
   };
 
   return (
     <div className={styles.loginForm}>
-      {/* 状态消息 */}
-      {message && (
-        <div className={`${styles.message} ${styles.success}`}>
-          {message}
-        </div>
-      )}
-      
+      <div className={styles.loginHeader}>
+        <h1>Welcome to Ambelie</h1>
+        {step === 'email' ? (
+          <p>Enter your email address and we'll send you a verification code to sign in</p>
+        ) : (
+          <p>
+            Verification code sent to: {email}
+          </p>
+        )}
+      </div>
+
       {error && (
         <div className={`${styles.message} ${styles.error}`}>
           {error}
@@ -198,13 +205,6 @@ export default function LoginForm() {
       ) : (
         // Verification code input step
         <div className={styles.codeStep}>
-          <div className={styles.emailDisplay}>
-            Verification code sent to: <strong>{email}</strong>
-            <button type="button" onClick={backToEmail} className={styles.changeEmail}>
-              Change Email
-            </button>
-          </div>
-
           <div className={styles.formGroup}>
             <label htmlFor="code">Verification Code</label>
             <input

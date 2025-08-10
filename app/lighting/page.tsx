@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -40,12 +40,21 @@ interface SubCategoryItem {
 function LightingContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('category');
-  const [activeSubCategory, setActiveSubCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'category';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('category') || 'category';
+  });
+  const [activeSubCategory, setActiveSubCategory] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'all';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('subcategory') || 'all';
+  });
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shouldResetSubCategory, setShouldResetSubCategory] = useState(false);
+  const requestIdRef = useRef(0);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -140,6 +149,7 @@ function LightingContent() {
     const fetchProducts = async () => {
       setLoading(true);
       setError(null); // 重置错误状态
+      const requestId = ++requestIdRef.current;
       
       try {
         // 根据当前活动分类和子分类构建查询
@@ -170,15 +180,19 @@ function LightingContent() {
             query = `filters[category][slug][$in][0]=frank-lloyd-wright-collection&filters[category][slug][$in][1]=jacobsson-collection&populate[0]=main_image&populate[1]=hover_image`;
           } else {
             // 对于其他主分类，暂时显示空结果
-            setProducts([]);
-            setLoading(false);
+            if (requestId === requestIdRef.current) {
+              setProducts([]);
+              setLoading(false);
+            }
             return;
           }
         }
         
         if (!query) {
-          setProducts([]);
-          setLoading(false);
+          if (requestId === requestIdRef.current) {
+            setProducts([]);
+            setLoading(false);
+          }
           return;
         }
         
@@ -195,7 +209,9 @@ function LightingContent() {
         if (!response.ok) {
           // 如果是404或其他错误，不抛出异常，而是设置空数组
           console.warn(`API request failed with status ${response.status}`);
-          setProducts([]);
+          if (requestId === requestIdRef.current) {
+            setProducts([]);
+          }
           return;
         }
 
@@ -204,7 +220,9 @@ function LightingContent() {
         // 检查数据结构是否正确
         if (!data || !Array.isArray(data.data)) {
           console.warn('Invalid data structure received from API');
-          setProducts([]);
+          if (requestId === requestIdRef.current) {
+            setProducts([]);
+          }
           return;
         }
         
@@ -235,13 +253,19 @@ function LightingContent() {
           }
         }).filter(Boolean) as Product[]; // 过滤掉null值
 
-        setProducts(transformedProducts);
+        if (requestId === requestIdRef.current) {
+          setProducts(transformedProducts);
+        }
       } catch (err) {
         console.error('Failed to fetch products:', err);
         // 不设置错误状态，而是显示空产品列表
-        setProducts([]);
+        if (requestId === requestIdRef.current) {
+          setProducts([]);
+        }
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 

@@ -23,6 +23,15 @@ export default function Header() {
   
   // 用户认证状态
   const { user, isLoggedIn, isLoading: authLoading, logout } = useAuth();
+  
+  // 调试：监听认证状态变化
+  useEffect(() => {
+    console.log('🏠 Header: Auth state changed:', {
+      user: user ? { email: user.email, name: user.name } : null,
+      isLoggedIn,
+      authLoading
+    });
+  }, [user, isLoggedIn, authLoading]);
   const { getItemCount } = useCartStore();
   const { getItemCount: getInquiryItemCount } = useInquiryStore();
   

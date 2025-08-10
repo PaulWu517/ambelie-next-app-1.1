@@ -176,7 +176,7 @@ export default function HangzhouShowroomPage() {
           className={styles.contactContent}
           ref={addToRefs}
         >
-          <h2 className={styles.contactTitle}>VISIT OUR SHOWROOM</h2>
+          <h2 className={styles.contactTitle}>VISIT THE GALLERY</h2>
           <p className={styles.contactDescription}>
             Experience our curated collection in person. Private appointments are available for personalized consultations.
           </p>

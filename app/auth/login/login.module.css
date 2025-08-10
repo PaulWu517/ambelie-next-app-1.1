@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: #f0f2f5;
   padding: 20px;
 }
 
@@ -31,7 +31,6 @@
 }
 
 .loginHeader {
-  text-align: center;
   margin-bottom: 30px;
 }
 
@@ -40,12 +39,14 @@
   font-weight: 700;
   color: #2d3748;
   margin-bottom: 8px;
+  text-align: center;
 }
 
 .loginHeader p {
   color: #718096;
   font-size: 16px;
   line-height: 1.5;
+  text-align: left;
 }
 
 /* Form styles */
@@ -68,8 +69,8 @@
 .formGroup input {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid #000;
+  border-radius: 0;
   font-size: 16px;
   transition: all 0.3s ease;
   box-sizing: border-box;
@@ -77,8 +78,17 @@
 
 .formGroup input:focus {
   outline: none;
-  border-color: #3182ce;
-  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  border-color: #000000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.formGroup input:-webkit-autofill,
+.formGroup input:-webkit-autofill:hover,
+.formGroup input:-webkit-autofill:focus,
+.formGroup input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #000 !important;
 }
 
 .formGroup input:disabled {
@@ -88,29 +98,58 @@
 }
 
 .submitButton {
+  min-width: 180px;
   width: 100%;
-  padding: 14px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 12px 0;
+  background-color: transparent;
+  color: var(--brand-black);
+  border: 1px solid var(--brand-black);
+  font-family: var(--font-body);
+  font-size: 0.95em;
+  letter-spacing: 0.1em;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s, background 0.3s;
+  z-index: 1;
+  margin-top: 20px;
+  margin-bottom: 20px; /* Retained from original for spacing */
+}
+
+.submitButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background-color: var(--brand-black);
+  transition: width 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  z-index: -1;
 }
 
 .submitButton:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  color: #fff;
+  border-color: var(--brand-black);
+  background-color: transparent;
+}
+
+.submitButton:hover:not(:disabled)::before {
+  width: 100%;
+  background-color: var(--brand-black);
 }
 
 .submitButton:disabled {
-  background: #cbd5e0;
+  background-color: #cccccc;
   cursor: not-allowed;
+  color: #666666;
+  border-color: #cccccc;
   transform: none;
   box-shadow: none;
+}
+
+.submitButton:disabled:hover::before {
+    width: 0;
 }
 
 /* 消息样式 */
@@ -133,6 +172,27 @@
   background-color: #fed7d7;
   color: #c53030;
   border: 1px solid #feb2b2;
+}
+
+
+.loginFooter {
+  text-align: left;
+  margin-top: 20px;
+}
+
+.loginFooter p {
+  color: #a0aec0; /* 浅灰色 */
+  font-size: 14px;
+}
+
+.loginFooter p a {
+  color: #a0aec0; /* 浅灰色 */
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.loginFooter p a:hover {
+  color: var(--brand-red); /* 品牌红 */
 }
 
 /* 验证码步骤特有样式 */
@@ -244,4 +304,4 @@
     opacity: 1;
     transform: translateY(0);
   }
-} 
+}

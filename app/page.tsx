@@ -382,8 +382,8 @@ export default async function HomePage() {
         <div className="about-us-inner">
           <h2 className="section-heading about-us-title animate-on-scroll delay-100">ABOUT US</h2>
           <div className="about-us-content">
-            <p className="animate-on-scroll delay-200">Traveling through Europe, Asia, the Middle East, and North America, moving through more than 500 buying and antique stores, AMBELIE brings beauty across time, place, society, and lifestyle back to Shanghai & Hangzhou.</p>
-            <p className="animate-on-scroll delay-300">Under the plain white dome supported by Collins columns, the same classic and timeless mid-century furniture from different cultures build a living place with an implicit aesthetic. Order - the relics of various civilizations, born from the works of other masters, are so harmonious and integrated into the same room, creating a hidden resonance and connection. </p>
+            <p className="animate-on-scroll delay-200">AMBELIE brings beauty across time, place, culture, and lifestyle. Timeless mid-century pieces from different cultures come together to form a living space defined by understated elegance.</p>
+            <p className="animate-on-scroll delay-300">Artifacts from diverse civilizations, creations of great masters, harmoniously coexist within the same room, evoking a subtle sense of resonance and connection across eras.</p>
             <div className="about-logo animate-on-scroll delay-400">
               <Image src="/assets/vi/Ambelie_about_Logos.png" alt="Ambelie Logo Detailed" width={260} height={75} style={{width: '260px', height: 'auto'}}/>
             </div>

@@ -102,7 +102,7 @@ export default function RelatedProducts({ currentProduct }: RelatedProductsProps
   if (loading) {
     return (
       <section className={styles.relatedProducts}>
-        <h2 className={styles.relatedTitle}>ITEMS SIMILAR</h2>
+        <h2 className={styles.relatedTitle}>KINDRED FINDS</h2>
         <div className={styles.loading}>Loading related products...</div>
       </section>
     );
@@ -111,7 +111,7 @@ export default function RelatedProducts({ currentProduct }: RelatedProductsProps
   if (error || relatedProducts.length === 0) {
     return (
       <section className={styles.relatedProducts}>
-        <h2 className={styles.relatedTitle}>ITEMS SIMILAR</h2>
+        <h2 className={styles.relatedTitle}>KINDRED FINDS</h2>
         <div className={styles.noProducts}>No similar items found.</div>
       </section>
     );
@@ -119,7 +119,7 @@ export default function RelatedProducts({ currentProduct }: RelatedProductsProps
 
   return (
     <section className={styles.relatedProducts}>
-      <h2 className={styles.relatedTitle}>ITEMS SIMILAR</h2>
+      <h2 className={styles.relatedTitle}>KINDRED FINDS</h2>
       <div className={styles.relatedItems}>
         {relatedProducts.map((product) => (
           <div key={product.slug} className={styles.relatedItem}>

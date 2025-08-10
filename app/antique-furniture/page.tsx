@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -40,12 +40,25 @@ interface SubCategoryItem {
 function AntiqueFurnitureContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('seating');
-  const [activeSubCategory, setActiveSubCategory] = useState<string>('all');
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('category') || 'seating';
+    }
+    return 'seating';
+  });
+  const [activeSubCategory, setActiveSubCategory] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get('subcategory') || 'all';
+    }
+    return 'all';
+  });
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shouldResetSubCategory, setShouldResetSubCategory] = useState(false);
+  const requestIdRef = useRef(0);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -143,6 +156,7 @@ function AntiqueFurnitureContent() {
   // 获取产品数据
   useEffect(() => {
     const fetchProducts = async () => {
+      const currentRequestId = ++requestIdRef.current;
       setLoading(true);
       setError(null); // 重置错误状态
       
@@ -177,15 +191,19 @@ function AntiqueFurnitureContent() {
             query = `filters[category][slug][$in][0]=designer-collections&populate[0]=main_image&populate[1]=hover_image`;
           } else {
             // 对于其他主分类，暂时显示空结果
-            setProducts([]);
-            setLoading(false);
+            if (currentRequestId === requestIdRef.current) {
+              setProducts([]);
+              setLoading(false);
+            }
             return;
           }
         }
         
         if (!query) {
-          setProducts([]);
-          setLoading(false);
+          if (currentRequestId === requestIdRef.current) {
+            setProducts([]);
+            setLoading(false);
+          }
           return;
         }
         
@@ -202,7 +220,9 @@ function AntiqueFurnitureContent() {
         if (!response.ok) {
           // 如果是404或其他错误，不抛出异常，而是设置空数组
           console.warn(`API request failed with status ${response.status}`);
-          setProducts([]);
+          if (currentRequestId === requestIdRef.current) {
+            setProducts([]);
+          }
           return;
         }
 
@@ -211,7 +231,9 @@ function AntiqueFurnitureContent() {
         // 检查数据结构是否正确
         if (!data || !Array.isArray(data.data)) {
           console.warn('Invalid data structure received from API');
-          setProducts([]);
+          if (currentRequestId === requestIdRef.current) {
+            setProducts([]);
+          }
           return;
         }
         
@@ -242,13 +264,21 @@ function AntiqueFurnitureContent() {
           }
         }).filter(Boolean) as Product[]; // 过滤掉null值
 
-        setProducts(transformedProducts);
+        if (currentRequestId === requestIdRef.current) {
+          setProducts(transformedProducts);
+        } else {
+          console.log('Ignored stale products response for', { activeCategory, activeSubCategory });
+        }
       } catch (err) {
         console.error('Failed to fetch products:', err);
         // 不设置错误状态，而是显示空产品列表
-        setProducts([]);
+        if (currentRequestId === requestIdRef.current) {
+          setProducts([]);
+        }
       } finally {
-        setLoading(false);
+        if (currentRequestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 

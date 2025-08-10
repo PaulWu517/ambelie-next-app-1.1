@@ -62,7 +62,7 @@ function SuccessModal({
     <div className="success-modal-overlay" onClick={onClose}>
       <div className="success-modal" onClick={(e) => e.stopPropagation()}>
         <div className="success-modal-content">
-          <div className="success-icon">✓</div>
+          <Image src="/assets/icon/success.png" alt="Success" width={48} height={48} />
           <h3>
             {actionType === 'inquiry' ? 'Added to Inquiry' : 
              actionType === 'collection' ? 'Added to Collection' : 

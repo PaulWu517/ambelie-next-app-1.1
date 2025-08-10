@@ -10,18 +10,12 @@ export default function LoginPage() {
   return (
     <main className={styles.loginPage}>
       <div className={styles.loginContainer}>
-        <div className={styles.loginHeader}>
-          <h1>Welcome to Ambelie</h1>
-          <p>Enter your email address and we'll send you a verification code to sign in</p>
-        </div>
-
         <LoginForm />
         
         <div className={styles.loginFooter}>
-          <p>First-time login will automatically create an account for you</p>
-          <p>By signing in, you agree to our <a href="/privacy-policy">Privacy Policy</a> and <a href="/terms">Terms of Service</a></p>
+          <p><a href="/auth/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="/auth/terms-of-service" target="_blank" rel="noopener noreferrer">Terms of Service</a></p>
         </div>
       </div>
     </main>
   );
-} 
+}

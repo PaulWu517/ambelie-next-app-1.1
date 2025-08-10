@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
@@ -32,9 +32,14 @@ interface SubCategory {
 function OrientalFurnitureContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [activeCategory, setActiveCategory] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'screens';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('category') || 'screens';
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -43,13 +48,13 @@ function OrientalFurnitureContent() {
   // 处理URL参数变化
   useEffect(() => {
     const category = searchParams.get('category');
-    if (category) {
+    if (category && category !== activeCategory) {
       setActiveCategory(category);
-    } else {
+    } else if (!category && activeCategory !== 'screens') {
       // 如果没有URL参数，设置默认分类
       setActiveCategory('screens');
     }
-  }, [searchParams]);
+  }, [searchParams, activeCategory]);
 
   // 获取东方家具相关的子分类
   useEffect(() => {
@@ -82,16 +87,24 @@ function OrientalFurnitureContent() {
     
     const fetchProducts = async () => {
       setLoading(true);
+      const requestId = ++requestIdRef.current;
       try {
         // 获取特定子分类的产品，参考category页面的实现
         const query = `filters[category][slug][$eq]=${activeCategory}&populate[0]=main_image&populate[1]=hover_image`;
         
         const response = await fetch(`${API_URL}/api/products?${query}`, {
-          cache: 'no-store'
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch products');
+          if (requestId === requestIdRef.current) {
+            setError('Failed to load products');
+            setProducts([]);
+          }
+          return;
         }
 
         const data = await response.json();
@@ -112,12 +125,20 @@ function OrientalFurnitureContent() {
           } : null,
         }));
 
-        setProducts(transformedProducts);
+        if (requestId === requestIdRef.current) {
+          setProducts(transformedProducts);
+          setError(null);
+        }
       } catch (err) {
         console.error('Failed to fetch products:', err);
-        setError('Failed to load products');
+        if (requestId === requestIdRef.current) {
+          setError('Failed to load products');
+          setProducts([]);
+        }
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
