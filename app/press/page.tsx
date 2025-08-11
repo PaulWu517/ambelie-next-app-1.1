@@ -34,6 +34,7 @@ interface PressItem {
   location?: string;
   media?: string;
   url?: string;
+  mediaLogo?: ImageItem | null;
 }
 
 interface StrapiResponse {
@@ -133,7 +134,7 @@ export default async function PressPage() {
           pressItems.map((pressItem, index) => (
             <div key={pressItem.id} className={`exhibitions-row ${index % 2 === 0 ? 'first-row' : 'second-row'}`}>
               <div className="exhibition-main-image animate-on-scroll">
-                <div className="exhibition-image-container">
+                <div className="exhibition-image-container press-image-hover">
                   {pressItem.mainImage ? (
                     <Image 
                       src={`${API_URL}${pressItem.mainImage.url}`} 
@@ -149,6 +150,23 @@ export default async function PressPage() {
                       <span>No Image</span>
                     </div>
                   )}
+                  <div className="press-hover-overlay">
+                    <div className="press-hover-content">
+                      <p className="reported-by-text">Reported by</p>
+                      {pressItem.mediaLogo && (
+                        <div className="media-logo">
+                          <Image 
+                            src={`${API_URL}${pressItem.mediaLogo.url}`} 
+                            alt={pressItem.mediaLogo.alternativeText || 'Media Logo'}
+                            width={120} 
+                            height={60} 
+                            style={{objectFit: 'contain'}}
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="exhibition-content animate-on-scroll delay-200">

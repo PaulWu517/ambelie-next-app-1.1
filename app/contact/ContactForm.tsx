@@ -46,13 +46,13 @@ export default function ContactForm() {
     // 验证必填字段
     if (!formData.enquiryType || !formData.email || !formData.name || !formData.country || !formData.message) {
       setSubmitStatus('error');
-      setStatusMessage('请填写所有必填字段');
+      setStatusMessage('Please fill in all required fields');
       return;
     }
 
     if (!formData.agree) {
       setSubmitStatus('error');
-      setStatusMessage('请同意隐私政策');
+      setStatusMessage('Please agree to the privacy policy');
       return;
     }
 
@@ -85,11 +85,11 @@ export default function ContactForm() {
         });
       } else {
         setSubmitStatus('error');
-        setStatusMessage(result.error || '发送失败，请稍后重试');
+        setStatusMessage(result.error || 'Sending failed, please try again later');
       }
     } catch (error) {
       setSubmitStatus('error');
-      setStatusMessage('网络错误，请稍后重试');
+      setStatusMessage('Network error, please try again later');
     } finally {
       setIsSubmitting(false);
     }
@@ -116,6 +116,8 @@ export default function ContactForm() {
                 name="enquiryType" 
                 value={formData.enquiryType}
                 onChange={handleInputChange}
+                onInvalid={(e) => (e.target as HTMLSelectElement).setCustomValidity('Please select an enquiry type')}
+                onInput={(e) => (e.target as HTMLSelectElement).setCustomValidity('')}
                 required
               >
                 <option value="">Please select</option>
@@ -135,6 +137,15 @@ export default function ContactForm() {
               name="email" 
               value={formData.email}
               onChange={handleInputChange}
+              onInvalid={(e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.validity.valueMissing) {
+                  target.setCustomValidity('Please enter your email address');
+                } else if (target.validity.typeMismatch) {
+                  target.setCustomValidity('Please enter a valid email address');
+                }
+              }}
+              onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
               required 
             />
           </div>
@@ -148,6 +159,8 @@ export default function ContactForm() {
               name="name" 
               value={formData.name}
               onChange={handleInputChange}
+              onInvalid={(e) => (e.target as HTMLInputElement).setCustomValidity('Please enter your name')}
+              onInput={(e) => (e.target as HTMLInputElement).setCustomValidity('')}
               required 
             />
           </div>
@@ -159,6 +172,8 @@ export default function ContactForm() {
                 name="country" 
                 value={formData.country}
                 onChange={handleInputChange}
+                onInvalid={(e) => (e.target as HTMLSelectElement).setCustomValidity('Please select a country/location')}
+                onInput={(e) => (e.target as HTMLSelectElement).setCustomValidity('')}
                 required
               >
                 <option value="">Please select</option>
@@ -183,6 +198,8 @@ export default function ContactForm() {
             rows={6} 
             value={formData.message}
             onChange={handleInputChange}
+            onInvalid={(e) => (e.target as HTMLTextAreaElement).setCustomValidity('Please enter your message')}
+            onInput={(e) => (e.target as HTMLTextAreaElement).setCustomValidity('')}
             required
           ></textarea>
         </div>

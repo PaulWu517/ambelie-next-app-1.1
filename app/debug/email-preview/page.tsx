@@ -21,9 +21,10 @@ const EmailPreviewPage = () => {
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-        <!-- Header with Brand Image -->
-        <div style="padding: 20px 30px; text-align: center; background-color: #ffffff;">
-          <img src="/assets/vi/Ambelie-EMAIL VERIFICATION.png" alt="Ambelie Email Verification" style="max-width: 400px; width: 100%; height: auto; display: block; margin: 0 auto;" />
+        <!-- Header -->
+        <div style="background-color: #231815; padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffffff; font-size: 28px; font-weight: 300; margin: 0; letter-spacing: 2px;">AMBELIE</h1>
+          <p style="color: #ffffff; font-size: 14px; margin: 8px 0 0 0; opacity: 0.8; letter-spacing: 1px;">EMAIL VERIFICATION</p>
         </div>
         
         <!-- Content -->
@@ -34,13 +35,16 @@ const EmailPreviewPage = () => {
             You are logging into your Ambelie account. Please use the following verification code to complete the verification:
           </p>
           
-          <!-- Verification Code Box -->
-          <div style="background-color: #f8f9fa; border: 2px dashed #7E7A20; border-radius: 8px; padding: 30px; margin: 40px 0; text-align: center;">
-            <div style="font-family: 'Georgia', 'Times New Roman', serif; font-size: 36px; font-weight: bold; color: #7E7A20; letter-spacing: 6px; margin: 20px 0; text-align: center;">${code}</div>
-            <div style="background-color: #880913; height: 2px; width: 60px; margin: 20px auto 0; border-radius: 1px;"></div>
+          <!-- Verification Code -->
+          <div style="text-align: center; margin: 50px 0;">
+            <div style="display: inline-block; background-color: #ffffff; border: 2px solid #231815; padding: 25px 40px;">
+              <span style="font-size: 36px; font-weight: 600; color: #231815; letter-spacing: 8px; font-family: Arial, sans-serif;">${code}</span>
+            </div>
           </div>
           
-          <p style="color: #666666; margin: 30px 0; font-size: 14px; text-align: center;">Verification code expires in: 10 minutes</p>
+          <div style="margin: 40px 0;">
+             <p style="color: #231815; font-size: 14px; margin: 0; text-align: left;">Verification code expires in: 10 minutes</p>
+           </div>
           
           <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0 0;">
             If you did not request this verification code, please ignore this email.

@@ -5058,3 +5058,76 @@ main.orders-page {
         margin-top: 120px;
     }
 }
+
+/* Press页面图片悬停效果 */
+.press-image-hover {
+    position: relative;
+    overflow: hidden;
+}
+
+.press-hover-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+}
+
+.press-image-hover:hover .press-hover-overlay {
+    opacity: 1;
+}
+
+.press-hover-content {
+    text-align: center;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+.reported-by-text {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 15px;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: -40px;
+}
+
+.media-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.media-logo img {
+    max-width: 120px !important;
+    max-height: 60px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    position: static !important;
+}
+
+/* 移动端响应式调整 */
+@media (max-width: 768px) {
+    .reported-by-text {
+        font-size: 16px;
+        margin-bottom: 10px;
+    }
+    
+    .media-logo img {
+        max-width: 100px;
+        max-height: 50px;
+    }
+}

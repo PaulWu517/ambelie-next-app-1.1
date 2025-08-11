@@ -112,37 +112,49 @@ export async function POST(request: NextRequest) {
     
     // 发送邮件到指定邮箱
     const fromEmail = process.env.SMTP_USER || 'noreply@ambelie.com';
-    const mailOptions = {
+    // 内部通知邮件
+    const internalMailOptions = {
       from: fromEmail,
-      to: 'pwu709724@gmail.com',
+      to: 'Info@ambelie.com', // Internal team's email address
       subject: `Ambelie Contact Form - ${enquiryType} - ${name}`,
       html: emailContent,
       replyTo: email,
     };
     
-    const info = await transporter.sendMail(mailOptions);
-    
-    // 发送确认邮件给用户
-    const confirmationEmail = {
+    // 给用户的确认邮件
+    const customerConfirmationEmail = {
       from: fromEmail,
-      to: email,
+      to: email, // Customer's email address
       subject: 'Thank you for contacting Ambelie',
       html: `
-        <h2>Thank you for your contact</h2>
-        <p>Dear ${name},</p>
-        <p>Thank you for contacting Ambelie. We have received your message and will reply to you within 24 hours.</p>
-        <p>For urgent matters, please call directly:</p>
-        <ul>
-          <li>Shanghai Showroom: +86 21 6473 7638</li>
-          <li>Hangzhou Showroom: +86 571 8871 9025</li>
-        </ul>
-        <p>Best regards,<br>Ambelie Team</p>
-        <hr>
-        <p><small>This is an automated email from Ambelie contact system</small></p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+          <p>Dear ${name},</p>
+          
+          <p>Thank you for reaching out to us. We've received your enquiry and will get back to you as soon as possible.</p>
+          
+          <p>Our team is currently reviewing your message, and we aim to respond within 1-2 working days.</p>
+          
+          <p>In the meantime, please feel free to browse our latest collections or follow us on Instagram for more inspiration.</p>
+          
+          <p>Warm regards,<br>
+          <strong>AMBELIE</strong></p>
+          
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+          
+          <div style="font-size: 12px; color: #666; line-height: 1.5;">
+            <p><strong>AMBELIE</strong><br>
+            Shanghai Showroom: No. 21, Kangping Road, Xuhui District<br>
+            Hangzhou Showroom: No. 1788 Hongning Road, Xiaoshan District<br>
+            Email: Info@ambelie.com<br>
+            Instagram: @ambelie_gallery</p>
+          </div>
+        </div>
       `,
     };
     
-    await transporter.sendMail(confirmationEmail);
+    // 发送邮件
+    const info = await transporter.sendMail(internalMailOptions);
+    await transporter.sendMail(customerConfirmationEmail);
     
     console.log('Email sent successfully:', info.messageId);
     
