@@ -353,7 +353,7 @@ export default async function HomePage() {
                       <p className="store-address animate-on-scroll delay-400">No. 21 Kangping Road, Xuhui District, Shanghai</p>
                       <p className="exhibition-date animate-on-scroll delay-500">Opening Hours: 10:00 - 20:00</p>
                       <p className="exhibition-description animate-on-scroll delay-600">AMBELIE has returned to Shanghai, nestled in a serene garden villa at Kangping Road. Our treasured collection has found its roots in this three-story garden house built in 1945, surrounded by swaying shadows and lush greenery.</p>
-                      <Link href="/about/shanghai" className="view-more-link animate-on-scroll delay-700">Visit Store</Link>
+                      <Link href="/about/shanghai" className="view-more-link animate-on-scroll delay-700">View More</Link>
                   </div>
               </div>
           </div>
@@ -371,7 +371,7 @@ export default async function HomePage() {
                       <p className="store-address animate-on-scroll delay-400">By Appointment</p>
                       <p className="exhibition-date animate-on-scroll delay-500">Opening Hours: 10:00 - 20:00</p>
                       <p className="exhibition-description animate-on-scroll delay-600">We've brought treasures from around the world to our Hangzhou space. This street once sheltered the renowned artist Mei Lanfang and was home to "Huang Garden." The refined aesthetic exists quietly here, immersed in a sense of history and culture.</p>
-                      <Link href="/about/hangzhou" className="view-more-link animate-on-scroll delay-700">Visit Store</Link>
+                      <Link href="/about/hangzhou" className="view-more-link animate-on-scroll delay-700">View More</Link>
                   </div>
               </div>
           </div>

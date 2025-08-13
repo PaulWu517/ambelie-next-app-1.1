@@ -62,10 +62,13 @@ const InquiryPage = () => {
     }
 
     setIsSubmitting(true);
+    
+    // 立即显示成功状态，避免等待后端响应的延迟
+    setSubmitSuccess(true);
 
     try {
-      // 首先使用 inquiryStore 的 submitInquiry 方法提交到后端
-      const backendSuccess = await submitInquiry({
+      // 异步提交到后端，不阻塞UI
+      const submitPromise = submitInquiry({
         email: customerInfo.email,
         firstName: customerInfo.firstName,
         lastName: customerInfo.lastName,
@@ -73,37 +76,39 @@ const InquiryPage = () => {
         message: customerInfo.message || 'Product inquiry request'
       });
 
-      if (backendSuccess) {
-        // 后端提交成功后，发送邮件通知
-        const inquiryData = {
-          customerInfo,
-          inquiryItems: items,
-          submissionDate: new Date().toISOString(),
-          totalItems: items.length
-        };
+      // 异步发送邮件通知
+      const inquiryData = {
+        customerInfo,
+        inquiryItems: items,
+        submissionDate: new Date().toISOString(),
+        totalItems: items.length
+      };
 
-        const emailResponse = await fetch('/api/inquiry/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(inquiryData),
-        });
+      const emailPromise = fetch('/api/inquiry/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(inquiryData),
+      });
 
-        if (emailResponse.ok) {
-          setSubmitSuccess(true);
-          // 重新从后端加载数据以确保同步
-          await loadFromBackend();
+      // 等待两个请求完成，但不阻塞UI显示
+      Promise.all([submitPromise, emailPromise]).then(([backendSuccess, emailResponse]) => {
+        if (backendSuccess && emailResponse.ok) {
+          console.log('Inquiry submitted and email sent successfully');
         } else {
-          console.warn('Email notification failed, but inquiry was saved');
-          setSubmitSuccess(true);
-          await loadFromBackend();
+          console.warn('Some operations may have failed, but inquiry was processed');
         }
-      } else {
-        throw new Error('Failed to submit inquiry to backend');
-      }
+        // 重新从后端加载数据以确保同步
+        loadFromBackend();
+      }).catch(error => {
+        console.error('Background submission error:', error);
+      });
+      
     } catch (error) {
       console.error('Failed to submit inquiry:', error);
+      // 如果出错，恢复到原始状态
+      setSubmitSuccess(false);
       alert('Failed to submit inquiry. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -125,10 +130,10 @@ const InquiryPage = () => {
     return (
       <main style={{ paddingTop: '80px', paddingBottom: '100px' }}>
         <div className="section-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0 50px', textAlign: 'center' }}>
-          <div style={{ backgroundColor: '#f0f8ff', padding: '40px', borderRadius: '10px', marginBottom: '40px' }}>
-            <h1 style={{ fontSize: '2rem', marginBottom: '20px', color: '#333' }}>Inquiry Sent Successfully!</h1>
-            <p style={{ fontSize: '1.1rem', color: '#666', marginBottom: '30px' }}>
-              We have received your inquiry and will respond within 24 hours. Thank you for your interest in AMBELIE!
+          <div style={{ backgroundColor: '#666666', padding: '40px', borderRadius: '10px', marginBottom: '40px' }}>
+            <h1 style={{ fontSize: '2rem', marginBottom: '20px', color: 'white' }}>Thank you for your inquiry</h1>
+            <p style={{ fontSize: '1.1rem', color: 'white', marginBottom: '30px' }}>
+              Our team will be in touch with you shortly.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <Link 
@@ -146,7 +151,7 @@ const InquiryPage = () => {
                 Back to Home
               </Link>
             </div>
-            <p style={{ fontSize: '0.9rem', color: '#999', marginTop: '20px' }}>
+            <p style={{ fontSize: '0.9rem', color: '#ccc', marginTop: '20px' }}>
               You will be redirected to the homepage in 3 seconds...
             </p>
           </div>
