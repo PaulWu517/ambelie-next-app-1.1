@@ -4,14 +4,7 @@
   background-color: #ffffff;
 }
 
-/* CSS Variables for consistent spacing */
-:root {
-  --mobile-content-order: -1;
-  --mobile-images-order: 1;
-  --mobile-content-padding: 20px 0 40px 0;
-  --mobile-content-padding-small: 15px 0 30px 0;
-  --mobile-content-padding-xs: 10px 0 25px 0;
-}
+
 
 /* Hero Section */
 .heroSection {
@@ -297,19 +290,19 @@
   
   /* 在移动端，让文字内容显示在图片上方 */
   .spaceSection .spaceContent {
-    order: var(--mobile-content-order); /* 让文字内容排在前面 */
+    order: -1; /* 让文字内容排在前面 */
     text-align: center;
-    padding: var(--mobile-content-padding); /* 使用CSS变量 */
+    padding: 20px 0 40px 0; /* 移动端文字内容间距 */
     max-width: 100%;
   }
   
   .spaceSection.reversed .spaceContent {
-    order: var(--mobile-content-order); /* 即使是reversed的section，文字也显示在上方 */
+    order: -1; /* 即使是reversed的section，文字也显示在上方 */
   }
   
   .spaceImages {
     max-width: 100%;
-    order: var(--mobile-images-order); /* 让图片排在后面 */
+    order: 1; /* 让图片排在后面 */
   }
   
   .imageGrid {
@@ -373,16 +366,16 @@
   
   /* 确保在小屏设备上文字也显示在图片上方 */
   .spaceSection .spaceContent {
-    order: var(--mobile-content-order);
-    padding: var(--mobile-content-padding-small); /* 使用CSS变量 */
+    order: -1;
+    padding: 15px 0 30px 0; /* 小屏设备间距 */
   }
   
   .spaceSection.reversed .spaceContent {
-    order: var(--mobile-content-order);
+    order: -1;
   }
   
   .spaceSection .spaceImages {
-    order: var(--mobile-images-order);
+    order: 1;
   }
   
   .imageGrid {
@@ -424,16 +417,16 @@
   
   /* 确保在超小屏设备上文字也显示在图片上方 */
   .spaceSection .spaceContent {
-    order: var(--mobile-content-order);
-    padding: var(--mobile-content-padding-xs); /* 使用CSS变量 */
+    order: -1;
+    padding: 10px 0 25px 0; /* 超小屏设备间距 */
   }
   
-  .spaceSection.reversed .spaceContent {
-    order: var(--mobile-content-order);
+  .spaceSection .spaceContent.reversed {
+    order: -1;
   }
   
   .spaceSection .spaceImages {
-    order: var(--mobile-images-order);
+    order: 1;
   }
   
   /* 超小屏设备的额外优化 */
