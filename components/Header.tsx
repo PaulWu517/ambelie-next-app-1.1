@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation'; // 引入 usePathname 和 useRouter
-import { Search, User, ShoppingCart, LogOut, FileText } from 'lucide-react'; // Import icons
+import { Search, User, ShoppingCart, LogOut, FileText, Menu, X } from 'lucide-react'; // Import icons
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useCartStore } from '@/lib/stores/cartStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
@@ -37,6 +37,7 @@ export default function Header() {
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchHovered, setIsSearchHovered] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // 更新状态变量名称以反映新的分类结构
   const [isOrientalFurnitureDropdownOpen, setIsOrientalFurnitureDropdownOpen] = useState(false);
@@ -75,6 +76,15 @@ export default function Header() {
     } catch (error) {
       console.error('注销失败:', error);
     }
+  };
+
+  // 移动端菜单切换
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
   };
 
   // 添加缺少的处理函数
@@ -545,13 +555,25 @@ export default function Header() {
           </Link>
         </div>
         
-          {/* 最右侧：用户图标 */}
-          <div className={styles.userMenuContainer}>
-            <UserMenu 
-              user={user} 
-              onSignOut={handleSignOut}
-              iconColor={userIconColor}
-            />
+          {/* 最右侧：移动端汉堡菜单 + 用户图标 */}
+          <div className={styles.topRowRight}>
+            {/* 移动端汉堡菜单按钮 */}
+            <button 
+              className={styles.mobileMenuButton}
+              onClick={toggleMobileMenu}
+              aria-label="Toggle mobile menu"
+            >
+              <Menu size={24} style={{ color: userIconColor }} />
+            </button>
+            
+            {/* 用户图标 */}
+            <div className={styles.userMenuContainer}>
+              <UserMenu 
+                user={user} 
+                onSignOut={handleSignOut}
+                iconColor={userIconColor}
+              />
+            </div>
           </div>
         </div>
 
@@ -841,6 +863,105 @@ export default function Header() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 移动端侧边栏 */}
+      {isMobileMenuOpen && (
+        <>
+          {/* 遮罩层 */}
+          <div className={styles.mobileOverlay} onClick={closeMobileMenu} />
+          
+          {/* 侧边栏 */}
+          <div className={styles.mobileSidebar}>
+            {/* 侧边栏头部 */}
+            <div className={styles.mobileSidebarHeader}>
+              <div className={styles.mobileLogo}>
+                <Image 
+                  src="/assets/vi/Ambelie_VI_Logos.png" 
+                  alt="Ambelie Logo" 
+                  width={120} 
+                  height={32} 
+                  priority 
+                />
+              </div>
+              <button 
+                className={styles.mobileCloseButton}
+                onClick={closeMobileMenu}
+                aria-label="Close mobile menu"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* 侧边栏导航 */}
+            <nav className={styles.mobileNavigation}>
+              <ul>
+                <li>
+                  <Link href="/oriental-furniture" onClick={closeMobileMenu}>
+                    ORIENTAL FURNITURE
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/antique-furniture" onClick={closeMobileMenu}>
+                    ANTIQUE FURNITURE
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/lighting" onClick={closeMobileMenu}>
+                    LIGHTING
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/art" onClick={closeMobileMenu}>
+                    ART
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/fashion" onClick={closeMobileMenu}>
+                    FASHION
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/exhibitions" onClick={closeMobileMenu}>
+                    EXHIBITION
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/projects" onClick={closeMobileMenu}>
+                    PROJECT
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/press" onClick={closeMobileMenu}>
+                    PRESS
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/about" onClick={closeMobileMenu}>
+                    ABOUT
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+
+            {/* 侧边栏底部 */}
+            <div className={styles.mobileSidebarFooter}>
+              <div className={styles.mobileSearch}>
+                <Link href="/search" onClick={closeMobileMenu}>
+                  <Search size={20} />
+                  <span>SEARCH</span>
+                </Link>
+              </div>
+              <div className={styles.mobileUserMenu}>
+                <UserMenu 
+                  user={user} 
+                  onSignOut={handleSignOut}
+                  iconColor="#333"
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </>
   );
