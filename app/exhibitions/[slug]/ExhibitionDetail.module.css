@@ -116,6 +116,7 @@
   width: 80%;
   margin: 0 auto;
   overflow: hidden;
+  position: relative;
 }
 
 .image {
@@ -123,6 +124,11 @@
   height: auto;
   display: block;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.image:hover {
+  transform: scale(1.02);
 }
 
 .noImages {
@@ -141,10 +147,17 @@
 
   .mainContent {
     grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .textColumn {
+    position: static;
+    min-height: auto;
+    margin-bottom: 2rem;
   }
 
   .imageColumn {
-    margin-top: 2rem;
+    margin-top: 0;
   }
 }
 
@@ -161,5 +174,61 @@
   .metaInfo {
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .mainContent {
+    gap: 1.5rem;
+  }
+
+  .textColumn {
+    margin-bottom: 1.5rem;
+  }
+
+  .imageColumn {
+    gap: 1.5rem;
+  }
+
+  .imageWrapper {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .exhibitionDetailContainer {
+    padding: 1rem;
+    padding-top: 90px;
+  }
+
+  .title {
+    font-size: 1.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .exhibitionHeader {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .mainContent {
+    gap: 1rem;
+  }
+
+  .textColumn {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+  }
+
+  .introduction {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    padding-left: 1rem;
+  }
+
+  .description {
+    font-size: 1rem;
+  }
+
+  .imageColumn {
+    gap: 1rem;
   }
 } 

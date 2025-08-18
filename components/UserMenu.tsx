@@ -20,9 +20,10 @@ interface UserMenuProps {
   } | null;
   onSignOut: () => void;
   iconColor?: string;
+  textColor?: string;
 }
 
-export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserMenuProps) {
+export default function UserMenu({ user, onSignOut, iconColor = 'white', textColor = 'white' }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -57,7 +58,7 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white' }: UserM
       <div className="user-menu">
         <Link href="/auth/login" className="login-link">
           <User className="user-icon" size={20} style={{ color: iconColor }} />
-          <span className="login-text">Sign In</span>
+          <span className="login-text" style={{ color: textColor }}>Sign In</span>
         </Link>
       </div>
     );

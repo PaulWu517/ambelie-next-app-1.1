@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import { useAuth } from '@/lib/hooks/useAuth';
+import styles from './inquiry.module.css';
 
 const InquiryPage = () => {
   const { items, removeFromInquiry, getItemCount, clearInquiry, loadFromBackend, submitInquiry } = useInquiryStore();
@@ -128,30 +129,19 @@ const InquiryPage = () => {
 
   if (submitSuccess) {
     return (
-      <main style={{ paddingTop: '80px', paddingBottom: '100px' }}>
-        <div className="section-container" style={{ maxWidth: '800px', margin: '0 auto', padding: '0 50px', textAlign: 'center' }}>
-          <div style={{ backgroundColor: '#666666', padding: '40px', borderRadius: '10px', marginBottom: '40px' }}>
-            <h1 style={{ fontSize: '2rem', marginBottom: '20px', color: 'white' }}>Thank you for your inquiry</h1>
-            <p style={{ fontSize: '1.1rem', color: 'white', marginBottom: '30px' }}>
+      <main className={styles.mainContainer}>
+        <div className={styles.successContainer}>
+          <div className={styles.successCard}>
+            <h1 className={styles.successTitle}>Thank you for your inquiry</h1>
+            <p className={styles.successMessage}>
               Our team will be in touch with you shortly.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <Link 
-                href="/" 
-                style={{
-                  display: 'inline-block',
-                  backgroundColor: '#333',
-                  color: 'white',
-                  padding: '12px 24px',
-                  textDecoration: 'none',
-                  borderRadius: '5px',
-                  fontWeight: '500'
-                }}
-              >
+            <div className={styles.successButtonContainer}>
+              <Link href="/" className={styles.successButton}>
                 Back to Home
               </Link>
             </div>
-            <p style={{ fontSize: '0.9rem', color: '#ccc', marginTop: '20px' }}>
+            <p className={styles.redirectMessage}>
               You will be redirected to the homepage in 3 seconds...
             </p>
           </div>
@@ -161,56 +151,40 @@ const InquiryPage = () => {
   }
 
   return (
-    <main style={{ paddingTop: '40px', paddingBottom: '100px' }}>
-      <div className="section-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 50px' }}>
-        <h1 className="section-heading" style={{ marginBottom: '40px', textAlign: 'center' }}>
+    <main className={styles.mainContainer}>
+      <div className={styles.container}>
+        <h1 className={styles.pageTitle}>
           PRODUCT INQUIRY
         </h1>
         
         {items.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '20px', color: '#666' }}>
+          <div className={styles.emptyState}>
+            <h2 className={styles.emptyTitle}>
               Your inquiry list is empty
             </h2>
-            <p style={{ fontSize: '1.1rem', marginBottom: '30px', color: '#999' }}>
+            <p className={styles.emptyMessage}>
               Browse our products and click "INQUIRE" to add items to your inquiry list
             </p>
-            <Link 
-              href="/products" 
-              style={{
-                display: 'inline-block',
-                backgroundColor: '#333',
-                color: 'white',
-                padding: '12px 24px',
-                textDecoration: 'none',
-                borderRadius: '5px',
-                fontWeight: '500'
-              }}
-            >
+            <Link href="/products" className={styles.browseButton}>
               Browse Products
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '60px' }}>
+          <div className={styles.contentGrid}>
             {/* 左侧：询价商品列表 */}
-            <div>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '30px', fontWeight: '500' }}>
+            <div className={styles.inquiryList}>
+              <h2 className={styles.listTitle}>
                 Inquiry List ({getItemCount()} items)
               </h2>
               
-              <div style={{ border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+              <div className={styles.listContainer}>
                 {items.map((item, index) => (
                   <div 
                     key={item.id} 
-                    style={{
-                      display: 'flex',
-                      padding: '20px',
-                      borderBottom: index < items.length - 1 ? '1px solid #eee' : 'none',
-                      alignItems: 'center'
-                    }}
+                    className={styles.listItem}
                   >
                     {/* 商品图片 */}
-                    <div style={{ width: '80px', height: '80px', marginRight: '20px' }}>
+                    <div className={styles.itemImage}>
                       {(() => {
                         // 构建图片URL - 适配两种数据结构
                         let imageUrl = null;
@@ -237,83 +211,64 @@ const InquiryPage = () => {
                             alt={item.name}
                             width={80}
                             height={80}
-                            style={{ objectFit: 'cover', borderRadius: '4px' }}
+                            className={styles.itemImageElement}
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
                               const parent = target.parentElement;
                               if (parent) {
-                                parent.innerHTML = '<div style="width: 80px; height: 80px; backgroundColor: #f0f0f0; borderRadius: 4px; display: flex; alignItems: center; justifyContent: center; color: #999; fontSize: 12px;">No Image</div>';
+                                parent.innerHTML = '<div class="no-image">No Image</div>';
                               }
                             }}
                           />
                          ) : (
-                           <div style={{ 
-                             width: '80px', 
-                             height: '80px', 
-                             backgroundColor: '#f0f0f0', 
-                             borderRadius: '4px',
-                             display: 'flex',
-                             alignItems: 'center',
-                             justifyContent: 'center',
-                             color: '#999'
-                           }}>
-                             No Image
-                           </div>
+                           <div className="no-image">No Image</div>
                          );
                        })()}
                     </div>
                     
                     {/* 商品信息 */}
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: '500', marginBottom: '8px' }}>
+                    <div className={styles.itemInfo}>
+                      <h3 className={styles.itemName}>
                         {item.name}
                       </h3>
                       {item.period && (
-                        <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '0.9rem' }}>
+                        <p className={styles.itemDetail}>
                           Period: {item.period}
                         </p>
                       )}
                       {item.dimensions && (
-                        <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '0.9rem' }}>
+                        <p className={styles.itemDetail}>
                           Dimensions: {item.dimensions}
                         </p>
                       )}
                       {item.materials && (
-                        <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '0.9rem' }}>
+                        <p className={styles.itemDetail}>
                           Materials: {item.materials}
                         </p>
                       )}
                       {item.origin && (
-                        <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '0.9rem' }}>
+                        <p className={styles.itemDetail}>
                           Origin: {item.origin}
                         </p>
                       )}
                       {item.designer && (
-                        <p style={{ margin: '0 0 4px 0', color: '#666', fontSize: '0.9rem' }}>
+                        <p className={styles.itemDetail}>
                           Designer: {item.designer}
                         </p>
                       )}
-                      <p style={{ margin: '8px 0 0 0', color: '#999', fontSize: '0.8rem' }}>
+                      <p className={styles.itemDate}>
                         Added: {new Date(item.inquiryDate).toLocaleDateString('en-US')}
                       </p>
                     </div>
                     
                     {/* 价格和移除按钮 */}
-                    <div style={{ textAlign: 'right', marginLeft: '20px' }}>
-                      <div style={{ marginBottom: '10px', fontSize: '1rem', fontWeight: '500' }}>
+                    <div className={styles.itemActions}>
+                      <div className={styles.itemPrice}>
                         {item.price && typeof item.price === 'number' && item.price > 0 ? `$${item.price.toLocaleString()}` : 'Price on inquiry'}
                       </div>
                       <button
                         onClick={() => removeFromInquiry(item.slug)}
-                        style={{
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          fontSize: '0.85rem',
-                          cursor: 'pointer'
-                        }}
+                        className={styles.removeButton}
                       >
                         Remove
                       </button>
@@ -324,20 +279,15 @@ const InquiryPage = () => {
             </div>
 
             {/* 右侧：联系表单 */}
-            <div>
-              <div style={{
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                padding: '30px',
-                backgroundColor: '#f9f9f9'
-              }}>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', fontWeight: '500' }}>
+            <div className={styles.contactForm}>
+              <div className={styles.formContainer}>
+                <h3 className={styles.formTitle}>
                   Contact Information
                 </h3>
                 
-                <form onSubmit={handleSubmitInquiry}>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                <form onSubmit={handleSubmitInquiry} className={styles.form}>
+                  <div className={styles.formField}>
+                    <label className={styles.formLabel}>
                       Email *
                     </label>
                     <input
@@ -346,20 +296,13 @@ const InquiryPage = () => {
                       value={customerInfo.email}
                       onChange={handleInputChange}
                       required
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        fontSize: '1rem',
-                        boxSizing: 'border-box'
-                      }}
+                      className={styles.formInput}
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  <div className={styles.nameFields}>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>
                         First Name *
                       </label>
                       <input
@@ -368,19 +311,12 @@ const InquiryPage = () => {
                         value={customerInfo.firstName}
                         onChange={handleInputChange}
                         required
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          fontSize: '1rem',
-                          boxSizing: 'border-box'
-                        }}
+                        className={styles.formInput}
                       />
                     </div>
                     
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>
                         Last Name
                       </label>
                       <input
@@ -388,20 +324,13 @@ const InquiryPage = () => {
                         name="lastName"
                         value={customerInfo.lastName}
                         onChange={handleInputChange}
-                        style={{
-                          width: '100%',
-                          padding: '12px',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          fontSize: '1rem',
-                          boxSizing: 'border-box'
-                        }}
+                        className={styles.formInput}
                       />
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '30px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
+                  <div className={styles.formField}>
+                    <label className={styles.formLabel}>
                       Phone
                     </label>
                     <input
@@ -409,32 +338,14 @@ const InquiryPage = () => {
                       name="phone"
                       value={customerInfo.phone}
                       onChange={handleInputChange}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        fontSize: '1rem',
-                        boxSizing: 'border-box'
-                      }}
+                      className={styles.formInput}
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    style={{
-                      width: '100%',
-                      backgroundColor: isSubmitting ? '#ccc' : '#333',
-                      color: 'white',
-                      padding: '15px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '1rem',
-                      fontWeight: '500',
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                      transition: 'background-color 0.3s ease'
-                    }}
+                    className={`${styles.submitButton} ${isSubmitting ? styles.submitting : ''}`}
                   >
                     {isSubmitting ? 'Sending...' : 'Send Inquiry'}
                   </button>

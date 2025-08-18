@@ -33,7 +33,7 @@
     margin-left: 0;
 }
 
-/* 第一行：搜索图标 - Logo - 用户图标 */
+/* 第一行：Logo - 移动端汉堡菜单 + 用户图标 */
 .topRow {
     display: flex;
     justify-content: space-between;
@@ -92,11 +92,21 @@
     height: 30px;
 }
 
+/* 顶部行左侧容器 */
+.topRowLeft {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    min-width: 120px;
+    justify-content: flex-start;
+}
+
 /* 顶部行右侧容器 */
 .topRowRight {
     display: flex;
     align-items: center;
-    gap: 15px;
+    min-width: 80px;
+    justify-content: flex-end;
 }
 
 /* 移动端汉堡菜单按钮 */
@@ -348,6 +358,20 @@
     .bottomRow {
         display: none;
     }
+
+    /* 移动端调整顶部行布局 */
+    .topRowLeft {
+        min-width: 60px;
+    }
+
+    .topRowRight {
+        min-width: 60px;
+    }
+
+    /* 移动端隐藏搜索按钮 */
+    .headerSearchIcon {
+        display: none;
+    }
 }
 
 /* 移动端侧边栏样式 */
@@ -365,15 +389,15 @@
 .mobileSidebar {
     position: fixed;
     top: 0;
-    right: 0;
+    left: 0;
     width: 300px;
     height: 100vh;
     background-color: white;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    animation: slideInRight 0.3s ease;
-    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    animation: slideInLeft 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .mobileSidebarHeader {
@@ -435,6 +459,66 @@
     color: #880913;
 }
 
+/* 移动端菜单项容器 */
+.mobileMenuItem {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+    position: relative;
+}
+
+/* 移动端展开按钮 */
+.mobileExpandButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    color: #333;
+    font-size: 14px;
+    font-weight: 300;
+    min-width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.mobileExpandButton:hover {
+    background-color: rgba(136, 9, 19, 0.1);
+    color: #880913;
+}
+
+/* 移动端子菜单 */
+.mobileSubmenu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f8f8;
+    border-top: 1px solid #eee;
+}
+
+.mobileSubmenu li {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.mobileSubmenu a {
+    padding: 12px 20px 12px 40px;
+    font-size: 14px;
+    color: #555;
+    background-color: #f8f8f8;
+}
+
+.mobileSubmenu a:hover {
+    background-color: #f0f0f0;
+    color: #880913;
+}
+
 .mobileSidebarFooter {
     padding: 20px;
     border-top: 1px solid #eee;
@@ -470,8 +554,8 @@
     to { opacity: 1; }
 }
 
-@keyframes slideInRight {
-    from { transform: translateX(100%); }
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); }
     to { transform: translateX(0); }
 }
 

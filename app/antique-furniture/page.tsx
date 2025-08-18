@@ -324,6 +324,34 @@ function AntiqueFurnitureContent() {
     setOpenDropdown(null);
   };
 
+  const handleTouchStart = (categorySlug: string) => {
+    // 在移动端，触摸时切换下拉菜单状态
+    if (openDropdown === categorySlug) {
+      setOpenDropdown(null);
+    } else {
+      // 关闭其他打开的下拉菜单
+      setOpenDropdown(categorySlug);
+    }
+  };
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(`.${styles.categoryTabContainer}`)) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [openDropdown]);
+
   // 获取当前显示的导航标题
   const getCurrentNavTitle = () => {
     const currentCategory = subCategories.find(cat => cat.slug === activeCategory);
@@ -368,6 +396,7 @@ function AntiqueFurnitureContent() {
               className={styles.categoryTabContainer}
               onMouseEnter={() => handleMouseEnter(category.slug)}
               onMouseLeave={handleMouseLeave}
+              onTouchStart={() => handleTouchStart(category.slug)}
             >
               <button
                 className={`${styles.categoryTab} ${
@@ -379,9 +408,16 @@ function AntiqueFurnitureContent() {
               </button>
               
               {/* 下拉菜单指示器 */}
-              <span className={`${styles.dropdownIndicator} ${
-                activeCategory === category.slug ? styles.active : ''
-              }`}>
+              <span 
+                className={`${styles.dropdownIndicator} ${
+                  activeCategory === category.slug ? styles.active : ''
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleTouchStart(category.slug);
+                }}
+              >
                 ▼
               </span>
               

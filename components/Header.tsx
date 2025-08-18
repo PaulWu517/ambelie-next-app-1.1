@@ -39,6 +39,9 @@ export default function Header() {
   const [isSearchHovered, setIsSearchHovered] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  // 移动端侧边栏子菜单展开状态
+  const [mobileMenuExpanded, setMobileMenuExpanded] = useState<{[key: string]: boolean}>({});
+  
   // 更新状态变量名称以反映新的分类结构
   const [isOrientalFurnitureDropdownOpen, setIsOrientalFurnitureDropdownOpen] = useState(false);
   const [isAntiqueFurnitureDropdownOpen, setIsAntiqueFurnitureDropdownOpen] = useState(false);
@@ -85,6 +88,16 @@ export default function Header() {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+    // 关闭侧边栏时重置所有子菜单展开状态
+    setMobileMenuExpanded({});
+  };
+
+  // 切换移动端子菜单展开状态
+  const toggleMobileSubmenu = (menuKey: string) => {
+    setMobileMenuExpanded(prev => ({
+      ...prev,
+      [menuKey]: !prev[menuKey]
+    }));
   };
 
   // 添加缺少的处理函数
@@ -417,6 +430,9 @@ export default function Header() {
   // 计算颜色
   const searchIconColor = (isHomepage && !headerIsActive) ? 'white' : 'black';
   const userIconColor = (isHomepage && !headerIsActive) ? 'white' : 'black';
+  
+  // 计算文字颜色（用于Sign In文字）
+  const textColor = (isHomepage && !headerIsActive) ? 'white' : 'black';
 
   // 更新导航链接结构
   const orientalFurnitureLinks = [
@@ -526,20 +542,32 @@ export default function Header() {
           }
         }}
       >
-        {/* 第一行：搜索图标 - Logo - 用户图标 */}
+        {/* 第一行：Logo - 移动端汉堡菜单 + 用户图标 */}
         <div className={styles.topRow}>
-          {/* 最左侧：搜索图标 */}
-        <div 
-            className={styles.headerSearchIcon}
-          onMouseEnter={() => setIsSearchHovered(true)}
-          onMouseLeave={() => setIsSearchHovered(false)}
-          onClick={() => router.push('/search')}
-          style={{ cursor: 'pointer' }}
-        >
-            <Search size={20} className={styles.searchIcon} style={{ color: searchIconColor }} />
-          {isSearchHovered && <span className="search-text" style={{ color: searchIconColor }}>SEARCH</span>}
-        </div>
-
+          {/* 最左侧：桌面端搜索按钮 + 移动端汉堡菜单按钮 */}
+          <div className={styles.topRowLeft}>
+            {/* 桌面端搜索按钮 */}
+            <div 
+              className={styles.headerSearchIcon}
+              onMouseEnter={() => setIsSearchHovered(true)}
+              onMouseLeave={() => setIsSearchHovered(false)}
+              onClick={() => router.push('/search')}
+              style={{ cursor: 'pointer' }}
+            >
+              <Search size={20} className={styles.searchIcon} style={{ color: searchIconColor }} />
+              {isSearchHovered && <span className="search-text" style={{ color: searchIconColor }}>SEARCH</span>}
+            </div>
+            
+            {/* 移动端汉堡菜单按钮 */}
+            <button 
+              className={styles.mobileMenuButton}
+              onClick={toggleMobileMenu}
+              aria-label="Toggle mobile menu"
+            >
+              <Menu size={24} style={{ color: userIconColor }} />
+            </button>
+          </div>
+          
           {/* 中间：Logo */}
           <div className={styles.logo}>
           <Link href="/">
@@ -555,23 +583,14 @@ export default function Header() {
           </Link>
         </div>
         
-          {/* 最右侧：移动端汉堡菜单 + 用户图标 */}
+          {/* 最右侧：用户图标 */}
           <div className={styles.topRowRight}>
-            {/* 移动端汉堡菜单按钮 */}
-            <button 
-              className={styles.mobileMenuButton}
-              onClick={toggleMobileMenu}
-              aria-label="Toggle mobile menu"
-            >
-              <Menu size={24} style={{ color: userIconColor }} />
-            </button>
-            
-            {/* 用户图标 */}
             <div className={styles.userMenuContainer}>
               <UserMenu 
                 user={user} 
                 onSignOut={handleSignOut}
                 iconColor={userIconColor}
+                textColor={textColor}
               />
             </div>
           </div>
@@ -897,29 +916,138 @@ export default function Header() {
             <nav className={styles.mobileNavigation}>
               <ul>
                 <li>
-                  <Link href="/oriental-furniture" onClick={closeMobileMenu}>
-                    ORIENTAL FURNITURE
-                  </Link>
+                  <div className={styles.mobileMenuItem}>
+                    <Link href="/oriental-furniture" onClick={closeMobileMenu}>
+                      ORIENTAL FURNITURE
+                    </Link>
+                    <button 
+                      className={styles.mobileExpandButton}
+                      onClick={() => toggleMobileSubmenu('oriental')}
+                      aria-label="Toggle Oriental Furniture submenu"
+                    >
+                      <Image 
+                        src={mobileMenuExpanded['oriental'] ? "/assets/icon/收缩.png" : "/assets/icon/展开.png"}
+                        alt={mobileMenuExpanded['oriental'] ? "收起" : "展开"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                  </div>
+                  {mobileMenuExpanded['oriental'] && (
+                    <ul className={styles.mobileSubmenu}>
+                      <li><Link href="/oriental-furniture?category=screens" onClick={closeMobileMenu}>SCREENS</Link></li>
+                      <li><Link href="/oriental-furniture?category=chairs" onClick={closeMobileMenu}>CHAIRS</Link></li>
+                      <li><Link href="/oriental-furniture?category=tables" onClick={closeMobileMenu}>TABLES</Link></li>
+                      <li><Link href="/oriental-furniture?category=cabinets-and-cupboards" onClick={closeMobileMenu}>CABINETS & CUPBOARDS</Link></li>
+                      <li><Link href="/oriental-furniture?category=rugs" onClick={closeMobileMenu}>RUGS</Link></li>
+                      <li><Link href="/oriental-furniture?category=others" onClick={closeMobileMenu}>OTHERS</Link></li>
+                    </ul>
+                  )}
                 </li>
                 <li>
-                  <Link href="/antique-furniture" onClick={closeMobileMenu}>
-                    ANTIQUE FURNITURE
-                  </Link>
+                  <div className={styles.mobileMenuItem}>
+                    <Link href="/antique-furniture" onClick={closeMobileMenu}>
+                      ANTIQUE FURNITURE
+                    </Link>
+                    <button 
+                      className={styles.mobileExpandButton}
+                      onClick={() => toggleMobileSubmenu('antique')}
+                      aria-label="Toggle Antique Furniture submenu"
+                    >
+                      <Image 
+                        src={mobileMenuExpanded['antique'] ? "/assets/icon/收缩.png" : "/assets/icon/展开.png"}
+                        alt={mobileMenuExpanded['antique'] ? "收起" : "展开"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                  </div>
+                  {mobileMenuExpanded['antique'] && (
+                    <ul className={styles.mobileSubmenu}>
+                      <li><Link href="/antique-furniture?category=seating" onClick={closeMobileMenu}>SEATING</Link></li>
+                      <li><Link href="/antique-furniture?category=storage" onClick={closeMobileMenu}>STORAGE</Link></li>
+                      <li><Link href="/antique-furniture?category=tables" onClick={closeMobileMenu}>TABLES</Link></li>
+                      <li><Link href="/antique-furniture?category=others" onClick={closeMobileMenu}>OTHERS</Link></li>
+                    </ul>
+                  )}
                 </li>
                 <li>
-                  <Link href="/lighting" onClick={closeMobileMenu}>
-                    LIGHTING
-                  </Link>
+                  <div className={styles.mobileMenuItem}>
+                    <Link href="/lighting" onClick={closeMobileMenu}>
+                      LIGHTING
+                    </Link>
+                    <button 
+                      className={styles.mobileExpandButton}
+                      onClick={() => toggleMobileSubmenu('lighting')}
+                      aria-label="Toggle Lighting submenu"
+                    >
+                      <Image 
+                        src={mobileMenuExpanded['lighting'] ? "/assets/icon/收缩.png" : "/assets/icon/展开.png"}
+                        alt={mobileMenuExpanded['lighting'] ? "收起" : "展开"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                  </div>
+                  {mobileMenuExpanded['lighting'] && (
+                    <ul className={styles.mobileSubmenu}>
+                      <li><Link href="/lighting?category=category" onClick={closeMobileMenu}>SHOP BY CATEGORY</Link></li>
+                      <li><Link href="/lighting?category=fortuny-collection" onClick={closeMobileMenu}>FORTUNY COLLECTION</Link></li>
+                      <li><Link href="/lighting?category=yamagiwa-collection" onClick={closeMobileMenu}>YAMAGIWA COLLECTION</Link></li>
+                    </ul>
+                  )}
                 </li>
                 <li>
-                  <Link href="/art" onClick={closeMobileMenu}>
-                    ART
-                  </Link>
+                  <div className={styles.mobileMenuItem}>
+                    <Link href="/art" onClick={closeMobileMenu}>
+                      ART
+                    </Link>
+                    <button 
+                      className={styles.mobileExpandButton}
+                      onClick={() => toggleMobileSubmenu('art')}
+                      aria-label="Toggle Art submenu"
+                    >
+                      <Image 
+                        src={mobileMenuExpanded['art'] ? "/assets/icon/收缩.png" : "/assets/icon/展开.png"}
+                        alt={mobileMenuExpanded['art'] ? "收起" : "展开"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                  </div>
+                  {mobileMenuExpanded['art'] && (
+                    <ul className={styles.mobileSubmenu}>
+                      <li><Link href="/art?category=category" onClick={closeMobileMenu}>CATEGORY</Link></li>
+                      <li><Link href="/art?category=oriental-art" onClick={closeMobileMenu}>ORIENTAL ART</Link></li>
+                    </ul>
+                  )}
                 </li>
                 <li>
-                  <Link href="/fashion" onClick={closeMobileMenu}>
-                    FASHION
-                  </Link>
+                  <div className={styles.mobileMenuItem}>
+                    <Link href="/fashion" onClick={closeMobileMenu}>
+                      FASHION
+                    </Link>
+                    <button 
+                      className={styles.mobileExpandButton}
+                      onClick={() => toggleMobileSubmenu('fashion')}
+                      aria-label="Toggle Fashion submenu"
+                    >
+                      <Image 
+                        src={mobileMenuExpanded['fashion'] ? "/assets/icon/收缩.png" : "/assets/icon/展开.png"}
+                        alt={mobileMenuExpanded['fashion'] ? "收起" : "展开"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                  </div>
+                  {mobileMenuExpanded['fashion'] && (
+                    <ul className={styles.mobileSubmenu}>
+                      <li><Link href="/fashion?category=category" onClick={closeMobileMenu}>SHOP BY CATEGORY</Link></li>
+                      <li><Link href="/fashion?category=runway-archive" onClick={closeMobileMenu}>RUNWAY ARCHIVE</Link></li>
+                      <li><Link href="/fashion?category=curated-collection" onClick={closeMobileMenu}>CURATED COLLECTION</Link></li>
+                      <li><Link href="/fashion?category=brand-partners" onClick={closeMobileMenu}>BRAND PARTNERS</Link></li>
+                    </ul>
+                  )}
                 </li>
                 <li>
                   <Link href="/exhibitions" onClick={closeMobileMenu}>
@@ -937,9 +1065,31 @@ export default function Header() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/about" onClick={closeMobileMenu}>
-                    ABOUT
-                  </Link>
+                  <div className={styles.mobileMenuItem}>
+                    <Link href="/about" onClick={closeMobileMenu}>
+                      ABOUT
+                    </Link>
+                    <button 
+                      className={styles.mobileExpandButton}
+                      onClick={() => toggleMobileSubmenu('about')}
+                      aria-label="Toggle About submenu"
+                    >
+                      <Image 
+                        src={mobileMenuExpanded['about'] ? "/assets/icon/收缩.png" : "/assets/icon/展开.png"}
+                        alt={mobileMenuExpanded['about'] ? "收起" : "展开"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                  </div>
+                  {mobileMenuExpanded['about'] && (
+                    <ul className={styles.mobileSubmenu}>
+                      <li><Link href="/about" onClick={closeMobileMenu}>OUR STORY</Link></li>
+                      <li><Link href="/contact" onClick={closeMobileMenu}>CONTACT</Link></li>
+                      <li><Link href="/about/shanghai" onClick={closeMobileMenu}>AMBELIE SHANGHAI</Link></li>
+                      <li><Link href="/about/hangzhou" onClick={closeMobileMenu}>AMBELIE HANGZHOU</Link></li>
+                    </ul>
+                  )}
                 </li>
               </ul>
             </nav>

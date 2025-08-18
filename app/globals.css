@@ -1571,22 +1571,165 @@ main.cart-page {
 
 @media (max-width: 768px) {
     .exhibitions-row,
-    .exhibitions-row.second-row {
-        flex-direction: column;
-        height: auto;
-        margin-bottom: 60px;
+    .exhibitions-row.second-row,
+    .store-locations .exhibitions-row,
+    .store-locations .exhibitions-row.second-row,
+    .exhibitions-asymmetric .exhibitions-row,
+    .exhibitions-asymmetric .exhibitions-row.second-row {
+        flex-direction: column !important;
+        height: auto !important;
+        margin-bottom: 60px !important;
+        max-width: 90% !important;
+        margin-left: 5% !important;
+        margin-right: 5% !important;
     }
     
     .exhibitions-row.first-row .exhibition-main-image,
-    .exhibitions-row.second-row .exhibition-main-image {
-        flex: none;
-        width: 100%;
-        height: 300px;
-        margin: 0 0 30px 0;
+    .exhibitions-row.second-row .exhibition-main-image,
+    .store-locations .exhibitions-row.first-row .exhibition-main-image,
+    .store-locations .exhibitions-row.second-row .exhibition-main-image,
+    .exhibitions-asymmetric .exhibitions-row.first-row .exhibition-main-image,
+    .exhibitions-asymmetric .exhibitions-row.second-row .exhibition-main-image {
+        flex: none !important;
+        width: 100% !important;
+        height: 300px !important;
+        margin: 0 0 20px 0 !important;
+    }
+    
+    /* 覆盖 store-locations 的图片容器样式，移除 padding-bottom 造成的空隙 */
+    .store-locations .exhibition-image-container {
+        height: 100% !important;
+        padding-bottom: 0 !important;
+    }
+    
+    .store-locations .exhibition-image-container img {
+        position: relative !important;
+        transform: none !important;
+    }
+    
+    .exhibitions-row.first-row .exhibition-content,
+    .exhibitions-row.second-row .exhibition-content,
+    .store-locations .exhibitions-row.first-row .exhibition-content,
+    .store-locations .exhibitions-row.second-row .exhibition-content,
+    .exhibitions-asymmetric .exhibitions-row.first-row .exhibition-content,
+    .exhibitions-asymmetric .exhibitions-row.second-row .exhibition-content {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
     
     .exhibition-small-image {
         height: 150px;
+    }
+    
+    .exhibition-title {
+        font-size: 1.5em;
+        margin-bottom: 12px;
+    }
+    
+    .exhibition-description {
+        font-size: 0.9em;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    .store-address,
+    .exhibition-date {
+        font-size: 0.85em;
+        margin-bottom: 12px;
+    }
+    
+    .view-more-link {
+        font-size: 0.9em;
+        padding: 8px 20px;
+    }
+    
+    /* 确保 store-locations 和 exhibitions-asymmetric 的样式在移动端被正确覆盖 */
+    .store-locations .exhibition-description,
+    .exhibitions-asymmetric .exhibition-description {
+        max-width: 100% !important;
+        font-size: 0.9em !important;
+        line-height: 1.6 !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .store-locations .view-more-link,
+    .exhibitions-asymmetric .view-more-link {
+        padding: 8px 20px !important;
+        font-size: 0.9em !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .exhibitions-row,
+    .exhibitions-row.second-row,
+    .store-locations .exhibitions-row,
+    .store-locations .exhibitions-row.second-row,
+    .exhibitions-asymmetric .exhibitions-row,
+    .exhibitions-asymmetric .exhibitions-row.second-row {
+        max-width: 95% !important;
+        margin-left: 2.5% !important;
+        margin-right: 2.5% !important;
+        margin-bottom: 40px !important;
+    }
+    
+    .exhibitions-row.first-row .exhibition-main-image,
+    .exhibitions-row.second-row .exhibition-main-image,
+    .store-locations .exhibitions-row.first-row .exhibition-main-image,
+    .store-locations .exhibitions-row.second-row .exhibition-main-image,
+    .exhibitions-asymmetric .exhibitions-row.first-row .exhibition-main-image,
+    .exhibitions-asymmetric .exhibitions-row.second-row .exhibition-main-image {
+        height: 250px !important;
+        margin-bottom: 15px !important;
+    }
+    
+    /* 确保在更小屏幕上也没有空隙 */
+    .store-locations .exhibition-image-container {
+        height: 100% !important;
+        padding-bottom: 0 !important;
+    }
+    
+    .store-locations .exhibition-image-container img {
+        position: relative !important;
+        transform: none !important;
+    }
+    
+    .exhibition-title {
+        font-size: 1.3em;
+        margin-bottom: 10px;
+    }
+    
+    .exhibition-description {
+        font-size: 0.85em;
+        line-height: 1.5;
+        margin-bottom: 15px;
+    }
+    
+    .store-address,
+    .exhibition-date {
+        font-size: 0.8em;
+        margin-bottom: 10px;
+    }
+    
+    .view-more-link {
+        font-size: 0.85em;
+        padding: 6px 16px;
+    }
+    
+    /* 确保 store-locations 和 exhibitions-asymmetric 的样式在移动端被正确覆盖 */
+    .store-locations .exhibition-description,
+    .exhibitions-asymmetric .exhibition-description {
+        max-width: 100% !important;
+        font-size: 0.85em !important;
+        line-height: 1.5 !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .store-locations .view-more-link,
+    .exhibitions-asymmetric .view-more-link {
+        padding: 6px 16px !important;
+        font-size: 0.85em !important;
     }
 }
 
@@ -3046,6 +3189,11 @@ body:has(.video-background-section) .site-header:not(.scrolled):not(.menu-active
     flex-direction: column;
 }
 
+.form-group.full-width {
+    flex: 0 0 100%;
+    width: 100%;
+}
+
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group textarea,
@@ -3281,6 +3429,7 @@ body:has(.video-background-section) .site-header:not(.scrolled):not(.menu-active
     .contact-info,
     .contact-form-container {
         flex: 0 0 100%;
+        max-width: 100%;
     }
     
     .contact-info {
@@ -3298,14 +3447,47 @@ body:has(.video-background-section) .site-header:not(.scrolled):not(.menu-active
 }
 
 @media (max-width: 768px) {
+    /* 移动端contact section整体布局优化 */
+    .contact-section {
+        max-width: 95%; /* 在移动端增加宽度利用率 */
+        margin: 20px auto 60px; /* 减少移动端边距 */
+    }
+    
+    .contact-container {
+        gap: 30px; /* 减少移动端间距 */
+    }
+    
     .form-row {
         flex-direction: column;
         gap: 20px;
         margin-bottom: 0;
     }
     
+    /* 移动端form-group强制占满宽度 */
+    .form-row .form-group {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
     .form-group {
         margin-bottom: 20px;
+        flex: 0 0 100% !important; /* 确保在移动端占满全宽 */
+        width: 100% !important;
+    }
+    
+    /* 确保select-wrapper在移动端也占满宽度 */
+    .select-wrapper {
+        width: 100% !important;
+    }
+    
+    /* 强制所有表单输入元素在移动端占满宽度 */
+    .contact-form .form-group input,
+    .contact-form .form-group select,
+    .contact-form .form-group textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
     
     /* 进一步调整移动端联系页面的布局 */
@@ -3313,21 +3495,44 @@ body:has(.video-background-section) .site-header:not(.scrolled):not(.menu-active
         padding: 30px; /* 减小内边距以节省空间 */
     }
     
+    /* 确保表单在移动端占满宽度 */
+    .contact-form-container {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100%;
+    }
+    
+    /* 调整表单标题在移动端的样式 */
+    .contact-form-title {
+        font-size: 1.6em;
+        margin-bottom: 25px;
+        margin-top: 20px;
+    }
+    
+    /* 移动端表单字段优化 */
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group textarea,
+    .form-group select {
+        padding: 14px; /* 增加移动端触摸友好性 */
+        font-size: 16px; /* 防止iOS缩放 */
+        width: 100% !important; /* 确保输入字段占满容器宽度 */
+        box-sizing: border-box;
+    }
+    
+    /* 移动端提交按钮优化 */
+    .submit-button {
+        width: 100%; /* 在移动端占满宽度 */
+        min-width: auto;
+        padding: 14px 0; /* 增加触摸友好性 */
+    }
+    
     body:has(.contact-section) main {
         padding-top: 90px; /* 平板尺寸进一步减小间隙 */
     }
 }
 
-@media (max-width: 480px) {
-    /* 小屏设备的额外调整 */
-    .contact-info {
-        padding: 25px;
-    }
-    
-    body:has(.contact-section) main {
-        padding-top: 85px; /* 手机尺寸的最小间隙 */
-    }
-}
+
 
 /* 展览页面专门的页眉样式 - 始终保持白色背景 */
 body:has(.page-header) .site-header,
@@ -3750,6 +3955,7 @@ body:has(.about-hero-section) main {
     
     .about-content-section {
         margin: 60px auto;
+        max-width: 90%;
     }
     
     .about-section-title {
@@ -3767,7 +3973,7 @@ body:has(.about-hero-section) main {
         flex-direction: column !important;
         gap: 30px;
         margin-bottom: 60px;
-        padding: 0 15px;
+        padding: 0 10px;
     }
     
     .about-text-content,
@@ -3776,17 +3982,26 @@ body:has(.about-hero-section) main {
         flex: none;
     }
     
+    .about-image-content {
+        width: 100%;
+    }
+    
+    .about-image-content img {
+        width: 100%;
+        height: auto;
+    }
+    
     .about-text-content {
         padding-top: 0;
     }
     
     .about-text-content .about-section-title {
         font-size: 1.6em;
-        text-align: center;
+        text-align: left;
     }
     
     .about-text-content .about-paragraph {
-        text-align: center;
+        text-align: left;
     }
     
     body:has(.about-hero-section) main {
@@ -3825,7 +4040,17 @@ body:has(.about-hero-section) main {
     }
     
     .about-image-text-block {
-        padding: 0 10px;
+        padding: 0 5px;
+    }
+    
+    .about-content-section {
+        max-width: 95%;
+        margin: 40px auto;
+    }
+    
+    .about-content-container {
+        max-width: 100%;
+        margin: 0;
     }
 }
 
@@ -5129,5 +5354,88 @@ main.orders-page {
     .media-logo img {
         max-width: 100px;
         max-height: 50px;
+    }
+}
+
+
+
+@media (max-width: 480px) {
+    /* 小屏设备的额外调整 */
+    .contact-section {
+        max-width: 98%; /* 小屏设备最大化宽度利用率 */
+        margin: 15px auto 40px; /* 进一步减少小屏设备边距 */
+    }
+    
+    .contact-container {
+        gap: 20px; /* 小屏设备进一步减少间距 */
+    }
+    
+    .contact-info {
+        padding: 25px;
+    }
+    
+    /* 小屏设备表单容器优化 */
+    .contact-form-container {
+        padding: 0 15px; /* 添加左右内边距避免贴边 */
+    }
+    
+    /* 小屏设备表单标题进一步调整 */
+    .contact-form-title {
+        font-size: 1.4em;
+        margin-bottom: 20px;
+        margin-top: 15px;
+    }
+    
+    /* 小屏设备form-group强制占满宽度 */
+    .form-row .form-group {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* 小屏设备表单字段进一步优化 */
+    .form-group {
+        flex: 0 0 100% !important; /* 确保在小屏设备占满全宽 */
+        width: 100% !important;
+    }
+    
+    /* 确保select-wrapper在小屏设备也占满宽度 */
+    .select-wrapper {
+        width: 100% !important;
+    }
+    
+    /* 强制所有表单输入元素在小屏设备占满宽度 */
+    .contact-form .form-group input,
+    .contact-form .form-group select,
+    .contact-form .form-group textarea {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group textarea,
+    .form-group select {
+        padding: 16px; /* 进一步增加触摸友好性 */
+        font-size: 16px;
+        width: 100% !important; /* 确保输入字段占满容器宽度 */
+        box-sizing: border-box;
+    }
+    
+    /* 小屏设备标签和文字优化 */
+    .form-group label {
+        font-size: 0.95em;
+        margin-bottom: 10px;
+    }
+    
+    /* 小屏设备隐私政策文字优化 */
+    .privacy-policy p {
+        font-size: 0.9em;
+        line-height: 1.5;
+    }
+    
+    body:has(.contact-section) main {
+        padding-top: 85px; /* 手机尺寸的最小间隙 */
     }
 }

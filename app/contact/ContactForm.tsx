@@ -96,7 +96,7 @@ export default function ContactForm() {
   };
 
   return (
-    <div className="contact-form-container" style={{ flex: '0 0 55%' }}>
+    <div className="contact-form-container">
       <h2 className="contact-form-title">Contact Us</h2>
       
       {/* 状态消息显示 */}
