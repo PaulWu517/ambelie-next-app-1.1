@@ -98,6 +98,9 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isIntroExpanded, setIsIntroExpanded] = useState(false);
   const [lastAction, setLastAction] = useState<'cart' | 'inquiry' | 'collection'>('cart');
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchEndX, setTouchEndX] = useState(0);
   
   const { addToCart } = useCartStore();
   const { addToInquiry } = useInquiryStore();
@@ -259,6 +262,46 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     setIsIntroExpanded(!isIntroExpanded);
   };
 
+  // 触摸事件处理函数
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+    
+    const distance = touchStartX - touchEndX;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentImageIndex < images.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    } else if (isRightSwipe && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+
+    setTouchStartX(0);
+    setTouchEndX(0);
+  };
+
+  // 切换到下一张图片
+  const goToNextImage = () => {
+    if (currentImageIndex < images.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  // 切换到上一张图片
+  const goToPreviousImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
   const details = [
     { label: 'Dimensions:', value: product.dimensions },
     { label: 'Period:', value: product.period },
@@ -273,25 +316,117 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         {/* 左侧图片列 */}
         <div className={styles.imageColumn}>
           {images.length > 0 ? (
-            images.map((image, index) => (
-              <div key={index} className={styles.imageWrapper}>
-                <Image
-                  src={image.src}
-                  alt={image.alt}
-                  width={600}
-                  height={800}
-                  className={styles.image}
-                  priority={index === 0}
-                  unoptimized
-                />
+            <>
+              {/* 桌面端：显示所有图片（垂直排列） */}
+              <div className={styles.desktopImages}>
+                {images.map((image, index) => (
+                  <div key={index} className={styles.imageWrapper}>
+                    <Image
+                      src={image.src}
+                      alt={image.alt}
+                      width={600}
+                      height={800}
+                      className={styles.image}
+                      priority={index === 0}
+                      unoptimized
+                    />
+                  </div>
+                ))}
               </div>
-            ))
+              
+              {/* 移动端：单张图片显示（支持滑动） */}
+              <div className={styles.mobileImages}>
+                <div 
+                  className={styles.imageWrapper}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <Image
+                    src={images[currentImageIndex].src}
+                    alt={images[currentImageIndex].alt}
+                    width={600}
+                    height={800}
+                    className={styles.image}
+                    priority={true}
+                    unoptimized
+                  />
+                  
+                  {/* 图片指示器 */}
+                  {images.length > 1 && (
+                    <div className={styles.imageIndicators}>
+                      {images.map((_, index) => (
+                        <div
+                          key={index}
+                          className={`${styles.indicator} ${index === currentImageIndex ? styles.active : ''}`}
+                          onClick={() => setCurrentImageIndex(index)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setCurrentImageIndex(index);
+                            }
+                          }}
+                          aria-label={`Go to image ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* 导航按钮 */}
+                  {images.length > 1 && (
+                    <>
+                      <button
+                        className={`${styles.navButton} ${styles.prevButton}`}
+                        onClick={goToPreviousImage}
+                        disabled={currentImageIndex === 0}
+                        aria-label="Previous image"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        className={`${styles.navButton} ${styles.nextButton}`}
+                        onClick={goToNextImage}
+                        disabled={currentImageIndex === images.length - 1}
+                        aria-label="Next image"
+                      >
+                        ›
+                      </button>
+                    </>
+                  )}
+                </div>
+                
+                {/* 缩略图导航 */}
+                {images.length > 1 && (
+                  <div className={styles.thumbnailNav}>
+                    {images.map((image, index) => (
+                      <button
+                        key={index}
+                        className={`${styles.thumbnail} ${index === currentImageIndex ? styles.active : ''}`}
+                        onClick={() => setCurrentImageIndex(index)}
+                        aria-label={`Go to image ${index + 1}`}
+                      >
+                        <Image
+                          src={image.src}
+                          alt={image.alt}
+                          width={80}
+                          height={80}
+                          className={styles.thumbnailImage}
+                          unoptimized
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             <div className={styles.noImages}>
               <p>No images available for this product.</p>
             </div>
           )}
-          </div>
+        </div>
 
         {/* 右侧文字信息列 */}
         <div className={styles.textColumn}>

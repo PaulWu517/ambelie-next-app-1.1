@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ambelie Email Verification</title>
+        <title>Ambelie Verification Code</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
@@ -114,8 +114,7 @@ export async function POST(request: NextRequest) {
         <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
           <!-- Header -->
           <div style="background-color: #333; padding: 40px 30px; text-align: center;">
-            <h1 style="color: #ffffff; font-size: 28px; font-weight: 400; margin: 0; letter-spacing: 2px; font-family: 'Solena-Regular', 'Times New Roman', 'Georgia', serif;">EMAIL VERIFICATION</h1>
-            <div style="margin: 15px 0 0 0; text-align: center;">
+            <div style="margin: 0; text-align: center;">
               <img src="https://www.ambelie.com/assets/vi/Ambelie_whitelogo.png" alt="AMBELIE Logo" style="height: 35px; margin: 0 auto;" />
             </div>
           </div>
@@ -170,7 +169,7 @@ export async function POST(request: NextRequest) {
     const mailOptions = {
       from: process.env.SMTP_USER || 'noreply@ambelie.com',
       to: email,
-      subject: '[Ambelie] Email Verification Code',
+      subject: '[Ambelie] Verification Code',
       html: emailContent,
     };
     

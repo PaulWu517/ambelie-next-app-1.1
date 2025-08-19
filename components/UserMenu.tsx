@@ -57,8 +57,8 @@ export default function UserMenu({ user, onSignOut, iconColor = 'white', textCol
     return (
       <div className="user-menu">
         <Link href="/auth/login" className="login-link">
+          <span className="login-text" style={{ color: textColor }}>SIGN IN</span>
           <User className="user-icon" size={20} style={{ color: iconColor }} />
-          <span className="login-text" style={{ color: textColor }}>Sign In</span>
         </Link>
       </div>
     );

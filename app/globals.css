@@ -882,6 +882,7 @@ main.cart-page {
     margin-bottom: 30px; /* 增加标题下方的间距 */
     text-align: center;
     font-weight: 400;
+    font-size: 2.5em; /* 添加字体大小设置 */
     /* u5220u9664u91cdu590du7684opacityu548ctransformu5c5eu6027 */
 }
 
@@ -909,6 +910,94 @@ main.cart-page {
 .about-logo img {
     max-width: 260px;
     height: auto;
+}
+
+/* About Us Section 响应式优化 */
+@media (max-width: 768px) {
+    .about-us-section {
+        padding: 25px 0 35px;
+    }
+    
+    .about-us-title {
+        font-size: 2rem;
+        margin-bottom: 25px;
+    }
+    
+    .about-us-content {
+        max-width: 90%;
+        line-height: 1.7;
+    }
+    
+    .about-us-content p {
+        margin-bottom: 18px;
+        font-size: 0.95em;
+    }
+    
+    .about-logo {
+        margin-top: 35px;
+    }
+    
+    .about-logo img {
+        max-width: 220px;
+    }
+}
+
+@media (max-width: 480px) {
+    .about-us-section {
+        padding: 20px 0 30px;
+    }
+    
+    .about-us-title {
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+    }
+    
+    .about-us-content {
+        max-width: 95%;
+        line-height: 1.6;
+    }
+    
+    .about-us-content p {
+        margin-bottom: 16px;
+        font-size: 0.9em;
+    }
+    
+    .about-logo {
+        margin-top: 30px;
+    }
+    
+    .about-logo img {
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 360px) {
+    .about-us-section {
+        padding: 18px 0 25px;
+    }
+    
+    .about-us-title {
+        font-size: 1.6rem;
+        margin-bottom: 18px;
+    }
+    
+    .about-us-content {
+        max-width: 98%;
+        line-height: 1.5;
+    }
+    
+    .about-us-content p {
+        margin-bottom: 14px;
+        font-size: 0.85em;
+    }
+    
+    .about-logo {
+        margin-top: 25px;
+    }
+    
+    .about-logo img {
+        max-width: 150px;
+    }
 }
 
 /* 产品分类页面样式 */
@@ -1962,7 +2051,15 @@ main.cart-page {
 
 @media (max-width: 600px) {
     .new-arrivals-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .new-arrivals-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 }
 
@@ -2156,8 +2253,13 @@ main.cart-page {
     background-size: cover;
     background-position: center;
     background-attachment: fixed; /* 固定背景，产生视差效果 */
+    background-repeat: no-repeat; /* 防止背景图片重复 */
     position: relative;
     margin: 80px 0; /* 上下边距 */
+    /* 图片质量优化 */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated; /* 为高分辨率屏幕提供更好的渲染 */
 }
 
 .exhibition-overlay {
@@ -2223,18 +2325,79 @@ main.cart-page {
 
 /* 响应式调整 */
 @media (max-width: 768px) {
-    .exhibition-slogan {
-        font-size: 2.5rem;
+    .fullscreen-exhibition {
+        height: 80vh; /* 减小高度，避免在移动端占用过多空间 */
+        margin: 40px 0;
+        background-attachment: scroll; /* 移动端禁用固定背景，提高性能 */
+        /* 移动端图片质量优化 */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        background-size: cover;
+        background-position: center;
     }
-}
-
-@media (max-width: 480px) {
+    
     .exhibition-slogan {
-        font-size: 2rem;
+        font-size: 2rem; /* 进一步减小字体 */
+        margin-bottom: 30px;
+        max-width: 90%;
+        line-height: 1.2;
     }
     
     .exhibition-button {
         padding: 10px 25px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .fullscreen-exhibition {
+        height: 70vh;
+        margin: 30px 0;
+        /* 小屏幕图片质量优化 */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        background-size: cover;
+        background-position: center;
+    }
+    
+    .exhibition-slogan {
+        font-size: 1.5rem; /* 移动端更合适的字体大小 */
+        margin-bottom: 25px;
+        max-width: 95%;
+        line-height: 1.3;
+        letter-spacing: 0.08em; /* 减小字间距 */
+    }
+    
+    .exhibition-button {
+        padding: 8px 20px;
+        font-size: 0.85rem;
+    }
+    
+    .exhibition-overlay {
+        background-color: rgba(0, 0, 0, 0.5); /* 增加遮罩透明度，提高文字可读性 */
+    }
+}
+
+@media (max-width: 360px) {
+    .fullscreen-exhibition {
+        height: 60vh;
+        margin: 20px 0;
+        /* 超小屏幕图片质量优化 */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        background-size: cover;
+        background-position: center;
+    }
+    
+    .exhibition-slogan {
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+        max-width: 98%;
+    }
+    
+    .exhibition-button {
+        padding: 6px 16px;
+        font-size: 0.8rem;
     }
 }
 
@@ -2374,7 +2537,15 @@ main.cart-page {
 
 @media (max-width: 600px) {
     .category-showcase-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .category-showcase-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 }
 
@@ -2444,7 +2615,8 @@ main.cart-page {
 .footer-center {
     flex: 0 0 33%;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
+    gap: 40px;
 }
 
 .footer-links-group h3 {
@@ -2566,11 +2738,66 @@ main.cart-page {
 
 @media (max-width: 768px) {
     .footer-center {
-        flex-direction: column;
+        flex-direction: row;
+        gap: 20px;
+        justify-content: space-between;
     }
     
     .footer-links-group {
-        margin-bottom: 30px;
+        margin-bottom: 0;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .footer-links-group h3 {
+        font-size: 0.8em;
+        margin-bottom: 15px;
+    }
+    
+    .footer-links-group ul {
+        font-size: 0.75em;
+    }
+    
+    .footer-links-group li {
+        margin-bottom: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-center {
+        gap: 15px;
+    }
+    
+    .footer-links-group h3 {
+        font-size: 0.75em;
+        margin-bottom: 12px;
+    }
+    
+    .footer-links-group ul {
+        font-size: 0.7em;
+    }
+    
+    .footer-links-group li {
+        margin-bottom: 6px;
+    }
+}
+
+@media (max-width: 360px) {
+    .footer-center {
+        gap: 10px;
+    }
+    
+    .footer-links-group h3 {
+        font-size: 0.7em;
+        margin-bottom: 10px;
+    }
+    
+    .footer-links-group ul {
+        font-size: 0.65em;
+    }
+    
+    .footer-links-group li {
+        margin-bottom: 5px;
     }
 }
 
@@ -2776,7 +3003,8 @@ main.cart-page {
 
 @media (max-width: 480px) {
     .past-exhibitions-section .new-arrivals-grid {
-        grid-template-columns: 1fr; /* 手机尺寸改为单列 */
+        grid-template-columns: repeat(2, 1fr); /* 手机尺寸保持2列 */
+        gap: 15px;
     }
     
     .page-header {
@@ -4771,14 +4999,29 @@ body:has(.video-background-section) .site-header .main-navigation a {
   padding: 8px 16px;
   color: #333;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
   border-radius: 6px;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .login-link:hover {
   background-color: #f5f5f5;
+}
+
+.login-text {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.login-link:hover .login-text {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .user-avatar-button {
@@ -5078,14 +5321,27 @@ body:has(.video-background-section) .site-header .main-navigation a {
 .site-header .user-menu .login-link,
 .site-header .user-menu .user-avatar-button {
   color: #333;
-  padding: 8px 4px;
+  padding: 8px 16px;
   background: transparent;
   border-radius: 0;
+  gap: 8px;
 }
 
 .site-header .user-menu .login-text,
 .site-header .user-menu .user-name {
-    display: none; /* Hide text in header context */
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.site-header .user-menu .login-link:hover .login-text {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .site-header .user-menu .user-icon,

@@ -21,7 +21,20 @@
     gap: 2rem;
 }
 
+/* 桌面端图片显示 */
+.desktopImages {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* 移动端图片显示 */
+.mobileImages {
+    display: none;
+}
+
 .imageWrapper {
+    position: relative;
     width: 95%;
     margin: 0 auto;
     overflow: hidden;
@@ -31,6 +44,138 @@
     width: 100%;
     height: auto;
     display: block;
+    object-fit: cover;
+}
+
+/* 移动端触摸样式 */
+.mobileImages .imageWrapper {
+    cursor: grab;
+}
+
+.mobileImages .imageWrapper:active {
+    cursor: grabbing;
+}
+
+.mobileImages .image {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* 图片指示器 */
+.imageIndicators {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+    align-items: center;
+    justify-content: center;
+    /* 确保容器不会影响子元素 */
+    width: auto;
+    height: auto;
+}
+
+.indicator {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    background-color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    flex-shrink: 0 !important;
+    /* 强制正圆形显示 */
+    aspect-ratio: 1 !important;
+    display: block !important;
+    /* 防止任何变形 */
+    transform: none !important;
+    /* 确保内容不会影响尺寸 */
+    line-height: 1 !important;
+    font-size: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    /* 确保尺寸不被覆盖 */
+    box-sizing: border-box !important;
+    /* 移除按钮默认样式 */
+    outline: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+}
+
+.indicator.active {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* 导航按钮 */
+.navButton {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease, opacity 0.3s ease;
+    z-index: 10;
+}
+
+.navButton:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.navButton:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.prevButton {
+    left: 20px;
+}
+
+.nextButton {
+    right: 20px;
+}
+
+/* 缩略图导航 */
+.thumbnailNav {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.thumbnail {
+    width: 80px;
+    height: 80px;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    background: none;
+    padding: 0;
+}
+
+.thumbnail.active {
+    border-color: var(--brand-green);
+}
+
+.thumbnailImage {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
 }
 
@@ -451,6 +596,17 @@
 }
 
 @media (max-width: 768px) {
+    /* 在移动端隐藏桌面端图片，显示移动端图片 */
+    .desktopImages {
+        display: none;
+    }
+    
+    .mobileImages {
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
     .productDetailContainer {
         padding: 1.5rem;
         margin-top: 60px;
@@ -512,5 +668,73 @@
 
     .relatedPeriod {
         font-size: 0.85em;
+    }
+
+    /* 移动端图片导航优化 */
+    .navButton {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+
+    .prevButton {
+        left: 10px;
+    }
+
+    .nextButton {
+        right: 10px;
+    }
+
+    .imageIndicators {
+        bottom: 15px;
+        gap: 6px;
+    }
+
+    .indicator {
+        width: 6px !important;
+        height: 6px !important;
+        flex-shrink: 0 !important;
+        aspect-ratio: 1 !important;
+        transform: none !important;
+        line-height: 1 !important;
+        font-size: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        outline: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        appearance: none !important;
+    }
+
+    .thumbnailNav {
+        gap: 8px;
+        margin-top: 15px;
+    }
+
+    .thumbnail {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+@media (max-width: 480px) {
+    .navButton {
+        width: 30px;
+        height: 30px;
+        font-size: 16px;
+    }
+
+    .prevButton {
+        left: 5px;
+    }
+
+    .nextButton {
+        right: 5px;
+    }
+
+    .thumbnail {
+        width: 50px;
+        height: 50px;
     }
 }

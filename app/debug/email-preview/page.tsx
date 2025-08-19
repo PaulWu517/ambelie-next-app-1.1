@@ -17,14 +17,13 @@ const EmailPreviewPage = () => {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Ambelie Email Verification</title>
+      <title>Ambelie Verification Code</title>
     </head>
     <body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
         <!-- Header -->
         <div style="background-color: #231815; padding: 40px 30px; text-align: center;">
           <h1 style="color: #ffffff; font-size: 28px; font-weight: 300; margin: 0; letter-spacing: 2px;">AMBELIE</h1>
-          <p style="color: #ffffff; font-size: 14px; margin: 8px 0 0 0; opacity: 0.8; letter-spacing: 1px;">EMAIL VERIFICATION</p>
         </div>
         
         <!-- Content -->

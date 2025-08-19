@@ -161,7 +161,7 @@ export default function LoginForm() {
   return (
     <div className={styles.loginForm}>
       <div className={styles.loginHeader}>
-        <h1>Welcome to Ambelie</h1>
+        <h1>SIGN IN</h1>
         {step === 'email' ? (
           <p>Enter your email address and we'll send you a verification code to sign in</p>
         ) : (
