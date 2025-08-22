@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
 import Image from 'next/image';
 
+const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+
 const CartPage = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, getItemCount } = useCartStore();
 
@@ -70,7 +72,7 @@ const CartPage = () => {
                         const imageUrl = item.main_image?.data?.attributes?.url ? 
                           (item.main_image.data.attributes.url.startsWith('http') ? 
                             item.main_image.data.attributes.url : 
-                            `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`
+                            `${API_URL}${item.main_image.data.attributes.url}`
                           ) : '/placeholder.jpg';
                         
                         console.log('🌐 [Cart Debug] Final image URL for', item.name, ':', imageUrl);

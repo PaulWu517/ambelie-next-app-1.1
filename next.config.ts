@@ -12,6 +12,24 @@ const nextConfig: NextConfig = {
         protocol: 'http',
         hostname: 'localhost',
       },
+      // 腾讯云COS原始域名
+      {
+        protocol: 'https',
+        hostname: 'ambelie-1368352639.cos.ap-guangzhou.myqcloud.com',
+        pathname: '/**',
+      },
+      // CDN加速域名
+      {
+        protocol: 'https',
+        hostname: 'media.ambelie.com',
+        pathname: '/**',
+      },
+      // 旧的Strapi后端域名（兼容性保留）
+      {
+        protocol: 'https',
+        hostname: 'ambelie-strapi.up.railway.app',
+        pathname: '/**',
+      },
     ],
   },
 };

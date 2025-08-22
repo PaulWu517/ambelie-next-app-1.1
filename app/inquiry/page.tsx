@@ -7,6 +7,8 @@ import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import { useAuth } from '@/lib/hooks/useAuth';
 import styles from './inquiry.module.css';
 
+const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+
 const InquiryPage = () => {
   const { items, removeFromInquiry, getItemCount, clearInquiry, loadFromBackend, submitInquiry } = useInquiryStore();
   const { user, isLoggedIn } = useAuth();
@@ -195,13 +197,13 @@ const InquiryPage = () => {
                             const url = (item.main_image as any).url;
                             imageUrl = url.startsWith('http') ? 
                               url : 
-                              `https://ambelie-backend-production.up.railway.app${url}`;
+                              `${API_URL}${url}`;
                           }
                           // 检查是否是旧的数据结构 (包含data.attributes)
                           else if (item.main_image.data?.attributes?.url) {
                             imageUrl = item.main_image.data.attributes.url.startsWith('http') ? 
                               item.main_image.data.attributes.url : 
-                              `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`;
+                              `${API_URL}${item.main_image.data.attributes.url}`;
                           }
                         }
                         

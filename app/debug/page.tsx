@@ -53,19 +53,20 @@ export default function DebugPage() {
 
   const getImageUrl = (item: any) => {
     let imageUrl = '/placeholder.jpg';
+    const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
     
     if (item.main_image) {
       // 检查是否是新的数据结构 (直接的图片对象)
       if (item.main_image.url) {
         imageUrl = item.main_image.url.startsWith('http') ? 
           item.main_image.url : 
-          `https://ambelie-backend-production.up.railway.app${item.main_image.url}`;
+          `${API_URL}${item.main_image.url}`;
       }
       // 检查是否是旧的数据结构 (包含data.attributes)
       else if (item.main_image.data?.attributes?.url) {
         imageUrl = item.main_image.data.attributes.url.startsWith('http') ? 
           item.main_image.data.attributes.url : 
-          `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`;
+          `${API_URL}${item.main_image.data.attributes.url}`;
       }
     }
     

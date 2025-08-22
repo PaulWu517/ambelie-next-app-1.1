@@ -114,7 +114,7 @@ export default async function ExhibitionsPage() {
             <div className="exhibition-image-container">
                   {exhibition.mainImage ? (
                     <Image 
-                      src={`${API_URL}${exhibition.mainImage.url}`} 
+                      src={/^(https?:)?\/\//i.test(exhibition.mainImage.url) ? exhibition.mainImage.url : `${API_URL}${exhibition.mainImage.url}`} 
                       alt={exhibition.mainImage.alternativeText || exhibition.name}
                       width={800} 
                       height={533} 
@@ -165,7 +165,7 @@ export default async function ExhibitionsPage() {
               <div className="product-image">
                     {exhibition.mainImage ? (
                       <Image 
-                        src={`${API_URL}${exhibition.mainImage.url}`} 
+                        src={/^(https?:)?\/\//i.test(exhibition.mainImage.url) ? exhibition.mainImage.url : `${API_URL}${exhibition.mainImage.url}`} 
                         alt={exhibition.mainImage.alternativeText || exhibition.name}
                         width={400} 
                         height={400} 
@@ -195,4 +195,4 @@ export default async function ExhibitionsPage() {
       </section>
     </main>
   );
-} 
+}

@@ -136,7 +136,7 @@ export default async function ExhibitionDetailPage({ params }: ExhibitionDetailP
               return (
                 <div key={index} className={styles.imageWrapper}>
                   <Image
-                    src={`${API_URL}${image.url}`}
+                    src={/^(https?:)?\/\//i.test(image.url) ? image.url : `${API_URL}${image.url}`}
                     alt={image.alternativeText || `Exhibition image ${index + 1}`}
                     width={800}
                     height={1200}
@@ -156,4 +156,4 @@ export default async function ExhibitionDetailPage({ params }: ExhibitionDetailP
       </main>
     </div>
   );
-} 
+}

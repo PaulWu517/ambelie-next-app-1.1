@@ -14,7 +14,7 @@ interface CollectionState {
   loadFromBackend: () => Promise<void>;
 }
 
-const API_BASE_URL = 'https://ambelie-backend-production.up.railway.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
 // 获取用户token的辅助函数
 const getUserToken = async () => {

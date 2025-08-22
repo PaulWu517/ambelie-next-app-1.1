@@ -140,7 +140,7 @@ export default async function ProjectsPage() {
                 <div className="exhibition-image-container">
                   {project.mainImage ? (
                     <Image 
-                      src={`${API_URL}${project.mainImage.url}`} 
+                      src={/^(https?:)?\/\//i.test(project.mainImage.url) ? project.mainImage.url : `${API_URL}${project.mainImage.url}`} 
                       alt={project.mainImage.alternativeText || project.name}
                       width={800} 
                       height={533} 
@@ -178,4 +178,4 @@ export default async function ProjectsPage() {
       </section>
     </main>
   );
-} 
+}

@@ -202,7 +202,7 @@ export default async function HomePage() {
         className="fullscreen-exhibition"
         style={{
           backgroundImage: homepageExhibition && homepageExhibition.mainImage
-            ? `url(${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${homepageExhibition.mainImage.url})`
+            ? `url(${ (homepageExhibition.mainImage.url?.startsWith('http') ? homepageExhibition.mainImage.url : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${homepageExhibition.mainImage.url}`) })`
             : "url('/assets/images/placeholder-hero.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center'
@@ -319,7 +319,7 @@ export default async function HomePage() {
         className="fullscreen-exhibition" 
         style={{
           backgroundImage: homepageProject && homepageProject.mainImage
-            ? `url(${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${homepageProject.mainImage.url})`
+            ? `url(${ (homepageProject.mainImage.url?.startsWith('http') ? homepageProject.mainImage.url : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app'}${homepageProject.mainImage.url}`) })`
             : "url('/assets/images/placeholder-hero.jpg')",
           backgroundSize: 'cover',
           backgroundPosition: 'center'

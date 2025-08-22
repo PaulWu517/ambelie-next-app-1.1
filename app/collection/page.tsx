@@ -9,6 +9,9 @@ import { useCartStore } from '@/lib/stores/cartStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import styles from './Collection.module.css';
 
+// 在本文件内统一定义后端基础 URL，避免硬编码和未定义错误
+const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+
 // 成功提示组件
 function SuccessToast({ 
   isVisible, 
@@ -120,13 +123,13 @@ export default function CollectionPage() {
               const url = (item.main_image as any).url;
               imageUrl = url.startsWith('http') ? 
                 url : 
-                `https://ambelie-backend-production.up.railway.app${url}`;
+                `${API_URL}${url}`;
             }
             // 检查是否是旧的数据结构 (包含data.attributes)
             else if (item.main_image.data?.attributes?.url) {
               imageUrl = item.main_image.data.attributes.url.startsWith('http') ? 
                 item.main_image.data.attributes.url : 
-                `https://ambelie-backend-production.up.railway.app${item.main_image.data.attributes.url}`;
+                `${API_URL}${item.main_image.data.attributes.url}`;
             }
           }
           

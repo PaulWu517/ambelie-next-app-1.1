@@ -110,7 +110,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const isInquiryOnly = product.isInquiryOnly || false;
 
   const images = product.images?.map(img => ({
-    src: `${API_URL}${img.url}`,
+    src: /^(https?:)?\/\//i.test(img.url) ? img.url : `${API_URL}${img.url}`,
     alt: img.alternativeText || product.name
   })) || [];
 

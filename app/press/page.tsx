@@ -137,7 +137,7 @@ export default async function PressPage() {
                 <div className="exhibition-image-container press-image-hover">
                   {pressItem.mainImage ? (
                     <Image 
-                      src={`${API_URL}${pressItem.mainImage.url}`} 
+                      src={/^(https?:)?\/\//i.test(pressItem.mainImage.url) ? pressItem.mainImage.url : `${API_URL}${pressItem.mainImage.url}`} 
                       alt={pressItem.mainImage.alternativeText || pressItem.name}
                       width={800} 
                       height={533} 
@@ -156,7 +156,7 @@ export default async function PressPage() {
                       {pressItem.mediaLogo && (
                         <div className="media-logo">
                           <Image 
-                            src={`${API_URL}${pressItem.mediaLogo.url}`} 
+                            src={/^(https?:)?\/\//i.test(pressItem.mediaLogo.url) ? pressItem.mediaLogo.url : `${API_URL}${pressItem.mediaLogo.url}`} 
                             alt={pressItem.mediaLogo.alternativeText || 'Media Logo'}
                             width={120} 
                             height={60} 
