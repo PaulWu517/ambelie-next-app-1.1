@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, Suspense } from 'react';
 import Image from 'next/image';
 import styles from './ShanghaiShowroom.module.css';
 import { useSearchParams } from 'next/navigation';
@@ -48,10 +48,11 @@ function normalizeItem(item: any) {
   return item;
 }
 
-export default function ShanghaiShowroomPage() {
+// Component that uses useSearchParams
+function ShanghaiShowroomContent() {
   const API_URL = useApiUrl();
   const searchParams = useSearchParams();
-  const debug = searchParams?.get('debug') === '1';
+  const debug = searchParams?.get('debug') === '1' || false;
 
   // ------------------ State for backend data ------------------
   const [loading, setLoading] = useState<boolean>(true);
@@ -337,5 +338,14 @@ export default function ShanghaiShowroomPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+// Main component with Suspense wrapper
+export default function ShanghaiShowroomPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ShanghaiShowroomContent />
+    </Suspense>
   );
 }

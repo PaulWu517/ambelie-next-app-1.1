@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, Suspense } from 'react';
 import Image from 'next/image';
 import styles from './HangzhouShowroom.module.css';
 import { useSearchParams } from 'next/navigation';
@@ -54,10 +54,11 @@ function normalizeItem(item: any) {
 //   description: "Discover AMBELIE Hangzhou showroom at Hongning Road, where French elegance meets Chinoiserie style in our thoughtfully designed spaces.",
 // };
 
-export default function HangzhouShowroomPage() {
+// Component that uses useSearchParams
+function HangzhouShowroomContent() {
   const API_URL = useApiUrl();
   const searchParams = useSearchParams();
-  const debug = searchParams?.get('debug') === '1';
+  const debug = searchParams?.get('debug') === '1' || false;
 
   // ------------------ State for backend data ------------------
   const [loading, setLoading] = useState<boolean>(true);
@@ -338,5 +339,14 @@ export default function HangzhouShowroomPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+// Main component with Suspense wrapper
+export default function HangzhouShowroomPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HangzhouShowroomContent />
+    </Suspense>
   );
 }
