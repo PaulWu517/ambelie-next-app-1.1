@@ -27,6 +27,7 @@ interface Product {
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;
   slug: string;
+  currencyKeyword?: string; // 新增：货币关键字（如 CNY, USD 等）
 }
 
 interface ProductDisplayProps {
@@ -108,6 +109,10 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   
   const actualPrice = product.price || 0;
   const isInquiryOnly = product.isInquiryOnly || false;
+
+  // 根据 currencyKeyword 计算货币符号，默认 CNY
+  const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
+  const currencySymbol = currencySymbolMap[(product.currencyKeyword || 'CNY').toUpperCase()] || '';
 
   const images = product.images?.map(img => ({
     src: /^(https?:)?\/\//i.test(img.url) ? img.url : `${API_URL}${img.url}`,
@@ -433,17 +438,14 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
           <div className={styles.productInfoContent}>
             <h1 className={styles.productTitle}>{product.name}</h1>
             
-            <div className={styles.priceContainer}>
-              {!isInquiryOnly && actualPrice > 0 ? (
+            {/* 当非询价且有价格时显示价格与货币符号；否则不展示任何价格文案 */}
+            {!isInquiryOnly && actualPrice > 0 && (
+              <div className={styles.priceContainer}>
                 <div className={styles.price}>
-                  ${actualPrice.toLocaleString()}
+                  {currencySymbol}{actualPrice.toLocaleString()}
                 </div>
-              ) : (
-                <div className={styles.inquiryPrice}>
-                  Price on inquiry
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Introduction 部分 - 现在在产品详情之前 */}
             {product.description && (

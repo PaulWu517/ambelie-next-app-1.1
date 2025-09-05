@@ -216,7 +216,7 @@ export default async function HomePage() {
             href="/exhibitions" 
             className="exhibition-button"
           >
-            Explore More
+            More Exbihitions
           </Link>
         </div>
       </section>
@@ -333,7 +333,7 @@ export default async function HomePage() {
                 href="/projects" 
                 className="exhibition-button"
               >
-                Learn More
+                More Projects
               </Link>
           </div>
       </section>

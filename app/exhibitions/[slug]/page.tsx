@@ -35,6 +35,7 @@ interface Exhibition {
   description?: string | null;
   images?: ImageItem[] | null;
   location?: string | null;
+  specialThanks?: string | null;
 }
 
 interface StrapiResponse {
@@ -128,13 +129,23 @@ export default async function ExhibitionDetailPage({ params }: ExhibitionDetailP
               dangerouslySetInnerHTML={{ __html: processTextWithLineBreaks(exhibition.description) }}
             />
           )}
+          {exhibition.specialThanks && (
+            <div className={styles.specialThanksSection}>
+              <h3 className={styles.specialThanksTitle}>Special Thanks</h3>
+              <div
+                className={styles.specialThanksText}
+                dangerouslySetInnerHTML={{ __html: processTextWithLineBreaks(exhibition.specialThanks) }}
+              />
+            </div>
+          )}
         </div>
         
         <div className={styles.imageColumn}>
           {exhibition.images && exhibition.images.length > 0 ? (
-            exhibition.images.map((image, index) => {
-              return (
-                <div key={index} className={styles.imageWrapper}>
+            // 先展示前三张
+            <> 
+              {(exhibition.images.slice(0, 3)).map((image, index) => (
+                <div key={`visible-${index}`} className={styles.imageWrapper}>
                   <Image
                     src={/^(https?:)?\/\//i.test(image.url) ? image.url : `${API_URL}${image.url}`}
                     alt={image.alternativeText || `Exhibition image ${index + 1}`}
@@ -145,8 +156,28 @@ export default async function ExhibitionDetailPage({ params }: ExhibitionDetailP
                     unoptimized
                   />
                 </div>
-              );
-            })
+              ))}
+
+              {exhibition.images.length > 3 && (
+                <details className={styles.expandDetails}>
+                  <summary className={styles.expandSummary} data-open-text="See more" data-close-text="See less"></summary>
+                  <div className={styles.extraImages}>
+                    {exhibition.images.slice(3).map((image, index) => (
+                      <div key={`extra-${index}`} className={styles.imageWrapper}>
+                        <Image
+                          src={/^(https?:)?\/\//i.test(image.url) ? image.url : `${API_URL}${image.url}`}
+                          alt={image.alternativeText || `Exhibition image ${index + 4}`}
+                          width={800}
+                          height={1200}
+                          className={styles.image}
+                          unoptimized
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
           ) : (
             <div className={styles.noImages}>
               <p>No images available for this exhibition.</p>

@@ -75,6 +75,7 @@
   line-height: 1.8;
   color: var(--brand-black);
   text-align: center;
+  white-space: pre-line; /* 保留后端换行 */
 }
 
 .descriptionContent p {
@@ -220,6 +221,7 @@
   line-height: 1.6;
   color: #666;
   margin-bottom: 40px;
+  white-space: pre-line; /* 保留换行 */
 }
 
 .contactInfo {
@@ -229,6 +231,7 @@
   font-family: var(--font-body);
   font-size: 1em;
   color: var(--brand-black);
+  white-space: pre-line; /* 保留换行 */
 }
 
 .contactInfo p {
@@ -445,4 +448,4 @@
     font-size: 0.95em;
     line-height: 1.6;
   }
-} 
+}

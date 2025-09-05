@@ -232,3 +232,86 @@
     gap: 1rem;
   }
 } 
+
+.specialThanksSection {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ddd; /* 分割线 */
+}
+
+.specialThanksTitle {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+.specialThanksText {
+  color: var(--brand-black);
+  line-height: 1.8;
+  white-space: pre-line; /* 保留换行符 */
+}
+
+.expandDetails {
+  /* 不让子元素被缩小为 80% 的 80%，保持与图片一致的宽度基准 */
+  margin-top: 0;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.expandSummary {
+  list-style: none;
+  cursor: pointer;
+  /* 参考产品详情页 Read more 按钮样式 */
+  background: none;
+  border: none;
+  color: var(--brand-black);
+  font-size: 0.9em;
+  text-decoration: underline;
+  padding: 0;
+  font-family: var(--font-body);
+  display: block;
+  width: 80%; /* 与图片容器同宽 */
+  margin: 0 auto 0; /* 依赖父列的 2rem gap，不额外叠加间距 */
+  text-align: center;
+  user-select: none;
+  order: 0;
+}
+
+.expandSummary:hover {
+  color: #666;
+}
+
+/* 默认显示“See more” */
+.expandSummary::before {
+  content: attr(data-open-text);
+}
+
+/* 打开时显示“See less”，并把按钮排到最后一张图片下方 */
+.expandDetails[open] .expandSummary::before {
+  content: attr(data-close-text);
+}
+
+.expandDetails[open] .expandSummary {
+  order: 2;
+  margin-top: 2rem; /* 与图片之间保持同样的间距 */
+}
+
+.extraImages {
+  margin-top: 0; /* 由父级控制首张额外图片与上方的间距 */
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  order: 1;
+}
+
+/* 展开时，第一张额外图片与上一张保持统一间距：依赖父列 gap，这里不再额外加间距 */
+.expandDetails[open] .extraImages {
+  margin-top: 0;
+}

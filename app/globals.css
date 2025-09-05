@@ -1075,7 +1075,7 @@ main.cart-page {
 
 .product-title {
     font-family: var(--font-heading);
-    font-size: 1.2em;
+    font-size: 1em;
     font-weight: 400;
     margin-bottom: 5px;
 }
@@ -2492,7 +2492,7 @@ main.cart-page {
 }
 
 .category-showcase-section .product-title {
-    font-size: 1em;
+    font-size: 0.8em !important;
     margin-bottom: 3px;
     transition: color 0.3s ease; /* 添加颜色过渡效果 */
 }
@@ -4004,6 +4004,7 @@ body:has(.product-detail-container) main {
     margin-bottom: 20px;
     font-weight: 300;
     letter-spacing: 0.01em;
+    white-space: pre-line;
 }
 
 .about-paragraph:last-child {

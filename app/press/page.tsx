@@ -150,10 +150,10 @@ export default async function PressPage() {
                       <span>No Image</span>
                     </div>
                   )}
-                  <div className="press-hover-overlay">
-                    <div className="press-hover-content">
-                      <p className="reported-by-text">Reported by</p>
-                      {pressItem.mediaLogo && (
+                  {pressItem.mediaLogo && (
+                    <div className="press-hover-overlay">
+                      <div className="press-hover-content">
+                        <p className="reported-by-text">Reported by</p>
                         <div className="media-logo">
                           <Image 
                             src={/^(https?:)?\/\//i.test(pressItem.mediaLogo.url) ? pressItem.mediaLogo.url : `${API_URL}${pressItem.mediaLogo.url}`} 
@@ -164,9 +164,9 @@ export default async function PressPage() {
                             unoptimized
                           />
                         </div>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
               <div className="exhibition-content animate-on-scroll delay-200">
