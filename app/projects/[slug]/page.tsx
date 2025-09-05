@@ -75,6 +75,21 @@ function processTextWithLineBreaks(text: string): string {
   return `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br />')}</p>`;
 }
 
+// Normalize image URLs in HTML content to point to original (non-variant) files
+function upgradeToOriginalImageUrls(html: string): string {
+  if (!html) return '';
+  let output = html;
+  // Remove prefix variants like thumbnail_, small_, medium_, large_
+  output = output.replace(/(\/uploads\/)(?:thumbnail_|small_|medium_|large_)([^"'\s>]+\.(?:jpg|jpeg|png|webp|gif))/gi, '$1$2');
+  // Remove suffix variants like _thumbnail, _small, _medium, _large before extension
+  output = output.replace(/(\/uploads\/[^"'\s>]+?)(?:_(?:thumbnail|small|medium|large))(\.(?:jpg|jpeg|png|webp|gif))/gi, '$1$2');
+  // Remove dash variants like -thumbnail, -small, -medium, -large
+  output = output.replace(/(\/uploads\/[^"'\s>]+?)(?:-(?:thumbnail|small|medium|large))(\.(?:jpg|jpeg|png|webp|gif))/gi, '$1$2');
+  // Remove responsive attributes so the browser uses the src (original) instead of a smaller candidate
+  output = output.replace(/\s(?:srcset|sizes)=["'][^"']*["']/gi, '');
+  return output;
+}
+
 // --- PAGE COMPONENT ---
 interface ProjectDetailPageProps {
   params: Promise<{
@@ -115,7 +130,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
           {project.content ? (
             <div
               className={styles.content}
-              dangerouslySetInnerHTML={{ __html: project.content }}
+              dangerouslySetInnerHTML={{ __html: upgradeToOriginalImageUrls(project.content) }}
             />
           ) : (
             <div className={styles.noContent}>
@@ -126,4 +141,4 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       </main>
     </div>
   );
-} 
+}
