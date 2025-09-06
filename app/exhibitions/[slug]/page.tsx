@@ -1,6 +1,9 @@
 import React from 'react';
 import Image from 'next/image';
 import styles from './ExhibitionDetail.module.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 
 // --- TYPE DEFINITIONS ---
 interface ImageFormat {
@@ -124,10 +127,11 @@ export default async function ExhibitionDetailPage({ params }: ExhibitionDetailP
             />
           )}
           {exhibition.description && (
-            <div
-              className={styles.description}
-              dangerouslySetInnerHTML={{ __html: processTextWithLineBreaks(exhibition.description) }}
-            />
+            <div className={styles.description}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {exhibition.description}
+              </ReactMarkdown>
+            </div>
           )}
           {exhibition.specialThanks && (
             <div className={styles.specialThanksSection}>

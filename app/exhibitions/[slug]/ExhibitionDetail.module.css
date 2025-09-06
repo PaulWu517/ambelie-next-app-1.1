@@ -87,7 +87,7 @@
 
 .description {
   line-height: 1.8;
-  white-space: pre-line; /* 保留换行符和空格 */
+  white-space: normal; /* markdown 渲染不需要保留换行 */
 }
 
 .description p {
@@ -314,4 +314,82 @@
 /* 展开时，第一张额外图片与上一张保持统一间距：依赖父列 gap，这里不再额外加间距 */
 .expandDetails[open] .extraImages {
   margin-top: 0;
+}
+
+
+/* markdown common styles inside text containers */
+.description :where(h1,h2,h3,h4,h5,h6),
+.introduction :where(h1,h2,h3,h4,h5,h6),
+.specialThanksText :where(h1,h2,h3,h4,h5,h6) {
+  font-family: var(--font-heading);
+  margin: 1.5rem 0 0.75rem;
+  line-height: 1.25;
+}
+
+.description h1 { font-size: 2rem; }
+.description h2 { font-size: 1.75rem; }
+.description h3 { font-size: 1.5rem; }
+.description h4 { font-size: 1.25rem; }
+.description h5 { font-size: 1.1rem; }
+.description h6 { font-size: 1rem; }
+
+/* paragraphs and inline */
+.description p,
+.introduction p,
+.specialThanksText p { margin: 0 0 1rem; }
+
+.description strong,
+.introduction strong,
+.specialThanksText strong { font-weight: 700; }
+
+.description em,
+.introduction em,
+.specialThanksText em { font-style: italic; }
+
+.description u,
+.introduction u,
+.specialThanksText u { text-decoration: underline; }
+
+.description del,
+.introduction del,
+.specialThanksText del { text-decoration: line-through; }
+
+/* lists */
+.description ul,
+.description ol,
+.introduction ul,
+.introduction ol,
+.specialThanksText ul,
+.specialThanksText ol { margin: 0 0 1rem 1.25rem; padding-left: 1.25rem; }
+
+.description ul { list-style: disc; }
+.description ol { list-style: decimal; }
+
+/* links */
+.description a,
+.introduction a,
+.specialThanksText a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* code */
+.description code,
+.introduction code,
+.specialThanksText code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.95em;
+  background: #f6f6f6;
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+}
+
+/* blockquote */
+.description blockquote,
+.introduction blockquote,
+.specialThanksText blockquote {
+  border-left: 3px solid #ddd;
+  padding-left: 1rem;
+  color: #555;
+  margin: 1rem 0;
 }
