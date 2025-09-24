@@ -1,0 +1,316 @@
+/* AI客服浮动按钮样式 */
+.chatButtonContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.chatButton {
+  position: relative;
+  background: #1f2937;
+  border: none;
+  border-radius: 28px;
+  padding: 12px 20px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 120px;
+  justify-content: center;
+  animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.chatButton:hover {
+  background: #374151;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.chatButton:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.chatButton.active {
+  background: #dc2626;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+}
+
+.chatButton.active:hover {
+  background: #b91c1c;
+  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+}
+
+/* 新消息提示点 */
+.notificationDot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border: 2px solid white;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 按钮图标 */
+.buttonIcon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.chatIcon {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+.closeIcon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.buttonText {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0.5px;
+}
+
+/* 欢迎气泡提示 */
+.welcomeBubble {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  max-width: 280px;
+  margin-bottom: 8px;
+  animation: slideInRight 0.5s ease-out 1s both;
+  border: 1px solid #e5e7eb;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.welcomeBubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 24px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid white;
+}
+
+.welcomeBubble::before {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  right: 24px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #e5e7eb;
+}
+
+.bubbleContent {
+  color: #374151;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bubbleContent p {
+  margin: 0;
+}
+
+.bubbleContent p:first-child {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.closeBubble {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 14px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.closeBubble:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .chatButtonContainer {
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .chatButton {
+    padding: 10px 16px;
+    font-size: 13px;
+    min-width: 100px;
+    border-radius: 24px;
+  }
+  
+  .buttonIcon {
+    font-size: 16px;
+  }
+  
+  .welcomeBubble {
+    max-width: 240px;
+    padding: 12px;
+    font-size: 13px;
+  }
+  
+  .notificationDot {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chatButtonContainer {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .chatButton {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-width: 80px;
+    border-radius: 20px;
+  }
+  
+  .welcomeBubble {
+    max-width: 200px;
+    padding: 10px;
+    font-size: 12px;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .welcomeBubble {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+  
+  .welcomeBubble::after {
+    border-top-color: #1f2937;
+  }
+  
+  .welcomeBubble::before {
+    border-top-color: #374151;
+  }
+  
+  .bubbleContent {
+    color: #f9fafb;
+  }
+  
+  .closeBubble {
+    color: #9ca3af;
+  }
+  
+  .closeBubble:hover {
+    background: #374151;
+    color: #d1d5db;
+  }
+}
+
+/* 无障碍支持 */
+@media (prefers-reduced-motion: reduce) {
+  .chatButton,
+  .welcomeBubble,
+  .notificationDot,
+  .chatIcon {
+    animation: none;
+  }
+  
+  .chatButton {
+    transition: none;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .chatButton {
+    border: 2px solid #000;
+  }
+  
+  .welcomeBubble {
+    border: 2px solid #000;
+  }
+}

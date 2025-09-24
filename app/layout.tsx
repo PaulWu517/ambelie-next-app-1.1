@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DataInitProvider from "@/app/providers/DataInitProvider";
 import AntiSaveGuard from "@/components/AntiSaveGuard";
+// import AIChatButton from "@/components/AIChatButton"; // 暂时隐藏AI助手功能
 
 export const metadata: Metadata = {
   title: "Ambelie", 
@@ -45,6 +46,7 @@ export default function RootLayout({
           <Header />
           {children}
           <Footer />
+          {/* <AIChatButton /> */} {/* 暂时隐藏AI助手功能 */}
         </DataInitProvider>
       </body>
     </html>

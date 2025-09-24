@@ -1,0 +1,490 @@
+/* AI Virtual Try-On Page Styles */
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 140px 20px 60px;
+  font-family: var(--font-body);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 60px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 3.5rem;
+  font-weight: 300;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  color: #666;
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.mainContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Left Panel - Upload & Clothing */
+.leftPanel {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  height: fit-content;
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: #2c2c2c;
+  margin-bottom: 25px;
+  font-weight: 400;
+}
+
+.uploadSection {
+  margin-bottom: 40px;
+}
+
+.uploadArea {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.uploadArea:hover {
+  border-color: #999;
+  background: #f5f5f5;
+}
+
+.uploadedImage {
+  max-width: 100%;
+  max-height: 300px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  margin: 0 auto;
+  display: block;
+}
+
+.resultImage {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.uploadPlaceholder {
+  color: #666;
+}
+
+.uploadIcon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  opacity: 0.7;
+}
+
+.uploadHint {
+  font-size: 0.9rem;
+  color: #999;
+  margin-top: 10px;
+  display: block;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.clothingSection {
+}
+
+.clothingGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.clothingItem {
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.clothingItem:hover {
+  border-color: #bbb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.clothingItem.selected {
+  border-color: #333;
+  background: #f8f8f8;
+}
+
+.clothingImagePlaceholder {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #e9ecef, #dee2e6);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #666;
+}
+
+.clothingName {
+  font-size: 0.9rem;
+  color: #444;
+  margin: 0;
+}
+
+/* Center Panel - Body Measurements */
+.centerPanel {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+}
+
+.measurementsContainer {
+  width: 100%;
+}
+
+.sliders {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.sliderGroup {
+  margin-bottom: 25px;
+}
+
+.sliderLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+  color: #444;
+  font-weight: 500;
+}
+
+.sliderValue {
+  color: #666;
+  font-size: 0.9rem;
+  background: #f8f9fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e9ecef;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #495057;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #495057;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Right Panel - Results */
+.rightPanel {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+}
+
+.resultArea {
+  margin-bottom: 30px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.processing {
+  text-align: center;
+  color: #666;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #666;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.result {
+  text-align: center;
+  width: 100%;
+}
+
+.resultImage {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.resultPlaceholder {
+  background: #fafafa;
+  border: 2px dashed #d0d0d0;
+  border-radius: 12px;
+  padding: 60px 20px;
+  color: #666;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.resultPlaceholder:hover {
+  border-color: #999;
+  background: #f5f5f5;
+}
+
+.resultPlaceholder span {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.resultActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.saveButton, .shareButton {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.saveButton:hover, .shareButton:hover {
+  background: #f8f9fa;
+  border-color: #bbb;
+}
+
+.actionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tryOnButton {
+  background: linear-gradient(135deg, #343a40, #495057);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tryOnButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #495057, #6c757d);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.tryOnButton:disabled {
+  background: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.resetButton {
+  background: transparent;
+  color: #666;
+  border: 2px solid #e0e0e0;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.resetButton:hover {
+  border-color: #bbb;
+  color: #444;
+}
+
+/* Features Section */
+.featuresSection {
+  margin-top: 80px;
+  text-align: center;
+}
+
+.featuresTitle {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  color: #2c2c2c;
+  margin-bottom: 50px;
+  font-weight: 300;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.feature {
+  background: white;
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.feature:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.featureIcon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+}
+
+.feature h3 {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  color: #2c2c2c;
+  margin-bottom: 15px;
+  font-weight: 400;
+}
+
+.feature p {
+  color: #666;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .mainContent {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 120px 15px 40px;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .leftPanel, .centerPanel, .rightPanel {
+    padding: 20px;
+  }
+  
+  .clothingGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .featuresGrid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  
+  .feature {
+    padding: 30px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 2rem;
+  }
+  
+  .uploadArea {
+    padding: 30px 15px;
+    min-height: 150px;
+  }
+  
+  .uploadIcon {
+    font-size: 2rem;
+  }
+}

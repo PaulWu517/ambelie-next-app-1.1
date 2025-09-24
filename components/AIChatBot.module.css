@@ -1,0 +1,469 @@
+/* AI聊天机器人样式 */
+.chatOverlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.chatContainer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  bottom: 100px;
+  width: 360px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideInRight 0.3s ease-out;
+  pointer-events: all;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 聊天头部 */
+.chatHeader {
+  background: #1f2937;
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #374151;
+}
+
+.botInfo {
+  display: flex;
+  align-items: center;
+}
+
+.botAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  overflow: hidden;
+}
+
+.botAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.botDetails h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.onlineStatus {
+  font-size: 12px;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.onlineStatus::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+  background: #374151;
+}
+
+/* 消息区域 */
+.messagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #f8fafc;
+}
+
+.messagesContainer::-webkit-scrollbar {
+  width: 4px;
+}
+
+.messagesContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.message {
+  display: flex;
+  gap: 8px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.botMessage {
+  align-self: flex-start;
+}
+
+.userMessage {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.messageAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1f2937;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.messageAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.messageContent {
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.messageText {
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.botMessage .messageText {
+  background: white;
+  color: #374151;
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.userMessage .messageText {
+  background: #1f2937;
+  color: white;
+  border-bottom-right-radius: 6px;
+}
+
+.messageTime {
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 0 4px;
+}
+
+.userMessage .messageTime {
+  text-align: right;
+}
+
+/* 正在输入指示器 */
+.typingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.typingIndicator span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: typing 1.4s infinite;
+}
+
+.typingIndicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typingIndicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+/* 快捷问题 */
+.quickQuestions {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+}
+
+.quickQuestions p {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.questionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quickButton {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.quickButton:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+/* 输入区域 */
+.inputContainer {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.messageInput {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  padding: 10px 60px 10px 16px;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  max-height: 100px;
+}
+
+.messageInput:focus {
+  border-color: #1f2937;
+  box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.1);
+}
+
+.messageInput:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.sendButton {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+}
+
+.sendButton:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: none;
+}
+
+.sendButton:disabled {
+  background: transparent;
+  cursor: not-allowed;
+  transform: translateY(-50%);
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.sendIcon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.inputHint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .chatOverlay {
+    width: 100%;
+    left: 0;
+  }
+  
+  .chatContainer {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    bottom: 90px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chatContainer {
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 80px;
+    border-radius: 0;
+    border: none;
+  }
+  
+  .messageContent {
+    max-width: 240px;
+  }
+  
+  .quickButton {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .chatContainer {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .messagesContainer {
+    background: #111827;
+  }
+  
+  .botMessage .messageText {
+    background: #374151;
+    color: #f9fafb;
+  }
+  
+  .quickQuestions {
+    background: #1f2937;
+    border-top-color: #374151;
+  }
+  
+  .quickButton {
+    background: #374151;
+    border-color: #4b5563;
+    color: #d1d5db;
+  }
+  
+  .quickButton:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+  
+  .inputContainer {
+    background: #1f2937;
+    border-top-color: #374151;
+  }
+  
+  .messageInput {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .messageInput:focus {
+    border-color: #667eea;
+  }
+}
