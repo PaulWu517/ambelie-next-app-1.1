@@ -72,7 +72,7 @@ function ArtContent() {
           { id: 0, name: 'All', slug: 'all', parentSlug: 'category' },
           { id: 1, name: 'Sculpture', slug: 'sculpture', parentSlug: 'category' },
           { id: 2, name: 'Paintings', slug: 'paintings', parentSlug: 'category' },
-          { id: 3, name: 'Drawings & Watercolor', slug: 'drawings-watercolor', parentSlug: 'category' }
+          { id: 3, name: 'Drawings & Watercolor', slug: 'drawings-and-watercolor', parentSlug: 'category' }
         ]
       },
       {
@@ -142,7 +142,7 @@ function ArtContent() {
         if (activeSubCategory === 'all') {
           // 根据主分类显示所有相关产品
           if (activeCategory === 'category') {
-            query = `filters[category][slug][$in][0]=sculpture&filters[category][slug][$in][1]=paintings&filters[category][slug][$in][2]=drawings-watercolor&populate[0]=main_image&populate[1]=hover_image`;
+            query = `filters[category][slug][$in][0]=sculpture&filters[category][slug][$in][1]=paintings&filters[category][slug][$in][2]=drawings-and-watercolor&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'oriental-art') {
             // 对于ORIENTAL ART，查询所有东方艺术相关产品
             query = `filters[category][slug][$in][0]=calligraphy&filters[category][slug][$in][1]=embroidery&populate[0]=main_image&populate[1]=hover_image`;
@@ -153,7 +153,7 @@ function ArtContent() {
         } else if (activeCategory) {
           // 如果只选择了主分类，显示该分类下的所有产品
           if (activeCategory === 'category') {
-            query = `filters[category][slug][$in][0]=sculpture&filters[category][slug][$in][1]=paintings&filters[category][slug][$in][2]=drawings-watercolor&populate[0]=main_image&populate[1]=hover_image`;
+            query = `filters[category][slug][$in][0]=sculpture&filters[category][slug][$in][1]=paintings&filters[category][slug][$in][2]=drawings-and-watercolor&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'oriental-art') {
             query = `filters[category][slug][$in][0]=calligraphy&filters[category][slug][$in][1]=embroidery&populate[0]=main_image&populate[1]=hover_image`;
           } else {

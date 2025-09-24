@@ -483,10 +483,10 @@ export default function Header() {
   };
 
   const artLinks = {
-      regular: [
+    regular: [
         { name: 'SCULPTURE', href: '/art?category=category&subcategory=sculpture' },
         { name: 'PAINTINGS', href: '/art?category=category&subcategory=paintings' },
-        { name: 'DRAWINGS & WATERCOLOR', href: '/art?category=category&subcategory=drawings-watercolor' }, 
+        { name: 'DRAWINGS & WATERCOLOR', href: '/art?category=category&subcategory=drawings-and-watercolor' }, 
       ],
     oriental: [
         { name: 'CALLIGRAPHY', href: '/art?category=oriental-art&subcategory=calligraphy' },
