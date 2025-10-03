@@ -93,15 +93,42 @@ export const useCartStore = create<CartState>()(
       },
       
       removeFromCart: async (productId) => {
+        // 先更新本地状态
         set((state) => ({
           items: state.items.filter((item) => item.id.toString() !== productId),
         }));
-        
-        // 尝试同步到后端
+
+        // 然后调用后端删除接口，确保后端与本地一致
         try {
-          await get().syncWithBackend();
+          const token = await getUserToken();
+          if (!token) {
+            console.warn('No user token found, skipping backend removal');
+          } else {
+            const fullUrl = `${API_BASE_URL}/api/cart/remove/${productId}`;
+            const response = await fetch(fullUrl, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            });
+
+            if (!response.ok) {
+              console.warn('Backend remove failed, status:', response.status);
+              // 退化为同步整个购物车
+              await get().syncWithBackend();
+            }
+          }
         } catch (error) {
-          console.warn('Failed to sync cart to backend:', error);
+          console.warn('Failed to remove cart item from backend:', error);
+          // 退化为同步整个购物车
+          try { await get().syncWithBackend(); } catch {}
+        }
+
+        // 从后端重新加载，确保最终一致
+        try {
+          await get().loadFromBackend();
+        } catch (error) {
+          console.warn('Failed to reload cart from backend:', error);
         }
       },
       
@@ -226,7 +253,7 @@ export const useCartStore = create<CartState>()(
 
             // 兼容不同数据结构：data/items/cartItems
             const backendItemsRaw = (result?.data?.items || result?.data?.cartItems || result?.data || []);
-            const backendItems: Array<{ productId: string | number; quantity: number }> = Array.isArray(backendItemsRaw)
+            const backendItems: Array<{ productId: string; quantity: number }> = Array.isArray(backendItemsRaw)
               ? backendItemsRaw.map((i: any) => ({
                   productId: (i.productId ?? i.id)?.toString(),
                   quantity: Number(i.quantity ?? i.qty ?? 1),
@@ -235,23 +262,27 @@ export const useCartStore = create<CartState>()(
 
             console.log('🧾 [Cart Load] Normalized backend items:', backendItems);
 
-            // 合并到本地状态：更新已存在商品的数量，避免缺少字段导致UI破坏
+            // 覆盖本地状态：
+            // - 仅保留后端存在的商品
+            // - 更新数量与后端一致
             const currentItems = get().items;
-            const mergedItems: CartItem[] = currentItems.map((item) => {
-              const back = backendItems.find((b) => item.id.toString() === b.productId.toString());
-              return back ? { ...item, quantity: back.quantity } : item;
-            });
+            const filteredItems: CartItem[] = currentItems
+              .filter((item) => backendItems.some((b) => item.id.toString() === b.productId.toString()))
+              .map((item) => {
+                const back = backendItems.find((b) => item.id.toString() === b.productId.toString());
+                return back ? { ...item, quantity: back.quantity } : item;
+              });
 
-            // 记录未在本地出现但后端存在的商品，用于后续优化（可批量获取详情）
-            const missingItems = backendItems.filter(
+            // 提示后端存在但本地没有的商品，后续可考虑补充详情拉取
+            const missingOnLocal = backendItems.filter(
               (b) => !currentItems.find((item) => item.id.toString() === b.productId.toString())
             );
-            if (missingItems.length > 0) {
-              console.warn('⚠️ [Cart Load] Backend has items missing locally. Skipping add to avoid UI break.', missingItems);
+            if (missingOnLocal.length > 0) {
+              console.warn('⚠️ [Cart Load] Items exist on backend but not locally. Skipping add to avoid UI issues.', missingOnLocal);
             }
 
-            set({ items: mergedItems, lastSyncTime: new Date().toISOString() });
-            console.log('✅ [Cart Load] Cart merged from backend');
+            set({ items: filteredItems, lastSyncTime: new Date().toISOString() });
+            console.log('✅ [Cart Load] Cart overwritten from backend (filtered to existing items)');
           }
         } catch (error) {
           console.error('Cart load error:', error);
