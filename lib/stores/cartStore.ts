@@ -16,7 +16,12 @@ interface CartState {
   loadFromBackend: () => Promise<void>;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+// 统一后端地址读取，优先使用生产环境变量
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_STRAPI_API_URL ||
+  process.env.NEXT_PUBLIC_STRAPI_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://ambelie-backend-production.up.railway.app';
 
 // 获取用户token的辅助函数
 const getUserToken = async () => {
@@ -152,8 +157,7 @@ export const useCartStore = create<CartState>()(
           return;
         }
         
-        const apiUrl = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
-        const fullUrl = `${apiUrl}/api/cart/sync`;
+        const fullUrl = `${API_BASE_URL}/api/cart/sync`;
         console.log('🌐 [Cart Sync] API URL:', fullUrl);
         
         set({ isLoading: true });
@@ -208,7 +212,8 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true });
         
         try {
-          const response = await fetch(`${API_BASE_URL}/cart`, {
+          // 从后端读取用户购物车
+          const response = await fetch(`${API_BASE_URL}/api/cart`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -217,17 +222,36 @@ export const useCartStore = create<CartState>()(
           
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.data) {
-              // 将后端数据转换为前端格式
-              const backendItems = result.data;
-              const frontendItems: CartItem[] = [];
-              
-              // 这里需要根据productId获取完整的产品信息
-              // 暂时保持现有的本地数据，后续可以优化
-              set({ 
-                lastSyncTime: new Date().toISOString()
-              });
+            console.log('📥 [Cart Load] Raw response JSON:', result);
+
+            // 兼容不同数据结构：data/items/cartItems
+            const backendItemsRaw = (result?.data?.items || result?.data?.cartItems || result?.data || []);
+            const backendItems: Array<{ productId: string | number; quantity: number }> = Array.isArray(backendItemsRaw)
+              ? backendItemsRaw.map((i: any) => ({
+                  productId: (i.productId ?? i.id)?.toString(),
+                  quantity: Number(i.quantity ?? i.qty ?? 1),
+                }))
+              : [];
+
+            console.log('🧾 [Cart Load] Normalized backend items:', backendItems);
+
+            // 合并到本地状态：更新已存在商品的数量，避免缺少字段导致UI破坏
+            const currentItems = get().items;
+            const mergedItems: CartItem[] = currentItems.map((item) => {
+              const back = backendItems.find((b) => item.id.toString() === b.productId.toString());
+              return back ? { ...item, quantity: back.quantity } : item;
+            });
+
+            // 记录未在本地出现但后端存在的商品，用于后续优化（可批量获取详情）
+            const missingItems = backendItems.filter(
+              (b) => !currentItems.find((item) => item.id.toString() === b.productId.toString())
+            );
+            if (missingItems.length > 0) {
+              console.warn('⚠️ [Cart Load] Backend has items missing locally. Skipping add to avoid UI break.', missingItems);
             }
+
+            set({ items: mergedItems, lastSyncTime: new Date().toISOString() });
+            console.log('✅ [Cart Load] Cart merged from backend');
           }
         } catch (error) {
           console.error('Cart load error:', error);
