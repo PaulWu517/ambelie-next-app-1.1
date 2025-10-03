@@ -569,7 +569,7 @@ const OrdersPage = () => {
                       <p className={styles.totalLabel}>Order Total</p>
                       <p className={styles.totalAmount}>
                         ${getOrderTotal(order).toFixed(2)}
-                        <span className={styles.totalCurrency}>{order.currency || 'USD'}</span>
+                        <span className={styles.totalCurrency}>{order.currency || 'GBP'}</span>
                         </p>
                     </div>
                   </div>
@@ -671,4 +671,4 @@ const OrdersPage = () => {
   );
 };
 
-export default OrdersPage; 
+export default OrdersPage;

@@ -530,7 +530,7 @@ const OrderSuccessContent = () => {
                   <div>
                     <p className="text-sm text-gray-600">支付金额</p>
                     <p className="font-semibold text-green-600">
-                      {paymentDetails.currency.toUpperCase()} ${paymentDetails.amount.toFixed(2)}
+                      {(paymentDetails.currency || 'GBP').toUpperCase()} {({ usd: '$', gbp: '£', eur: '€', cny: '¥', jpy: '¥', hkd: 'HK$' })[((paymentDetails.currency || 'GBP') as string).toLowerCase()] || ''}{paymentDetails.amount.toFixed(2)}
                     </p>
                   </div>
                   <div>
