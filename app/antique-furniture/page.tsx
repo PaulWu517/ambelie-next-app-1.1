@@ -130,7 +130,8 @@ function AntiqueFurnitureContent() {
             description: 'Other antique furniture pieces',
             subItems: [
               { id: 41, name: 'All', slug: 'all', parentSlug: 'others' },
-              { id: 42, name: 'Designer Collections', slug: 'designer-collections', parentSlug: 'others' }
+              { id: 42, name: 'Designer Collections', slug: 'designer-collections', parentSlug: 'others' },
+              { id: 43, name: 'Others', slug: 'others-1', parentSlug: 'others' }
             ]
           }
         ];
@@ -174,7 +175,7 @@ function AntiqueFurnitureContent() {
           } else if (activeCategory === 'tables') {
             query = `filters[category][slug][$in][0]=dining-tables&filters[category][slug][$in][1]=coffee-tables&filters[category][slug][$in][2]=side-tables&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'others') {
-            query = `filters[category][slug][$in][0]=designer-collections&populate[0]=main_image&populate[1]=hover_image`;
+            query = `filters[category][slug][$in][0]=designer-collections&filters[category][slug][$in][1]=others-1&populate[0]=main_image&populate[1]=hover_image`;
           }
         } else if (activeSubCategory && activeSubCategory !== 'all') {
           // 对于具体的子分类，使用完整的子分类slug查询
@@ -188,7 +189,7 @@ function AntiqueFurnitureContent() {
           } else if (activeCategory === 'tables') {
             query = `filters[category][slug][$in][0]=dining-tables&filters[category][slug][$in][1]=coffee-tables&filters[category][slug][$in][2]=side-tables&populate[0]=main_image&populate[1]=hover_image`;
           } else if (activeCategory === 'others') {
-            query = `filters[category][slug][$in][0]=designer-collections&populate[0]=main_image&populate[1]=hover_image`;
+            query = `filters[category][slug][$in][0]=designer-collections&filters[category][slug][$in][1]=others-1&populate[0]=main_image&populate[1]=hover_image`;
           } else {
             // 对于其他主分类，暂时显示空结果
             if (currentRequestId === requestIdRef.current) {
