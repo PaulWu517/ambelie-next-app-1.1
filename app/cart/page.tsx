@@ -9,6 +9,9 @@ const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-p
 
 const CartPage = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, getItemCount } = useCartStore();
+  const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
+  const cartCurrency = (items[0]?.currencyKeyword || 'GBP').toUpperCase();
+  const subtotalSymbol = currencySymbolMap[cartCurrency] || '';
 
   return (
     <main className="cart-page" style={{ paddingBottom: '100px' }}>
@@ -43,7 +46,9 @@ const CartPage = () => {
             </div>
 
             {/* 商品列表 */}
-            {items.map((item) => (
+            {items.map((item) => { 
+              const symbol = currencySymbolMap[(item.currencyKeyword || cartCurrency).toUpperCase()] || '';
+              return (
               <div key={item.id} style={{ 
                 display: 'grid', 
                 gridTemplateColumns: '2fr 1fr 1fr 1fr 100px', 
@@ -126,7 +131,7 @@ const CartPage = () => {
                   fontFamily: 'var(--font-body)', 
                   color: 'var(--brand-green)',
                   fontWeight: '500'
-                }}>${item.price?.toFixed(2) || '0.00'}</div>
+                }}>{symbol}{item.price?.toFixed(2) || '0.00'}</div>
                 <div>
                   <input
                     type="number"
@@ -147,7 +152,7 @@ const CartPage = () => {
                   fontFamily: 'var(--font-body)', 
                   fontWeight: 'bold',
                   fontSize: '1em'
-                }}>${((item.price || 0) * item.quantity).toFixed(2)}</div>
+                }}>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
                 <div>
                   <button
                     onClick={() => removeFromCart(item.id.toString())}
@@ -172,7 +177,8 @@ const CartPage = () => {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* 移动端布局 */}
             <style jsx>{`
@@ -209,7 +215,7 @@ const CartPage = () => {
               <div style={{ width: '300px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2em', fontWeight: 'bold', marginBottom: '20px' }}>
                   <span>Subtotal ({getItemCount()} items)</span>
-                  <span style={{ color: 'var(--brand-green)' }}>${getCartTotal().toFixed(2)}</span>
+                  <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>
                 </div>
                 <Link 
                   href="/checkout"

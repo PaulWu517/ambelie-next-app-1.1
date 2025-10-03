@@ -134,6 +134,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
       dimensions: product.dimensions,
       designer: product.designer,
       price: actualPrice,
+      currencyKeyword: product.currencyKeyword || 'GBP',
       slug: product.slug,
       main_image: product.images && product.images.length > 0 ? {
         data: {

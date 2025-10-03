@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Package, MapPin, CreditCard, ArrowLeft, Calendar, ShoppingBag, Phone, DollarSign, X, Edit, Ban } from 'lucide-react';
+import { Package, MapPin, CreditCard, ArrowLeft, Calendar, ShoppingBag, Phone, X, Edit, Ban } from 'lucide-react';
 import OrderTimeline from '@/components/OrderTimeline';
 import OrderCancelModal from '@/components/OrderCancelModal';
 import OrderModifyModal from '@/components/OrderModifyModal';
@@ -58,6 +58,7 @@ interface PaymentDetails {
 }
 
 const OrderDetailsPage = () => {
+  const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
   const params = useParams();
   const orderId = params.id;
   
@@ -592,9 +593,9 @@ const OrderDetailsPage = () => {
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Order Total</span>
                   <span className={styles.totalAmount}>
-                    <DollarSign size={20} />
+                    {currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£'}
                     {getOrderTotal(orderDetails).toFixed(2) || '0.00'}
-                    <span className={styles.currency}>{orderDetails.currency || 'USD'}</span>
+                    <span className={styles.currency}>{orderDetails.currency || 'GBP'}</span>
                   </span>
                 </div>
                 <div className={styles.infoItem}>
@@ -651,12 +652,12 @@ const OrderDetailsPage = () => {
                         <div className={styles.itemDetails}>
                           <p className={styles.itemName}>{getProductName(item)}</p>
                           <p className={styles.itemQuantity}>Quantity: {item.quantity || 1}</p>
-                          <p className={styles.itemPrice}>Price per item: ${getItemPrice(item).toFixed(2)}</p>
+                          <p className={styles.itemPrice}>Price per item: {(currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£')}{getItemPrice(item).toFixed(2)}</p>
                         </div>
                       </div>
                       <div className={styles.itemTotalPrice}>
                         <p className={styles.itemTotalAmount}>
-                          ${getItemTotal(item).toFixed(2)}
+                          {(currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£')}{getItemTotal(item).toFixed(2)}
                         </p>
                         <p className={styles.itemTotalLabel}>Total</p>
                       </div>
@@ -700,9 +701,9 @@ const OrderDetailsPage = () => {
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>Payment Amount</span>
                     <span className={styles.totalAmount}>
-                      <DollarSign size={20} />
+                      {(currencySymbolMap[(paymentDetails.currency || orderDetails.currency || 'GBP').toUpperCase()] || '£')}
                       {getPaymentAmount(paymentDetails).toFixed(2) || '0.00'}
-                      <span className={styles.currency}>{paymentDetails.currency || 'USD'}</span>
+                      <span className={styles.currency}>{paymentDetails.currency || orderDetails.currency || 'GBP'}</span>
                     </span>
                   </div>
                   <div className={styles.infoItem}>
@@ -778,7 +779,9 @@ const OrderDetailsPage = () => {
                       disabled={isRefundLoading}
                       className={`${styles.actionButton} ${styles.refundButton} ${isRefundLoading ? styles.loading : ''}`}
                     >
-                      <DollarSign className={styles.actionButtonIcon} />
+                      <span className={styles.actionButtonIcon} aria-hidden="true">
+                        {currencySymbolMap[(orderDetails?.currency || paymentDetails?.currency || 'GBP').toUpperCase()] || '£'}
+                      </span>
                       <span className={styles.actionButtonText}>
                         {isRefundLoading ? 'Opening...' : 'Request Refund'}
                       </span>
@@ -887,4 +890,4 @@ const OrderDetailsPage = () => {
   );
 };
 
-export default OrderDetailsPage; 
+export default OrderDetailsPage;

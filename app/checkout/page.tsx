@@ -55,8 +55,8 @@ const CheckoutPage = () => {
     
     try {
       // 验证必需字段
-      if (!customerInfo.email || !customerInfo.name) {
-        alert('请填写邮箱和姓名');
+      if (!customerInfo.email || !customerInfo.name || !customerInfo.phone) {
+        alert('请填写邮箱、姓名和手机号');
         setLoading(false);
         return;
       }
@@ -159,8 +159,10 @@ const CheckoutPage = () => {
 
   const subtotal: number = getCartTotal();
   const shipping: number = 0; // 暂时设为免费配送
-  const tax: number = subtotal * 0.1; // 10% 税率
-  const total: number = subtotal + shipping + tax;
+  const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
+  const cartCurrency = (items[0]?.currencyKeyword || 'GBP').toUpperCase();
+  const currencySymbol = currencySymbolMap[cartCurrency] || '';
+  const total: number = subtotal + shipping; // 取消税费计算
 
   return (
     <div style={{ paddingTop: '120px', paddingBottom: '100px' }}>
@@ -226,7 +228,7 @@ const CheckoutPage = () => {
                   
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                      Phone Number
+                      Phone Number *
                     </label>
                     <input
                       type="tel"
@@ -240,6 +242,7 @@ const CheckoutPage = () => {
                         fontSize: '1rem',
                         boxSizing: 'border-box'
                       }}
+                      required
                     />
                   </div>
                 </div>
@@ -250,8 +253,11 @@ const CheckoutPage = () => {
               <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', fontWeight: '500' }}>
                 Shipping Address
               </h3>
+              <p style={{ color: '#666', marginBottom: '8px', fontSize: '0.9rem' }}>
+                Shipping address will be collected securely through Stripe checkout.
+              </p>
               <p style={{ color: '#666', marginBottom: '20px', fontSize: '0.9rem' }}>
-                Note: Shipping address will be collected securely through Stripe checkout.
+                We will arrange the transport on our side.
               </p>
             </div>
 
@@ -301,11 +307,11 @@ const CheckoutPage = () => {
                     <div style={{ flex: 1 }}>
                       <p style={{ fontWeight: '500', marginBottom: '5px' }}>{item.name}</p>
                       <p style={{ fontSize: '0.9rem', color: '#666' }}>
-                        Qty: {item.quantity} × ${(item.price || 0).toFixed(2)}
+                        Qty: {item.quantity} × {currencySymbol}{(item.price || 0).toFixed(2)}
                       </p>
                     </div>
                     <div style={{ fontWeight: '500' }}>
-                      ${((item.price || 0) * item.quantity).toFixed(2)}
+                      {currencySymbol}{((item.price || 0) * item.quantity).toFixed(2)}
                     </div>
                   </div>
                 ))}
@@ -315,18 +321,15 @@ const CheckoutPage = () => {
               <div style={{ borderTop: '1px solid #ddd', paddingTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Subtotal ({getItemCount()} items)</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{currencySymbol}{subtotal.toFixed(2)}</span>
                 </div>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
+                  <span>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toFixed(2)}`}</span>
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-                  <span>Tax</span>
-                  <span>${tax.toFixed(2)}</span>
-                </div>
+                {/* Tax removed per requirements */}
                 
                 <div style={{
                   display: 'flex',
@@ -337,7 +340,7 @@ const CheckoutPage = () => {
                   paddingTop: '15px'
                 }}>
                   <span>Total</span>
-                  <span style={{ color: 'var(--brand-green)' }}>${total.toFixed(2)}</span>
+                  <span style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</span>
                 </div>
               </div>
             </div>

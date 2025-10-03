@@ -31,6 +31,7 @@ export interface Product {
   dimensions?: string;
   designer?: string;
   price?: number; // 商品价格
+  currencyKeyword?: string; // 货币关键字（如 GBP, USD 等）
   isInquiryOnly?: boolean; // 是否仅支持询价
   images?: { data: Image[] };
   main_image?: { data: Image };
