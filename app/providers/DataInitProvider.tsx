@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useCollectionStore } from '@/lib/stores/collectionStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
@@ -15,6 +15,7 @@ export default function DataInitProvider({ children }: DataInitProviderProps) {
   const { loadFromBackend: loadCollection } = useCollectionStore();
   const { loadFromBackend: loadInquiry } = useInquiryStore();
   const { loadFromBackend: loadCart } = useCartStore();
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     // 只有在用户登录且认证状态加载完成后才初始化数据
@@ -25,6 +26,12 @@ export default function DataInitProvider({ children }: DataInitProviderProps) {
 
     if (!isLoggedIn) {
       console.log('👤 [DataInit] 用户未登录，跳过数据初始化');
+      initializedRef.current = false; // 登出时允许下次登录重新初始化
+      return;
+    }
+
+    if (initializedRef.current) {
+      // 避免因依赖或函数引用变化造成的重复初始化
       return;
     }
 
@@ -41,13 +48,14 @@ export default function DataInitProvider({ children }: DataInitProviderProps) {
         ]);
         
         console.log('✅ [DataInit] 用户数据初始化完成');
+        initializedRef.current = true;
       } catch (error) {
         console.error('❌ [DataInit] 数据初始化失败:', error);
       }
     };
 
     initializeData();
-  }, [isLoggedIn, isLoading, loadCollection, loadInquiry]);
+  }, [isLoggedIn, isLoading]);
 
   return <>{children}</>;
 }

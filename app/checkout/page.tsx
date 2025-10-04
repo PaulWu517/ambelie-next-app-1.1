@@ -43,9 +43,14 @@ const CheckoutPage = () => {
     }
   }, [isLoggedIn, user]);
 
-  // 如果购物车为空，重定向到购物车页面
+  // 如果购物车为空，重定向到购物车页面（在 effect 中进行，避免渲染期触发路由）
+  useEffect(() => {
+    if (items.length === 0) {
+      router.push('/cart');
+    }
+  }, [items.length, router]);
+
   if (items.length === 0) {
-    router.push('/cart');
     return null;
   }
 
@@ -165,15 +170,14 @@ const CheckoutPage = () => {
   const total: number = subtotal + shipping; // 取消税费计算
 
   return (
-    <div style={{ paddingTop: '120px', paddingBottom: '100px' }}>
-      <div className="section-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+    <div className="checkout-page-root" style={{ paddingTop: '120px', paddingBottom: '100px' }}>
+      <div className="section-container">
         <h1 className="section-heading" style={{ marginBottom: '40px', textAlign: 'center' }}>
           CHECKOUT
         </h1>
 
 
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '60px' }}>
+        <div className="checkout-grid">
           {/* 左侧：客户信息表单 */}
           <div>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '30px', fontWeight: '500' }}>
@@ -199,13 +203,14 @@ const CheckoutPage = () => {
                       padding: '12px',
                       border: '1px solid #ddd',
                       borderRadius: '4px',
-                      fontSize: '1rem'
+                      fontSize: '1rem',
+                      boxSizing: 'border-box'
                     }}
                     required
                   />
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div className="two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
                       Full Name *
@@ -261,29 +266,12 @@ const CheckoutPage = () => {
               </p>
             </div>
 
-            <button
-              onClick={handleCreateCheckoutSession}
-              disabled={loading}
-              style={{
-                width: '100%',
-                backgroundColor: loading ? '#ccc' : 'var(--brand-black)',
-                color: 'white',
-                padding: '15px',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                fontWeight: '500',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.3s ease'
-              }}
-            >
-              {loading ? 'Processing...' : 'Continue to Payment'}
-            </button>
+            
           </div>
 
           {/* 右侧：订单摘要 */}
           <div>
-            <div style={{
+            <div className="summary-card" style={{
               border: '1px solid #ddd',
               borderRadius: '8px',
               padding: '30px',
@@ -342,10 +330,42 @@ const CheckoutPage = () => {
                   <span>Total</span>
                   <span style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</span>
                 </div>
+
+                {/* 移动 Continue to Payment 按钮到订单摘要卡片下方 */}
+                <button
+                  onClick={handleCreateCheckoutSession}
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    marginTop: '20px',
+                    backgroundColor: loading ? '#ccc' : 'var(--brand-black)',
+                    color: 'white',
+                    padding: '15px',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.3s ease'
+                  }}
+                >
+                  {loading ? 'Processing...' : 'Continue to Payment'}
+                </button>
               </div>
             </div>
           </div>
         </div>
+        <style jsx>{`
+          .checkout-page-root { overflow-x: hidden; }
+          .section-container { box-sizing: border-box; max-width: 1200px; margin: 0 auto; padding: 0 20px; width: 100%; }
+          .checkout-grid { display: grid; grid-template-columns: 1fr 400px; gap: 60px; width: 100%; }
+          .summary-card { width: 100%; max-width: 100%; box-sizing: border-box; }
+          @media (max-width: 1024px) {
+            .section-container { padding: 0 16px !important; }
+            .checkout-grid { grid-template-columns: 1fr; gap: 32px; }
+            .two-col-grid { grid-template-columns: 1fr !important; gap: 16px; }
+          }
+        `}</style>
       </div>
     </div>
   );

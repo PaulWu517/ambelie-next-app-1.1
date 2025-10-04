@@ -15,23 +15,54 @@ const CartPage = () => {
 
   return (
     <main className="cart-page" style={{ paddingBottom: '100px' }}>
-      <div className="section-container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 50px' }}>
-                <h1 className="section-heading" style={{ marginBottom: '40px', textAlign: 'left' }}>Shopping Cart</h1>
+      <div className="cart-container">
+                <h1 className="cart-title">Shopping Cart</h1>
+
+        {/* 页面局部样式：避免使用 global.css 的标题和容器样式 */}
+        <style jsx>{`
+          .cart-page { overflow-x: hidden; }
+          /* 整体向下移动一点 */
+          .cart-container { box-sizing: border-box; max-width: 1200px; margin: 40px auto 0; padding: 0 50px; width: 100%; }
+          /* 宽度加宽为 75% */
+          .cart-title { width: 90%; margin: 0 auto 40px; text-align: left; font-family: var(--font-heading); font-size: 2.2em; color: var(--brand-black); }
+          .cart-grid { width: 90%; margin: 0 auto; }
+          /* 空状态与标题对齐 */
+          .empty-state { width: 90%; margin: 0 auto; text-align: left; }
+          .empty-text { font-size: 1.2em; margin-bottom: 20px; color: #666; }
+          .empty-link { color: var(--brand-green); text-decoration: underline; }
+          /* 使用固定比例列，确保表头与数据列一致（避免 auto 导致不同行计算不同） */
+          .cart-header, .cart-item { gap: 20px; grid-template-columns: 2fr 1fr 1fr 1fr 0.8fr; justify-items: start; }
+          .cart-header > div, .cart-item > div { text-align: left; }
+
+          @media (max-width: 768px) {
+            .cart-container { padding: 0 16px; margin-top: 24px; }
+            .cart-title { width: 100%; margin: 0 0 24px; }
+            .cart-grid { width: 100%; }
+            .empty-state { width: 100%; }
+            .cart-header { grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr 0.8fr; gap: 12px; font-size: 0.9rem; justify-items: start; }
+            .cart-item { grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr 0.8fr; gap: 12px; justify-items: start; }
+            .cart-item .remove-button { white-space: nowrap; }
+            .cart-header > div, .cart-item > div { text-align: left; }
+            .product-info { flex-direction: column; align-items: flex-start; }
+            .product-image { margin-right: 0; max-width: 120px; width: 100%; }
+            .quantity-input input { width: 56px; }
+            .checkout-bar { display: block; }
+            .checkout-summary { width: 100%; }
+          }
+        `}</style>
         
         {items.length === 0 ? (
-          <div className="text-center">
-            <p style={{ fontSize: '1.2em', marginBottom: '20px', color: '#666' }}>Your cart is empty</p>
-            <Link href="/products" style={{ color: 'var(--brand-green)', textDecoration: 'underline' }}>
+          <div className="empty-state">
+            <p className="empty-text">Your cart is empty</p>
+            <Link href="/products" className="empty-link">
               Continue Shopping
             </Link>
           </div>
         ) : (
-          <div style={{ width: '100%' }}>
+          <div className="cart-grid">
             {/* 表格标题 */}
-            <div style={{ 
+            <div className="cart-header" style={{ 
               display: 'grid', 
-              gridTemplateColumns: '2fr 1fr 1fr 1fr 100px', 
-              gap: '20px', 
               fontWeight: 'bold', 
               borderBottom: '1px solid #ddd', 
               paddingBottom: '15px', 
@@ -49,17 +80,15 @@ const CartPage = () => {
             {items.map((item) => { 
               const symbol = currencySymbolMap[(item.currencyKeyword || cartCurrency).toUpperCase()] || '';
               return (
-              <div key={item.id} style={{ 
+              <div key={item.id} className="cart-item" style={{ 
                 display: 'grid', 
-                gridTemplateColumns: '2fr 1fr 1fr 1fr 100px', 
-                gap: '20px', 
                 alignItems: 'center', 
                 borderBottom: '1px solid #eee', 
                 paddingTop: '20px', 
                 paddingBottom: '20px' 
               }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ 
+                <div className="product-info" style={{ display: 'flex', alignItems: 'center' }}>
+                  <div className="product-image" style={{ 
                     width: '80px', 
                     height: '100px', 
                     marginRight: '15px', 
@@ -132,7 +161,7 @@ const CartPage = () => {
                   color: 'var(--brand-green)',
                   fontWeight: '500'
                 }}>{symbol}{item.price?.toFixed(2) || '0.00'}</div>
-                <div>
+                <div className="quantity-input">
                   <input
                     type="number"
                     min="1"
@@ -155,22 +184,23 @@ const CartPage = () => {
                 }}>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
                 <div>
                   <button
+                    className="remove-button"
                     onClick={() => removeFromCart(item.id.toString())}
                     style={{ 
                       color: '#dc3545', 
-                      background: 'none', 
-                      border: 'none', 
+                      backgroundColor: '#fdecec', 
+                      border: '1px solid #f6c7c7', 
                       cursor: 'pointer', 
                       fontSize: '0.9em',
-                      padding: '5px',
-                      borderRadius: '3px',
+                      padding: '6px 10px',
+                      borderRadius: '8px',
                       transition: 'background-color 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
-                      (e.target as HTMLButtonElement).style.backgroundColor = '#f8f9fa';
+                      (e.target as HTMLButtonElement).style.backgroundColor = '#fbd5d5';
                     }}
                     onMouseLeave={(e) => {
-                      (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+                      (e.target as HTMLButtonElement).style.backgroundColor = '#fdecec';
                     }}
                   >
                     Remove
@@ -180,39 +210,10 @@ const CartPage = () => {
               );
             })}
 
-            {/* 移动端布局 */}
-            <style jsx>{`
-              @media (max-width: 768px) {
-                .cart-grid {
-                  display: block !important;
-                }
-                .cart-header {
-                  display: none !important;
-                }
-                .cart-item {
-                  display: block !important;
-                  padding: 15px 0 !important;
-                  border-bottom: 1px solid #eee !important;
-                }
-                .cart-item > div {
-                  margin-bottom: 10px;
-                }
-                .product-info {
-                  display: flex !important;
-                  align-items: center !important;
-                  margin-bottom: 15px !important;
-                }
-                .price-quantity-row {
-                  display: flex !important;
-                  justify-content: space-between !important;
-                  align-items: center !important;
-                  margin-bottom: 10px !important;
-                }
-              }
-            `}</style>
+            {/* 样式已上移到容器级别，保证标题与表格都能被作用到 */}
 
-            <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ width: '300px' }}>
+            <div className="checkout-bar" style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="checkout-summary" style={{ width: '300px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2em', fontWeight: 'bold', marginBottom: '20px' }}>
                   <span>Subtotal ({getItemCount()} items)</span>
                   <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>

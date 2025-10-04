@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { CartItem, Product } from '@/types';
 
 interface CartState {
@@ -62,8 +61,7 @@ const getUserToken = async () => {
 };
 
 export const useCartStore = create<CartState>()(
-  persist(
-    (set, get) => ({
+  (set, get) => ({
       items: [],
       isLoading: false,
       lastSyncTime: null,
@@ -84,11 +82,12 @@ export const useCartStore = create<CartState>()(
           }
         });
         
-        // 尝试同步到后端
+        // 尝试同步到后端，并用后端覆盖本地，确保后端为唯一数据源
         try {
           await get().syncWithBackend();
+          await get().loadFromBackend();
         } catch (error) {
-          console.warn('Failed to sync cart to backend:', error);
+          console.warn('Failed to sync/load cart from backend:', error);
         }
       },
       
@@ -146,22 +145,24 @@ export const useCartStore = create<CartState>()(
           return { items: updatedItems };
         });
         
-        // 尝试同步到后端
+        // 尝试同步到后端，并用后端覆盖本地
         try {
           await get().syncWithBackend();
+          await get().loadFromBackend();
         } catch (error) {
-          console.warn('Failed to sync cart to backend:', error);
+          console.warn('Failed to sync/load cart from backend:', error);
         }
       },
       
       clearCart: async () => {
         set({ items: [] });
         
-        // 尝试同步到后端
+        // 尝试同步到后端，并用后端覆盖本地
         try {
           await get().syncWithBackend();
+          await get().loadFromBackend();
         } catch (error) {
-          console.warn('Failed to sync cart to backend:', error);
+          console.warn('Failed to sync/load cart from backend:', error);
         }
       },
       
@@ -235,9 +236,9 @@ export const useCartStore = create<CartState>()(
           console.warn('No user token found, skipping cart load');
           return;
         }
-        
+
         set({ isLoading: true });
-        
+
         try {
           // 从后端读取用户购物车
           const response = await fetch(`${API_BASE_URL}/api/cart`, {
@@ -246,43 +247,58 @@ export const useCartStore = create<CartState>()(
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (response.ok) {
             const result = await response.json();
             console.log('📥 [Cart Load] Raw response JSON:', result);
 
             // 兼容不同数据结构：data/items/cartItems
             const backendItemsRaw = (result?.data?.items || result?.data?.cartItems || result?.data || []);
-            const backendItems: Array<{ productId: string; quantity: number }> = Array.isArray(backendItemsRaw)
+            const backendItems: Array<{ productId: string | number; quantity: number }> = Array.isArray(backendItemsRaw)
               ? backendItemsRaw.map((i: any) => ({
-                  productId: (i.productId ?? i.id)?.toString(),
+                  productId: (i.productId ?? i.id),
                   quantity: Number(i.quantity ?? i.qty ?? 1),
                 }))
               : [];
 
             console.log('🧾 [Cart Load] Normalized backend items:', backendItems);
 
-            // 覆盖本地状态：
-            // - 仅保留后端存在的商品
-            // - 更新数量与后端一致
-            const currentItems = get().items;
-            const filteredItems: CartItem[] = currentItems
-              .filter((item) => backendItems.some((b) => item.id.toString() === b.productId.toString()))
-              .map((item) => {
-                const back = backendItems.find((b) => item.id.toString() === b.productId.toString());
-                return back ? { ...item, quantity: back.quantity } : item;
-              });
-
-            // 提示后端存在但本地没有的商品，后续可考虑补充详情拉取
-            const missingOnLocal = backendItems.filter(
-              (b) => !currentItems.find((item) => item.id.toString() === b.productId.toString())
-            );
-            if (missingOnLocal.length > 0) {
-              console.warn('⚠️ [Cart Load] Items exist on backend but not locally. Skipping add to avoid UI issues.', missingOnLocal);
+            // 为每个后端商品补齐详情，完全覆盖本地
+            const detailedItems: CartItem[] = [];
+            for (const b of backendItems) {
+              try {
+                const prodRes = await fetch(`${API_BASE_URL}/api/products/${b.productId}?populate[0]=images&populate[1]=main_image`, {
+                  method: 'GET',
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!prodRes.ok) continue;
+                const prodJson = await prodRes.json();
+                const data = prodJson.data;
+                const attr = data?.attributes || {};
+                const item: CartItem = {
+                  id: data?.id,
+                  name: attr.name,
+                  slug: attr.slug,
+                  period: attr.period,
+                  description: attr.description,
+                  materials: attr.materials,
+                  origin: attr.origin,
+                  dimensions: attr.dimensions,
+                  designer: attr.designer,
+                  price: attr.price,
+                  currencyKeyword: attr.currencyKeyword,
+                  images: attr.images,
+                  main_image: attr.main_image,
+                  quantity: b.quantity
+                };
+                detailedItems.push(item);
+              } catch (e) {
+                console.warn('Failed to fetch product detail for cart item:', b.productId, e);
+              }
             }
 
-            set({ items: filteredItems, lastSyncTime: new Date().toISOString() });
-            console.log('✅ [Cart Load] Cart overwritten from backend (filtered to existing items)');
+            set({ items: detailedItems, lastSyncTime: new Date().toISOString() });
+            console.log('✅ [Cart Load] Cart replaced from backend (full detail)');
           }
         } catch (error) {
           console.error('Cart load error:', error);
@@ -290,9 +306,5 @@ export const useCartStore = create<CartState>()(
           set({ isLoading: false });
         }
       }
-    }),
-    {
-      name: 'cart-storage', // 用于本地存储的键
-    }
-  )
+    })
 );

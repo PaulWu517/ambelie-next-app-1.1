@@ -316,6 +316,9 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     { label: 'Designer:', value: product.designer },
   ].filter(detail => detail.value && detail.value.trim() !== ''); // 过滤掉空值
 
+  // 有无描述：用于在无描述时让右侧文字块左对齐
+  const hasDescription = !!(product.description && product.description.trim());
+
   return (
     <>
       <div className={styles.productDetailContainer}>
@@ -436,7 +439,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
 
         {/* 右侧文字信息列 */}
         <div className={styles.textColumn}>
-          <div className={styles.productInfoContent}>
+          <div className={`${styles.productInfoContent} ${!hasDescription ? styles.noDescriptionContent : ''}`}>
             <h1 className={styles.productTitle}>{product.name}</h1>
             
             {/* 当非询价且有价格时显示价格与货币符号；否则不展示任何价格文案 */}
@@ -473,14 +476,8 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
           </div>
 
           <div className={styles.productActions}>
-            {isInquiryOnly ? (
-              <button 
-                className={`${styles.actionButton} ${styles.inquireButton}`}
-                onClick={handleAddToInquiry}
-              >
-                <span className={styles.buttonText}>ADD TO INQUIRY</span>
-              </button>
-            ) : (
+            {/* 当有价格时：同时展示“Add to Cart”和“Add to Inquiry”，并保证顺序为：Cart -> Inquiry -> Collection */}
+            {!isInquiryOnly && (
               <button 
                 className={`${styles.actionButton} ${styles.addToCartButton}`}
                 onClick={handleAddToCart}
@@ -491,6 +488,14 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
                 </span>
               </button>
             )}
+
+            {/* 无论是否有价格，都保留 Add to Inquiry */}
+            <button 
+              className={`${styles.actionButton} ${styles.inquireButton}`}
+              onClick={handleAddToInquiry}
+            >
+              <span className={styles.buttonText}>ADD TO INQUIRY</span>
+            </button>
             <button 
               className={`${styles.actionButton} ${styles.addToCollectionButton}`}
               onClick={handleAddToCollection}

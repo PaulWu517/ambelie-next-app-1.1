@@ -208,6 +208,12 @@
     margin: 0 auto;
 }
 
+/* 无描述时：取消居中，轻微左对齐 */
+.noDescriptionContent {
+    max-width: 95%;
+    margin: 0; /* 去掉 auto 居中，使内容贴左 */
+}
+
 /* 产品标题 */
 .productTitle {
     font-family: var(--font-heading);
