@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
 import Image from 'next/image';
@@ -8,10 +8,14 @@ import Image from 'next/image';
 const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
 const CartPage = () => {
-  const { items, removeFromCart, updateQuantity, getCartTotal, getItemCount } = useCartStore();
+  const { items, removeFromCart, updateQuantity, getCartTotal, getItemCount, loadFromBackend, isLoading } = useCartStore();
   const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
   const cartCurrency = (items[0]?.currencyKeyword || 'GBP').toUpperCase();
   const subtotalSymbol = currencySymbolMap[cartCurrency] || '';
+
+  useEffect(() => {
+    loadFromBackend();
+  }, []);
 
   return (
     <main className="cart-page" style={{ paddingBottom: '100px' }}>
@@ -51,7 +55,11 @@ const CartPage = () => {
           }
         `}</style>
         
-        {items.length === 0 ? (
+        {isLoading ? (
+          <div className="empty-state">
+            <p className="empty-text">Loading cart from backend…</p>
+          </div>
+        ) : items.length === 0 ? (
           <div className="empty-state">
             <p className="empty-text">Your cart is empty</p>
             <Link href="/products" className="empty-link">
@@ -103,20 +111,24 @@ const CartPage = () => {
                         console.log('🛒 [Cart Debug] Item data:', JSON.stringify(item, null, 2));
                         console.log('🖼️ [Cart Debug] Main image data:', JSON.stringify(item.main_image, null, 2));
                         
-                        const imageUrl = item.main_image?.data?.attributes?.url ? 
-                          (item.main_image.data.attributes.url.startsWith('http') ? 
-                            item.main_image.data.attributes.url : 
-                            `${API_URL}${item.main_image.data.attributes.url}`
-                          ) : '/placeholder.jpg';
+                        const preferredUrl = (() => {
+                          const img: any = item.main_image;
+                          const nested = img?.data?.attributes?.url;
+                          const direct = typeof img?.url === 'string' ? img.url : undefined;
+                          return nested || direct;
+                        })();
+                        const imageUrl = preferredUrl
+                          ? (preferredUrl.startsWith('http') ? preferredUrl : `${API_URL}${preferredUrl}`)
+                          : '/placeholder.jpg';
                         
                         console.log('🌐 [Cart Debug] Final image URL for', item.name, ':', imageUrl);
                         console.log('📊 [Cart Debug] URL analysis:', {
                           hasMainImage: !!item.main_image,
-                          hasData: !!item.main_image?.data,
-                          hasAttributes: !!item.main_image?.data?.attributes,
-                          hasUrl: !!item.main_image?.data?.attributes?.url,
-                          originalUrl: item.main_image?.data?.attributes?.url,
-                          startsWithHttp: item.main_image?.data?.attributes?.url?.startsWith('http'),
+                          // 以下为宽松类型检查输出（img 可能是任意形态）
+                          hasData: !!(item as any)?.main_image?.data,
+                          hasAttributes: !!(item as any)?.main_image?.data?.attributes,
+                          hasUrl: !!preferredUrl,
+                          startsWithHttp: preferredUrl?.startsWith('http'),
                           finalUrl: imageUrl
                         });
                         
