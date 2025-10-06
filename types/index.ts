@@ -36,6 +36,7 @@ export interface Product {
   images?: { data: Image[] };
   main_image?: { data: Image };
   hover_image?: { data: Image };
+  vrModelUrl?: string; // VR 模型地址（COS GLB 文件 URL）
 }
 
 export interface CartItem extends Product {

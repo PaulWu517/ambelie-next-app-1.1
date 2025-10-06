@@ -3,6 +3,7 @@ import "./globals.css";
 
 import Header from "@/components/Header"; 
 import Footer from "@/components/Footer";
+import RouteVisibility from "@/components/RouteVisibility";
 import DataInitProvider from "@/app/providers/DataInitProvider";
 import AntiSaveGuard from "@/components/AntiSaveGuard";
 // import AIChatButton from "@/components/AIChatButton"; // 暂时隐藏AI助手功能
@@ -43,9 +44,13 @@ export default function RootLayout({
       <body className="antialiased">
         <DataInitProvider>
           <AntiSaveGuard />
-          <Header />
+          <RouteVisibility>
+            <Header />
+          </RouteVisibility>
           {children}
-          <Footer />
+          <RouteVisibility>
+            <Footer />
+          </RouteVisibility>
           {/* <AIChatButton /> */} {/* 暂时隐藏AI助手功能 */}
         </DataInitProvider>
       </body>

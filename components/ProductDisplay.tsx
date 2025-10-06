@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
@@ -8,6 +8,7 @@ import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import { useCollectionStore } from '@/lib/stores/collectionStore';
 import { Product as CartProduct } from '@/types';
 import styles from '../app/products/[slug]/ProductDetailPage.module.css';
+import QRCodeModal from './QRCodeModal';
 
 interface ImageItem {
   url: string;
@@ -27,6 +28,7 @@ interface Product {
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;
   slug: string;
+  vrModelUrl?: string;
   currencyKeyword?: string; // 新增：货币关键字（如 CNY, USD 等）
 }
 
@@ -102,6 +104,20 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
+  const [qrOpen, setQrOpen] = useState(false);
+  const vrPageUrl = useMemo(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${origin}/vr/${product.slug}`;
+  }, [product.slug]);
+  const hasVRModel = !!(product.vrModelUrl && product.vrModelUrl.trim());
+  const isMobileDevice = () => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent || navigator.vendor || '';
+    // 更偏向“手机端”的匹配，避免把 iPad 等平板误判为手机
+    const isPhoneUA = /Android.+Mobile|iPhone|Windows Phone|BlackBerry/i.test(ua);
+    const isSmallViewport = window.innerWidth <= 768;
+    return isPhoneUA || isSmallViewport;
+  };
   
   const { addToCart } = useCartStore();
   const { addToInquiry } = useInquiryStore();
@@ -475,6 +491,8 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
               ))}
           </div>
 
+          {/* 移除原“Try on your room”按钮，改为在操作区展示 */}
+
           <div className={styles.productActions}>
             {/* 当有价格时：同时展示“Add to Cart”和“Add to Inquiry”，并保证顺序为：Cart -> Inquiry -> Collection */}
             {!isInquiryOnly && (
@@ -496,6 +514,23 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
             >
               <span className={styles.buttonText}>ADD TO INQUIRY</span>
             </button>
+            {/* VR 入口：样式与“Add to Inquiry”一致，位于其右侧、Collection 左侧；当无 vrModelUrl 时隐藏 */}
+            {hasVRModel && (
+              <button
+                className={`${styles.actionButton} ${styles.inquireButton}`}
+                onClick={() => {
+                  if (isMobileDevice()) {
+                    // 移动端：直接跳转到 VR 页面
+                    window.location.href = vrPageUrl;
+                  } else {
+                    // 桌面端：弹出二维码
+                    setQrOpen(true);
+                  }
+                }}
+              >
+                <span className={styles.buttonText}>3D MODEL VIEW</span>
+              </button>
+            )}
             <button 
               className={`${styles.actionButton} ${styles.addToCollectionButton}`}
               onClick={handleAddToCollection}
@@ -513,6 +548,8 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         productName={product.name}
         actionType={lastAction}
       />
+      {/* 保持 QRCodeModal 功能，用于引导到 VR 路由 */}
+      <QRCodeModal open={qrOpen} targetUrl={vrPageUrl} onClose={() => setQrOpen(false)} />
     </>
   );
 }
