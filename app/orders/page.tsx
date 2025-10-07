@@ -6,6 +6,7 @@ import { Package, Calendar, CreditCard, Eye, ShoppingBag, ArrowRight } from 'luc
 import OrderStatusBadge from '@/components/OrderStatusBadge';
 import { useOrderStatusStore, OrderStatus, ShippingCarrier } from '@/lib/stores/orderStatusStore';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 
 // 更新 Order 接口以包含商品信息
@@ -52,6 +53,7 @@ const OrdersPage = () => {
   
   // 用户认证状态
   const { user, isLoggedIn, isLoading: authLoading, logout } = useAuth();
+  const router = useRouter();
   
   // 订单状态管理
   const { initializeOrder, getOrderStatus, setTrackingInfo, setEstimatedDeliveryDate } = useOrderStatusStore();
@@ -99,6 +101,28 @@ const OrdersPage = () => {
       }
     }
   }, [isLoggedIn, user]);
+
+  // 如果 Stripe 成功回跳到了 /orders（而不是 /order/success），在此根据查询参数做一次前端重定向
+  // 支持形如 /orders?session_id=cs_...&redirect_status=success&email=...
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const sessionId = sp.get('session_id') || sp.get('sessionId') || '';
+      const redirectStatus = (sp.get('redirect_status') || sp.get('status') || '').toLowerCase();
+      // 优先取 URL 中的 email；否则尝试从本地存储获取
+      const emailParam = sp.get('email') || '';
+      const localEmail = emailParam || localStorage.getItem('customerEmail') || localStorage.getItem('userEmail') || '';
+
+      const shouldRedirect = !!sessionId || redirectStatus === 'succeeded' || redirectStatus === 'success';
+      if (shouldRedirect) {
+        const to = `/order/success?session_id=${encodeURIComponent(sessionId)}${localEmail ? `&email=${encodeURIComponent(localEmail)}` : ''}`;
+        router.replace(to);
+      }
+    } catch (e) {
+      // 静默处理，避免影响订单页正常展示
+    }
+  }, [router]);
 
   // 通过用户token获取订单
   const fetchUserOrders = async () => {
