@@ -22,8 +22,8 @@ export interface Image {
 
 export interface Product {
   id: number;
-  name?: string;
-  slug?: string;
+  name: string;
+  slug: string;
   period?: string;
   description?: string;
   materials?: string;

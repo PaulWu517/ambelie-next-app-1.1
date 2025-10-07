@@ -151,7 +151,7 @@ export default function CollectionPage() {
               <Link href={`/products/${item.slug}`}>
                 <Image
                   src={imageUrl}
-                  alt={item.name}
+                  alt={item.name ?? 'Product image'}
                   width={300}
                   height={400}
                   className={styles.productImage}
@@ -167,7 +167,13 @@ export default function CollectionPage() {
                 />
               </Link>
               <button
-                onClick={() => removeFromCollection(item.slug)}
+                onClick={() => {
+                  if (item.slug) {
+                    removeFromCollection(item.slug);
+                  } else {
+                    console.warn('⚠️ [Collection Debug] Missing slug, cannot remove from collection:', item);
+                  }
+                }}
                 className={styles.removeBtn}
                 aria-label="Remove from collection"
               >

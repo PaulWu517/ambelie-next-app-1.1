@@ -135,7 +135,7 @@ const CartPage = () => {
                         return imageUrl;
                       })()
                       }
-                      alt={item.name}
+                      alt={item.name ?? 'Product image'}
                       width={80}
                       height={100}
                       style={{ 

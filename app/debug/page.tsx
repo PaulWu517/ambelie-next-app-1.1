@@ -134,7 +134,7 @@ export default function DebugPage() {
                     {getImageUrl(item) !== '/placeholder.jpg' ? (
                       <Image
                         src={getImageUrl(item)}
-                        alt={item.name}
+                        alt={item.name ?? 'Product image'}
                         width={100}
                         height={120}
                         style={{ objectFit: 'cover' }}
@@ -171,7 +171,7 @@ export default function DebugPage() {
                     {getImageUrl(item) !== '/placeholder.jpg' ? (
                       <Image
                         src={getImageUrl(item)}
-                        alt={item.name}
+                        alt={item.name ?? 'Product image'}
                         width={100}
                         height={120}
                         style={{ objectFit: 'cover' }}
