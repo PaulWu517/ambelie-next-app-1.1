@@ -1,14 +1,36 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Ignore ESLint issues during production builds to prevent non-critical warnings from failing the build.
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // Allow builds to proceed even if there are TypeScript type errors.
-  // This is useful to unblock deployments when warnings are treated strictly.
-  typescript: {
-    ignoreBuildErrors: true,
+  images: {
+    unoptimized: true, // 暂时禁用图片优化以解决超时问题
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ambelie-backend-production.up.railway.app',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      // 腾讯云COS原始域名
+      {
+        protocol: 'https',
+        hostname: 'ambelie-1368352639.cos.ap-guangzhou.myqcloud.com',
+        pathname: '/**',
+      },
+      // CDN加速域名
+      {
+        protocol: 'https',
+        hostname: 'media.ambelie.com',
+        pathname: '/**',
+      },
+      // 旧的Strapi后端域名（兼容性保留）
+      {
+        protocol: 'https',
+        hostname: 'ambelie-strapi.up.railway.app',
+        pathname: '/**',
+      },
+    ],
   },
 };
 
