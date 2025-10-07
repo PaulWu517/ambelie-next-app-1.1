@@ -547,6 +547,12 @@ const OrderSuccessContent = () => {
         {/* 操作按钮 */}
         <div className="text-center space-x-4">
           <Link 
+            href="/orders" 
+            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            查看我的订单
+          </Link>
+          <Link 
             href="/" 
             className="inline-block bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
           >
