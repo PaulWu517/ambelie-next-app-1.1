@@ -22,10 +22,10 @@ export interface Image {
 
 export interface Product {
   id: number;
-  name: string;
-  slug: string;
-  period: string;
-  description: string;
+  name?: string;
+  slug?: string;
+  period?: string;
+  description?: string;
   materials?: string;
   origin?: string;
   dimensions?: string;
@@ -39,8 +39,25 @@ export interface Product {
   vrModelUrl?: string; // VR 模型地址（COS GLB 文件 URL）
 }
 
-export interface CartItem extends Product {
+// 说明：不再继承 Partial<Product>，以避免 id 类型与 Partial<Product> 的兼容性报错
+export interface CartItem {
+  id: number | string;
   quantity: number;
+  // 以下字段均为可选，用于前端展示，不强依赖后端完整结构
+  name?: string;
+  slug?: string;
+  period?: string;
+  description?: string;
+  materials?: string;
+  origin?: string;
+  dimensions?: string;
+  designer?: string;
+  price?: number;
+  currencyKeyword?: string;
+  images?: { data: Image[] };
+  main_image?: { data: Image };
+  hover_image?: { data: Image };
+  vrModelUrl?: string;
 }
 
 export interface Exhibition {

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { CartItem, Product } from '@/types';
 
 interface CartState {
@@ -14,6 +15,7 @@ interface CartState {
   getItemCount: () => number;
   syncWithBackend: () => Promise<void>;
   loadFromBackend: () => Promise<void>;
+  mergeLocalToBackend: () => Promise<void>;
 }
 
 // 统一后端地址读取，优先使用生产环境变量
@@ -62,7 +64,8 @@ const getUserToken = async () => {
 };
 
 export const useCartStore = create<CartState>()(
-  (set, get) => ({
+  persist(
+    (set, get) => ({
       items: [],
       isLoading: false,
       lastError: null,
@@ -84,10 +87,15 @@ export const useCartStore = create<CartState>()(
           }
         });
         
-        // 尝试同步到后端，并用后端覆盖本地，确保后端为唯一数据源
+        // 若已登录则与后端同步；未登录仅本地持久化
         try {
-          await get().syncWithBackend();
-          await get().loadFromBackend();
+          const token = await getUserToken();
+          if (token) {
+            await get().syncWithBackend();
+            await get().loadFromBackend();
+          } else {
+            set({ lastSyncTime: new Date().toISOString(), lastError: null });
+          }
         } catch (error) {
           console.warn('⚠️ [Cart Debug] Failed to sync/load cart from backend after add:', error);
           set({ lastError: `Add sync/load failed: ${error instanceof Error ? error.message : String(error)}` });
@@ -100,11 +108,12 @@ export const useCartStore = create<CartState>()(
           items: state.items.filter((item) => item.id.toString() !== productId),
         }));
 
-        // 然后调用后端删除接口，确保后端与本地一致
+        // 若已登录则调用后端删除并重新加载；未登录仅本地持久化
         try {
           const token = await getUserToken();
           if (!token) {
             console.warn('❌ [Cart Debug] No user token found, skipping backend removal');
+            set({ lastSyncTime: new Date().toISOString() });
           } else {
             const fullUrl = `${API_BASE_URL}/api/cart/remove/${productId}`;
             console.log('🌐 [Cart Debug] Remove API URL:', fullUrl);
@@ -122,20 +131,20 @@ export const useCartStore = create<CartState>()(
               // 退化为同步整个购物车
               await get().syncWithBackend();
             }
+
+            // 从后端重新加载，确保最终一致
+            try {
+              await get().loadFromBackend();
+            } catch (error) {
+              console.warn('⚠️ [Cart Debug] Failed to reload cart from backend:', error);
+              set({ lastError: `Reload failed: ${error instanceof Error ? error.message : String(error)}` });
+            }
           }
         } catch (error) {
           console.warn('💥 [Cart Debug] Failed to remove cart item from backend:', error);
           set({ lastError: `Remove failed: ${error instanceof Error ? error.message : String(error)}` });
-          // 退化为同步整个购物车
+          // 退化为同步整个购物车（若登录）
           try { await get().syncWithBackend(); } catch {}
-        }
-
-        // 从后端重新加载，确保最终一致
-        try {
-          await get().loadFromBackend();
-        } catch (error) {
-          console.warn('⚠️ [Cart Debug] Failed to reload cart from backend:', error);
-          set({ lastError: `Reload failed: ${error instanceof Error ? error.message : String(error)}` });
         }
       },
       
@@ -153,10 +162,15 @@ export const useCartStore = create<CartState>()(
           return { items: updatedItems };
         });
         
-        // 尝试同步到后端，并用后端覆盖本地
+        // 若已登录则与后端同步；未登录仅本地持久化
         try {
-          await get().syncWithBackend();
-          await get().loadFromBackend();
+          const token = await getUserToken();
+          if (token) {
+            await get().syncWithBackend();
+            await get().loadFromBackend();
+          } else {
+            set({ lastSyncTime: new Date().toISOString(), lastError: null });
+          }
         } catch (error) {
           console.warn('⚠️ [Cart Debug] Failed to sync/load cart from backend after update:', error);
           set({ lastError: `Update sync/load failed: ${error instanceof Error ? error.message : String(error)}` });
@@ -166,10 +180,15 @@ export const useCartStore = create<CartState>()(
       clearCart: async () => {
         set({ items: [] });
         
-        // 尝试同步到后端，并用后端覆盖本地
+        // 若已登录则与后端同步；未登录仅本地持久化
         try {
-          await get().syncWithBackend();
-          await get().loadFromBackend();
+          const token = await getUserToken();
+          if (token) {
+            await get().syncWithBackend();
+            await get().loadFromBackend();
+          } else {
+            set({ lastSyncTime: new Date().toISOString(), lastError: null });
+          }
         } catch (error) {
           console.warn('⚠️ [Cart Debug] Failed to sync/load cart from backend after clear:', error);
           set({ lastError: `Clear sync/load failed: ${error instanceof Error ? error.message : String(error)}` });
@@ -243,16 +262,16 @@ export const useCartStore = create<CartState>()(
       },
       
       loadFromBackend: async () => {
-        console.log('🔄 [Cart Debug] Begin loadFromBackend, clearing local cache...');
-        set({ items: [], isLoading: true, lastError: null });
+        console.log('🔄 [Cart Debug] Begin loadFromBackend');
         const token = await getUserToken();
         console.log('🔑 [Cart Debug] Token found for load:', !!token, token ? `Length: ${token.length}` : 'No token');
         if (!token) {
-          console.warn('❌ [Cart Debug] No user token found, keeping empty cart');
-          set({ isLoading: false, lastError: 'No token' });
+          console.warn('❌ [Cart Debug] No user token found, skip backend load and keep local cart');
+          set({ isLoading: false, lastError: null });
           return;
         }
 
+        set({ isLoading: true, lastError: null });
         try {
           // 从后端读取用户购物车
           const cartUrl = `${API_BASE_URL}/api/cart`;
@@ -372,6 +391,27 @@ export const useCartStore = create<CartState>()(
           set({ isLoading: false });
           console.log('🏁 [Cart Debug] Load process completed');
         }
+      },
+
+      mergeLocalToBackend: async () => {
+        // 登录后调用：将本地购物车合并到后端并刷新
+        const token = await getUserToken();
+        if (!token) {
+          console.warn('⚠️ [Cart Debug] mergeLocalToBackend skipped: no token');
+          return;
+        }
+        try {
+          await get().syncWithBackend();
+          await get().loadFromBackend();
+        } catch (error) {
+          console.warn('⚠️ [Cart Debug] mergeLocalToBackend failed:', error);
+          set({ lastError: `Merge failed: ${error instanceof Error ? error.message : String(error)}` });
+        }
       }
-    })
+    }),
+    {
+      name: 'cart-storage-v1',
+      partialize: (state) => ({ items: state.items })
+    }
+  )
 );
