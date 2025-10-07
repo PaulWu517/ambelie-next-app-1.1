@@ -80,19 +80,67 @@ export default function OrderSuccessClient() {
         const emailParam = searchParams.get('email');
         const url = `/api/orders/by-session?session_id=${encodeURIComponent(sessionId)}${emailParam ? `&email=${encodeURIComponent(emailParam)}` : ''}`;
         const res = await fetch(url, { method: 'GET' });
-        if (!res.ok) {
-          const errText = await res.text();
-          setError(`Failed to load order: ${res.status} ${errText || ''}`);
-          setLoading(false);
-          return;
-        }
-        const data = await res.json();
-        if (data && data.success && data.data) {
-          clearCart();
-          setOrderDetails(data.data);
-          setPaymentDetails(prev => prev || null);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.success && data.data) {
+            clearCart();
+            setOrderDetails(data.data);
+            setPaymentDetails(prev => prev || null);
+          } else {
+            setError('Order data not found');
+          }
         } else {
-          setError('Order data not found');
+          // 如果前端服务端未配置 Stripe Secret（501），降级调用后端接口获取会话详情
+          if (res.status === 501) {
+            try {
+              const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app';
+              const backendUrl = `${apiUrl}/api/payments/session/${encodeURIComponent(sessionId)}`;
+              const bRes = await fetch(backendUrl, { method: 'GET' });
+              if (bRes.ok) {
+                const bData = await bRes.json();
+                const session = bData?.data;
+                if (session) {
+                  // 将 Stripe session 映射为前端 orderDetails
+                  const lineItems = (session?.line_items?.data || []).map((item: any) => {
+                    const qty = item.quantity || 1;
+                    const unitAmount = typeof item.amount_subtotal === 'number' ? item.amount_subtotal / 100 / qty : (item.price?.unit_amount || 0) / 100;
+                    return {
+                      name: item.description || item.price?.nickname || 'Item',
+                      price: unitAmount,
+                      quantity: qty,
+                      currency: (item.currency || session.currency || 'GBP').toUpperCase(),
+                    };
+                  });
+                  const customerEmail = session?.customer_details?.email || session?.customer_email || emailParam || 'Unknown';
+                  const mapped = {
+                    id: session.client_reference_id || session.id,
+                    orderNumber: session.metadata?.order_number || session.id,
+                    totalAmount: (session.amount_total || 0) / 100,
+                    currency: (session.currency || 'GBP').toUpperCase(),
+                    customerEmail,
+                    customerName: session?.customer_details?.name || 'Customer',
+                    orderDate: new Date((session.created || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+                    status: session.payment_status === 'paid' ? 'paid' : session.status || 'pending',
+                    items: lineItems,
+                  } as OrderDetails;
+                  clearCart();
+                  setOrderDetails(mapped);
+                  setPaymentDetails(prev => prev || null);
+                } else {
+                  const bt = await bRes.text();
+                  setError(`Fallback failed: ${bt || 'No session data'}`);
+                }
+              } else {
+                const bt = await bRes.text();
+                setError(`Backend fetch failed: ${bRes.status} ${bt || ''}`);
+              }
+            } catch (fallbackErr) {
+              setError(fallbackErr instanceof Error ? fallbackErr.message : 'Fallback unknown error');
+            }
+          } else {
+            const errText = await res.text();
+            setError(`Failed to load order: ${res.status} ${errText || ''}`);
+          }
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Unknown error');

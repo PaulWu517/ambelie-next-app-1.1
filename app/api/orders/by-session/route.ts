@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'nodejs';
 
 // GET /api/orders/by-session?session_id=...&email=...
 // Server-side route: uses Stripe Secret to look up Checkout Session and map to order details.
