@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Package, Calendar, Clock } from 'lucide-react';
+import { CheckCircle, Package, Calendar, Clock, Copy } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cartStore';
 import styles from './page.module.css';
 
@@ -39,6 +39,7 @@ export default function OrderSuccessClient() {
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isMock) {
@@ -186,7 +187,25 @@ export default function OrderSuccessClient() {
         {orderDetails && (
           <div className={styles.orderCard}>
             <div className={styles.orderHeader}>
-              <div className={styles.orderTitle}>Order #{orderDetails.orderNumber}</div>
+              <div className={styles.orderTitleRow}>
+                <div className={`${styles.orderTitle} ${styles.orderTitleText}`}>Order #{orderDetails.orderNumber}</div>
+                <button
+                  type="button"
+                  className={styles.copyButton}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(String(orderDetails.orderNumber || ''));
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    } catch (e) {
+                      // ignore
+                    }
+                  }}
+                  aria-label="Copy order number"
+                >
+                  <Copy className={styles.copyIcon} /> {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
               <div className={styles.orderPlaced}><Clock className={styles.cardIcon} /> Order Placed</div>
             </div>
             <div className={styles.orderBody}>
