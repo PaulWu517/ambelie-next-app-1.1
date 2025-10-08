@@ -77,7 +77,7 @@ export default function VRClient({ product }: VRClientProps) {
             src={product!.vrModelUrl}
             alt={product!.name}
             camera-controls
-            camera-orbit="90deg 0deg auto"
+            camera-orbit="90deg 90deg auto"
             touch-action="pan-y"
             ar
             ar-modes="webxr scene-viewer quick-look"
