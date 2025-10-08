@@ -9,14 +9,29 @@ interface VRClientProps {
     name: string;
     slug: string;
     vrModelUrl?: string;
+    vrUsdzUrl?: string;
     mainImageUrl?: string;
   } | null;
 }
 
 export default function VRClient({ product }: VRClientProps) {
-  const hasModel = Boolean(product?.vrModelUrl);
+  const hasModel = Boolean(product?.vrModelUrl || product?.vrUsdzUrl);
   const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const isIOS = () =>
+    typeof navigator !== 'undefined' &&
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1));
+  const iosUsdzUrl = (() => {
+    const explicit = (product?.vrUsdzUrl || '').trim();
+    if (explicit) return explicit;
+    const src = (product?.vrModelUrl || '').trim();
+    if (!src) return '';
+    if (src.endsWith('.usdz')) return src;
+    const dot = src.lastIndexOf('.');
+    if (dot === -1) return '';
+    return src.slice(0, dot) + '.usdz';
+  })();
 
   useEffect(() => {
     const el = document.querySelector('model-viewer') as any;
@@ -47,7 +62,7 @@ export default function VRClient({ product }: VRClientProps) {
       el.removeEventListener('progress', onProgress);
       clearInterval(timer);
     };
-  }, [product?.vrModelUrl]);
+  }, [product?.vrModelUrl, product?.vrUsdzUrl]);
 
   return (
     <div style={{ background: '#f0f0f0', minHeight: '100vh' }}>
@@ -65,6 +80,7 @@ export default function VRClient({ product }: VRClientProps) {
             touch-action="pan-y"
             ar
             ar-modes="webxr scene-viewer quick-look"
+            ios-src={iosUsdzUrl || undefined}
             style={{ width: '100%', height: '100vh', background: '#f0f0f0' }}
           ></model-viewer>
 
@@ -98,6 +114,10 @@ export default function VRClient({ product }: VRClientProps) {
             }}
             onClick={() => {
               const el = document.querySelector('model-viewer') as any;
+              if (isIOS() && !iosUsdzUrl) {
+                alert('iOS 设备的 AR 需要 USDZ 文件。当前模型未提供 USDZ，因此无法在 AR 中查看。');
+                return;
+              }
               if (el && typeof el.activateAR === 'function') {
                 el.activateAR();
               }

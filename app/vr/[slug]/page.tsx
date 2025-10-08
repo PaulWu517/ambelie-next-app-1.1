@@ -8,6 +8,7 @@ interface ProductResponse {
     name: string;
     slug: string;
     vrModelUrl?: string;
+    vrUsdzUrl?: string;
     main_image?: { url?: string; alternativeText?: string | null } | null;
   }>;
 }
@@ -21,11 +22,13 @@ async function getProductBySlug(slug: string) {
   const item = json.data?.[0];
   if (!item) return null;
   const mainImageUrl = item.main_image?.url;
+  const usdzUrl = item.vrUsdzUrl;
   return {
     id: item.id,
     name: item.name,
     slug: item.slug,
     vrModelUrl: item.vrModelUrl,
+    vrUsdzUrl: usdzUrl && (usdzUrl.startsWith('http') ? usdzUrl : `${API_URL}${usdzUrl}`),
     mainImageUrl: mainImageUrl && (mainImageUrl.startsWith('http') ? mainImageUrl : `${API_URL}${mainImageUrl}`)
   };
 }

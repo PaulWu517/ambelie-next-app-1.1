@@ -29,6 +29,7 @@ interface Product {
   images?: ImageItem[] | null;
   slug: string;
   vrModelUrl?: string;
+  vrUsdzUrl?: string;
   currencyKeyword?: string; // 新增：货币关键字（如 CNY, USD 等）
 }
 
@@ -109,7 +110,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     return `${origin}/vr/${product.slug}`;
   }, [product.slug]);
-  const hasVRModel = !!(product.vrModelUrl && product.vrModelUrl.trim());
+  const hasVRModel = !!((product.vrModelUrl && product.vrModelUrl.trim()) || (product.vrUsdzUrl && product.vrUsdzUrl.trim()));
   const isMobileDevice = () => {
     if (typeof window === 'undefined') return false;
     const ua = navigator.userAgent || navigator.vendor || '';
