@@ -5,8 +5,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // 表单数据验证
-    const { enquiryType, email, name, country, message, hearAboutUs } = body;
+    // 表单数据验证 + 反机器人校验
+    const { enquiryType, email, name, country, message, hearAboutUs, hp, formStart } = body;
     
     if (!enquiryType || !email || !name || !country || !message) {
       return NextResponse.json(
@@ -14,7 +14,41 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // 简单的反机器人策略：
+    // 1) 蜜罐字段不得有值
+    if (typeof hp === 'string' && hp.trim() !== '') {
+      return NextResponse.json(
+        { error: 'Submission blocked by anti-bot rule' },
+        { status: 429 }
+      );
+    }
+    // 2) 填表耗时不得过短（例如 < 2 秒）
+    const nowTs = Date.now();
+    const startTs = typeof formStart === 'number' ? formStart : 0;
+    if (startTs > 0 && (nowTs - startTs) < 2000) {
+      return NextResponse.json(
+        { error: 'Submission too fast, please try again' },
+        { status: 429 }
+      );
+    }
+
+    // 额外：基础速率限制，按邮箱在 60 秒内仅允许提交一次
+    const lastSentMap = globalThis.__contactRateLimit || new Map<string, number>();
+    const nowMs = Date.now();
+    const last = lastSentMap.get(email?.toLowerCase?.() || '');
+    if (last && (nowMs - last) < 60_000) {
+      return NextResponse.json(
+        { error: 'Too many requests, please try again later' },
+        { status: 429 }
+      );
+    }
+    lastSentMap.set(email?.toLowerCase?.() || '', nowMs);
+    // 将 map 挂到 globalThis 以跨请求生命周期（开发/单实例场景有效）；生产建议改为 Redis/数据库
+    // @ts-ignore
+    globalThis.__contactRateLimit = lastSentMap;
     
+    // 生产环境真实邮件发送逻辑保持不变
     // 创建邮件发送器
     let transporter;
     let testAccount = null;
