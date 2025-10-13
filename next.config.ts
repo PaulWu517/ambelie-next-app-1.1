@@ -34,8 +34,8 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
-      // 将 /favicon.ico 映射到中文文件名的头像图片（PNG），避免浏览器默认图标
-      { source: '/favicon.ico', destination: '/assets/vi/%E5%A4%B4%E5%83%8F.png' },
+      // 将 /favicon.ico 映射到英文文件名的头像图片，避免编码问题
+      { source: '/favicon.ico', destination: '/assets/vi/avatar.png' },
     ];
   },
 };
