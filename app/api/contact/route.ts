@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
+// Augment globalThis to hold rate-limit map without ts-ignore
+declare global {
+  // Using var to allow re-declaration across modules in Node
+  // Map key: lowercased email, value: last submission timestamp (ms)
+  // eslint-disable-next-line no-var
+  var __contactRateLimit: Map<string, number> | undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -34,20 +42,19 @@ export async function POST(request: NextRequest) {
     }
 
     // 额外：基础速率限制，按邮箱在 60 秒内仅允许提交一次
-    const lastSentMap = globalThis.__contactRateLimit || new Map<string, number>();
+    const lastSentMap = globalThis.__contactRateLimit ?? new Map<string, number>();
     const nowMs = Date.now();
-    const last = lastSentMap.get(email?.toLowerCase?.() || '');
+    const key = (email?.toLowerCase?.() || '').trim();
+    const last = key ? lastSentMap.get(key) : undefined;
     if (last && (nowMs - last) < 60_000) {
       return NextResponse.json(
         { error: 'Too many requests, please try again later' },
         { status: 429 }
       );
     }
-    lastSentMap.set(email?.toLowerCase?.() || '', nowMs);
-    // 将 map 挂到 globalThis 以跨请求生命周期（开发/单实例场景有效）；生产建议改为 Redis/数据库
-    // @ts-ignore
+    if (key) lastSentMap.set(key, nowMs);
     globalThis.__contactRateLimit = lastSentMap;
-    
+
     // 生产环境真实邮件发送逻辑保持不变
     // 创建邮件发送器
     let transporter;

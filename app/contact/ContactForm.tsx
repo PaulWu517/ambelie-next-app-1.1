@@ -14,20 +14,18 @@ export default function ContactForm() {
     country: '',
     message: '',
     hearAboutUs: '',
-    agree: false,
-    // Anti-bot fields
-    hp: '',
-    formStart: 0
+    agree: false
   });
 
-  // 从URL参数中获取邮件地址 + 初始化表单开始时间
+  // 从URL参数中获取邮件地址
   useEffect(() => {
     const emailFromUrl = searchParams.get('email');
-    setFormData(prev => ({
-      ...prev,
-      email: emailFromUrl || prev.email,
-      formStart: Date.now(),
-    }));
+    if (emailFromUrl) {
+      setFormData(prev => ({
+        ...prev,
+        email: emailFromUrl
+      }));
+    }
   }, [searchParams]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,24 +107,6 @@ export default function ContactForm() {
       )}
       
       <form className="contact-form" onSubmit={handleSubmit}>
-        {/* Honeypot hidden field: bots may auto-fill this */}
-        <input 
-          type="text" 
-          name="hp" 
-          value={formData.hp}
-          onChange={handleInputChange}
-          autoComplete="off"
-          tabIndex={-1}
-          aria-hidden="true"
-          style={{ display: 'none' }}
-        />
-        {/* Form start timestamp to detect too-fast submissions */}
-        <input 
-          type="hidden" 
-          name="formStart" 
-          value={formData.formStart}
-          readOnly
-        />
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="enquiryType">Enquiry type<span className="required">*</span></label>
