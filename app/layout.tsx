@@ -12,9 +12,14 @@ export const metadata: Metadata = {
   title: "Ambelie", 
   description: "Discover Ambelie's unique collection of antique furniture, modern designs, and fashion.",
   icons: {
-    icon: "/assets/vi/avatar.png",
+    icon: [
+      { url: "/assets/vi/avatar.png", type: "image/png", sizes: "32x32" },
+      { url: "/assets/vi/avatar.png", type: "image/png", sizes: "16x16" },
+    ],
     shortcut: "/assets/vi/avatar.png",
-    apple: "/assets/vi/avatar.png",
+    apple: [
+      { url: "/assets/vi/avatar.png", sizes: "180x180" },
+    ],
   },
 };
 
@@ -28,7 +33,9 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/assets/vi/avatar.png" type="image/png" />
+        <link rel="icon" href="/assets/vi/avatar.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/assets/vi/avatar.png" type="image/png" sizes="16x16" />
+        <link rel="apple-touch-icon" href="/assets/vi/avatar.png" sizes="180x180" />
         <link 
           rel="stylesheet" 
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
