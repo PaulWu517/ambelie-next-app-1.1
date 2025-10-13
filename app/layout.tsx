@@ -13,14 +13,16 @@ export const metadata: Metadata = {
   description: "Discover Ambelie's unique collection of antique furniture, modern designs, and fashion.",
   icons: {
     icon: [
-      { url: "/assets/vi/avatar.png", type: "image/png", sizes: "32x32" },
-      { url: "/assets/vi/avatar.png", type: "image/png", sizes: "16x16" },
+      { url: "/assets/vi/avatar.png", sizes: "32x32", type: "image/png" },
+      { url: "/assets/vi/avatar.png", sizes: "16x16", type: "image/png" }
     ],
-    shortcut: "/assets/vi/avatar.png",
+    shortcut: [
+      { url: "/favicon.ico", type: "image/png" }
+    ],
     apple: [
-      { url: "/assets/vi/avatar.png", sizes: "180x180" },
-    ],
-  },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
+    ]
+  }
 };
 
 export default function RootLayout({
@@ -33,9 +35,9 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/assets/vi/avatar.png" type="image/png" sizes="32x32" />
-        <link rel="icon" href="/assets/vi/avatar.png" type="image/png" sizes="16x16" />
-        <link rel="apple-touch-icon" href="/assets/vi/avatar.png" sizes="180x180" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/vi/avatar.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/vi/avatar.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link 
           rel="stylesheet" 
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
