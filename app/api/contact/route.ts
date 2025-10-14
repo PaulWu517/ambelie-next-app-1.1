@@ -1,13 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-// Augment globalThis to hold rate-limit map without ts-ignore
+// Augment globalThis to hold rate-limit maps without ts-ignore
 declare global {
-  // Using var to allow re-declaration across modules in Node
-  // Map key: lowercased email, value: last submission timestamp (ms)
   // eslint-disable-next-line no-var
   var __contactRateLimit: Map<string, number> | undefined;
+  // eslint-disable-next-line no-var
+  var __contactRateLimitIp: Map<string, number> | undefined;
 }
+
+// Helpers
+const getClientIp = (req: NextRequest): string => {
+  const xf = req.headers.get('x-forwarded-for');
+  if (xf) return xf.split(',')[0].trim();
+  const xr = req.headers.get('x-real-ip');
+  if (xr) return xr.trim();
+  return 'unknown';
+};
+
+const isDisposableDomain = (domain: string): boolean => {
+  const blacklist = new Set([
+    'mailinator.com','tempmail.com','10minutemail.com','yopmail.com','guerrillamail.com','trashmail.com',
+    'getnada.com','fakemailgenerator.com','emailondeck.com','mytrashmail.com','sharklasers.com','spamgourmet.com',
+    'burnermail.io','dispostable.com','moakt.com','maildrop.cc','mintemail.com','mailcatch.com','inboxbear.com'
+  ]);
+  return blacklist.has(domain);
+};
+
+const validateName = (name: string): boolean => {
+  const n = (name || '').trim();
+  if (n.length < 3 || n.length > 80) return false;
+  const words = n.split(/\s+/).filter(Boolean).length;
+  const vowels = (n.match(/[aeiouAEIOU]/g) || []).length;
+  // 至少两个词，或至少有两个元音，避免随机无语义串
+  if (words < 2 && vowels < 2) return false;
+  // 仅允许常见字符（字母、空格、连字符、撇号）
+  if (!/^[A-Za-z\s\-']+$/.test(n)) return false;
+  return true;
+};
+
+const validateMessage = (message: string): boolean => {
+  const m = (message || '').trim();
+  const cjkCount = (m.match(/[\u4e00-\u9fff]/g) || []).length;
+  const wordCount = m.split(/\s+/).filter(Boolean).length;
+  // 至少 10 个英文单词，或至少 10 个中文字符
+  if (cjkCount < 10 && wordCount < 10) return false;
+  // 英文消息需要至少一个空格，避免单个令牌；中文无需空格
+  if (cjkCount === 0 && !/\s/.test(m)) return false;
+  // 不强制要求标点
+  // 拒绝长的纯令牌/编码串
+  if (/^[A-Za-z0-9+/=]{20,}$/.test(m)) return false;
+  return true;
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,15 +67,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 简单的反机器人策略：
-    // 1) 蜜罐字段不得有值
+    // 简单的反机器人策略：蜜罐与最小填写时间
     if (typeof hp === 'string' && hp.trim() !== '') {
       return NextResponse.json(
         { error: 'Submission blocked by anti-bot rule' },
         { status: 429 }
       );
     }
-    // 2) 填表耗时不得过短（例如 < 2 秒）
     const nowTs = Date.now();
     const startTs = typeof formStart === 'number' ? formStart : 0;
     if (startTs > 0 && (nowTs - startTs) < 2000) {
@@ -41,19 +83,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 额外：基础速率限制，按邮箱在 60 秒内仅允许提交一次
+    // 基础速率限制：按邮箱
     const lastSentMap = globalThis.__contactRateLimit ?? new Map<string, number>();
     const nowMs = Date.now();
-    const key = (email?.toLowerCase?.() || '').trim();
-    const last = key ? lastSentMap.get(key) : undefined;
-    if (last && (nowMs - last) < 60_000) {
+    const emailKey = (email?.toLowerCase?.() || '').trim();
+    const lastEmail = emailKey ? lastSentMap.get(emailKey) : undefined;
+    if (lastEmail && (nowMs - lastEmail) < 60_000) {
       return NextResponse.json(
         { error: 'Too many requests, please try again later' },
         { status: 429 }
       );
     }
-    if (key) lastSentMap.set(key, nowMs);
+    if (emailKey) lastSentMap.set(emailKey, nowMs);
     globalThis.__contactRateLimit = lastSentMap;
+
+    // 基础速率限制：按 IP
+    const ip = getClientIp(request);
+    if (ip !== 'unknown') {
+      const ipMap = globalThis.__contactRateLimitIp ?? new Map<string, number>();
+      const lastIp = ipMap.get(ip);
+      if (lastIp && (nowMs - lastIp) < 60_000) {
+        return NextResponse.json(
+          { error: 'Too many requests from your network, please try again later' },
+          { status: 429 }
+        );
+      }
+      ipMap.set(ip, nowMs);
+      globalThis.__contactRateLimitIp = ipMap;
+    }
+
+    // 一次性邮箱域名拦截
+    const domain = (email.split('@')[1] || '').toLowerCase();
+    if (domain && isDisposableDomain(domain)) {
+      return NextResponse.json(
+        { error: 'Disposable email addresses are not allowed. Please use a valid email.' },
+        { status: 422 }
+      );
+    }
+
+    // 姓名与留言的格式/语义校验
+    if (!validateName(name)) {
+      return NextResponse.json(
+        { error: 'Please enter your full name (first and last name) using letters only.' },
+        { status: 422 }
+      );
+    }
+    if (!validateMessage(message)) {
+      return NextResponse.json(
+        { error: 'Please provide a more detailed message (at least 10 words or 10 Chinese characters; English messages should include spaces).' },
+        { status: 422 }
+      );
+    }
 
     // 生产环境真实邮件发送逻辑保持不变
     // 创建邮件发送器
