@@ -397,7 +397,7 @@ function AntiqueFurnitureContent() {
               className={styles.categoryTabContainer}
               onMouseEnter={() => handleMouseEnter(category.slug)}
               onMouseLeave={handleMouseLeave}
-              onTouchStart={() => handleTouchStart(category.slug)}
+              // 移除容器级触摸事件，避免首次点击拦截导航
             >
               <button
                 className={`${styles.categoryTab} ${
@@ -408,7 +408,7 @@ function AntiqueFurnitureContent() {
                 {getCategoryButtonText(category)}
               </button>
               
-              {/* 下拉菜单指示器 */}
+              {/* 下拉菜单指示器，仅用于展开/收起下拉 */}
               <span 
                 className={`${styles.dropdownIndicator} ${
                   activeCategory === category.slug ? styles.active : ''
