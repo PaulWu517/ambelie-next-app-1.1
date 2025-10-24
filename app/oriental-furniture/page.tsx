@@ -44,6 +44,9 @@ function OrientalFurnitureContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+  // 别名映射：兼容旧的 chairs 到新的 seating
+  const slugAliasMap: Record<string, string> = { 'chairs': 'seating' };
+  const canonicalActiveCategory = slugAliasMap[activeCategory] || activeCategory;
 
   // 处理URL参数变化
   useEffect(() => {
@@ -63,7 +66,7 @@ function OrientalFurnitureContent() {
         // 获取东方家具相关的子分类，slug需要与页眉链接对应
         const orientalCategories = [
           { id: 1, name: 'SCREENS', slug: 'screens', description: 'Traditional oriental screens' },
-          { id: 2, name: 'CHAIRS', slug: 'chairs', description: 'Oriental style chairs' },
+          { id: 2, name: 'SEATING', slug: 'seating', description: 'Oriental style seating' },
           { id: 3, name: 'TABLES', slug: 'tables', description: 'Oriental dining and tea tables' },
           { id: 4, name: 'CABINETS & CUPBOARDS', slug: 'cabinets-and-cupboards', description: 'Traditional oriental cabinets and cupboards' },
           { id: 5, name: 'RUGS', slug: 'rugs', description: 'Oriental rugs and carpets' },
@@ -89,8 +92,19 @@ function OrientalFurnitureContent() {
       setLoading(true);
       const requestId = ++requestIdRef.current;
       try {
-        // 获取特定子分类的产品，参考category页面的实现
-        const query = `filters[category][slug][$eq]=${activeCategory}&populate[0]=main_image&populate[1]=hover_image`;
+        // 获取特定子分类的产品，参考category页面的实现（同时兼容oriental-前缀与chairs别名）
+        const candidateSlugs: string[] = [];
+        if (activeCategory && activeCategory !== canonicalActiveCategory) {
+          candidateSlugs.push(activeCategory);
+        }
+        candidateSlugs.push(canonicalActiveCategory);
+        if (!canonicalActiveCategory.startsWith('oriental-')) {
+          candidateSlugs.push(`oriental-${canonicalActiveCategory}`);
+        }
+        const inQuery = candidateSlugs
+          .map((slug, idx) => `filters[category][slug][$in][${idx}]=${slug}`)
+          .join('&');
+        const query = `${inQuery}&populate[0]=main_image&populate[1]=hover_image`;
         
         const response = await fetch(`${API_URL}/api/products?${query}`, {
           cache: 'no-store',
@@ -180,7 +194,7 @@ function OrientalFurnitureContent() {
             <button
               key={category.id}
               className={`${styles.categoryTab} ${
-                activeCategory === category.slug ? styles.active : ''
+                canonicalActiveCategory === category.slug ? styles.active : ''
               }`}
               onClick={() => handleCategoryChange(category.slug)}
             >
