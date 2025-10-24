@@ -5,12 +5,13 @@ import path from "path";
 export async function GET(_req: NextRequest) {
   const filePath = path.join(process.cwd(), "public", "assets", "vi", "avatar.png");
   try {
-    const file = await fs.readFile(filePath);
-    return new Response(file, {
+    const file = await fs.readFile(filePath); // Buffer
+    const body = new Uint8Array(file); // Convert to BodyInit-compatible type
+    return new Response(body, {
       headers: {
         "Content-Type": "image/png",
-        // Cache for 1 day on clients; CDN/proxy can cache longer if needed
-        "Cache-Control": "public, max-age=86400, immutable",
+        // 强制客户端不缓存，避免移动端长期持有旧图标
+        "Cache-Control": "public, max-age=0, must-revalidate",
       },
     });
   } catch (err) {

@@ -6,11 +6,13 @@ import path from 'path';
 export async function GET() {
   try {
     const filePath = path.join(process.cwd(), 'public', 'assets', 'vi', 'avatar.png');
-    const data = await fs.readFile(filePath);
-    return new Response(data, {
+    const data = await fs.readFile(filePath); // Buffer
+    const body = new Uint8Array(data); // Convert to BodyInit-compatible type
+    return new Response(body, {
       headers: {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
+        // 统一与 apple-touch-icon 的策略，确保客户端不缓存旧图标
+        'Cache-Control': 'public, max-age=0, must-revalidate',
       },
     });
   } catch (err) {
