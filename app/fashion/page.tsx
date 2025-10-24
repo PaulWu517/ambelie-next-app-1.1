@@ -592,7 +592,6 @@ function FashionContent() {
               className={styles.categoryTabContainer}
               onMouseEnter={() => handleMouseEnter(category.slug)}
               onMouseLeave={handleMouseLeave}
-              onTouchStart={() => handleTouchStart(category.slug)}
             >
               <button
                 className={`${styles.categoryTab} ${
