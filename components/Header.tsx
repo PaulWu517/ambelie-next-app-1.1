@@ -437,7 +437,7 @@ export default function Header() {
   // 更新导航链接结构
   const orientalFurnitureLinks = [
       { name: 'SCREENS', href: '/oriental-furniture?category=screens' },
-    { name: 'CHAIRS', href: '/oriental-furniture?category=chairs' },
+    { name: 'SEATING', href: '/oriental-furniture?category=seating' },
     { name: 'TABLES', href: '/oriental-furniture?category=tables' },
       { name: 'CABINETS & CUPBOARDS', href: '/oriental-furniture?category=cabinets-and-cupboards' },
       { name: 'RUGS', href: '/oriental-furniture?category=rugs' },
@@ -681,7 +681,7 @@ export default function Header() {
                 <h3><Link href="/oriental-furniture">SHOP BY CATEGORY</Link></h3>
                 <div className="oriental-single-row-container">
                   <Link href="/oriental-furniture?category=screens" className="oriental-category-link">SCREENS</Link>
-                  <Link href="/oriental-furniture?category=chairs" className="oriental-category-link">CHAIRS</Link>
+                  <Link href="/oriental-furniture?category=seating" className="oriental-category-link">SEATING</Link>
                   <Link href="/oriental-furniture?category=tables" className="oriental-category-link">TABLES</Link>
                   <Link href="/oriental-furniture?category=cabinets-and-cupboards" className="oriental-category-link">CABINETS & CUPBOARDS</Link>
                   <Link href="/oriental-furniture?category=rugs" className="oriental-category-link">RUGS</Link>
@@ -936,7 +936,7 @@ export default function Header() {
                   {mobileMenuExpanded['oriental'] && (
                     <ul className={styles.mobileSubmenu}>
                       <li><Link href="/oriental-furniture?category=screens" onClick={closeMobileMenu}>SCREENS</Link></li>
-                      <li><Link href="/oriental-furniture?category=chairs" onClick={closeMobileMenu}>CHAIRS</Link></li>
+                      <li><Link href="/oriental-furniture?category=seating" onClick={closeMobileMenu}>SEATING</Link></li>
                       <li><Link href="/oriental-furniture?category=tables" onClick={closeMobileMenu}>TABLES</Link></li>
                       <li><Link href="/oriental-furniture?category=cabinets-and-cupboards" onClick={closeMobileMenu}>CABINETS & CUPBOARDS</Link></li>
                       <li><Link href="/oriental-furniture?category=rugs" onClick={closeMobileMenu}>RUGS</Link></li>
