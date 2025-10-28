@@ -6,9 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate:favicon": "node scripts/generate-favicon.mjs",
+    "generate:favicon:adv": "node scripts/generate-favicon-advanced.mjs"
   },
   "dependencies": {
+    "@mediapipe/pose": "^0.5.1675469404",
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.4.0",
     "@types/nodemailer": "^6.4.17",
@@ -23,7 +27,9 @@
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "sharp": "^0.34.4",
     "stripe": "^19.1.0",
+    "undici": "^7.16.0",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
@@ -34,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "9.32.0",
     "eslint-config-next": "15.4.4",
+    "png-to-ico": "^3.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

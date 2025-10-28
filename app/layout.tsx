@@ -17,7 +17,7 @@ export const metadata: Metadata = {
       { url: "/assets/vi/avatar.png?v=3", sizes: "16x16", type: "image/png" }
     ],
     shortcut: [
-      { url: "/favicon.ico?v=3", type: "image/png" }
+      { url: "/favicon.ico", type: "image/x-icon" }
     ],
     apple: [
       { url: "/apple-touch-icon.png?v=3", sizes: "180x180", type: "image/png" }
@@ -38,6 +38,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/assets/vi/avatar.png?v=3" />
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/vi/avatar.png?v=3" />
         <link rel="icon" href="/favicon.ico?v=3" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
         <link rel="manifest" href="/site.webmanifest?v=3" />
         <link 
