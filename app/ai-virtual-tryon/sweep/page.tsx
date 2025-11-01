@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styles from '../VirtualTryOn.module.css';
-import { useSearchParams } from 'next/navigation';
 
 interface ParamGroup {
   name: string;
@@ -38,9 +37,7 @@ const SweepPage: React.FC = () => {
     return () => { if (header) header.style.display = ''; };
   }, []);
 
-  const search = useSearchParams();
-  const fashionUrl = search.get('fashion');
-  const modelUrl = search.get('model');
+  // Removed useSearchParams to avoid CSR bailout during prerender
 
   const [userImage, setUserImage] = useState<string | null>(null); // data URL
   const [refImage, setRefImage] = useState<string | null>(null);   // data URL 或远程 URL

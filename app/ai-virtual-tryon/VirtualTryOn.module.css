@@ -2,7 +2,7 @@
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 140px 20px 60px;
+  padding: 20px 20px 60px; /* further reduce top padding to shrink top gap */
   font-family: var(--font-body);
 }
 
@@ -94,6 +94,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  overflow: hidden; /* prevent image overflow beyond dashed frame */
 }
 
 .uploadedImage {
@@ -621,7 +622,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 100px 10px 40px;
+    padding: 44px 10px 40px; /* further reduce mobile top padding */
   }
   
   .mainContent {
@@ -686,9 +687,9 @@
   }
 }
 
-/* Specific style to reduce Model Reference image scale inside uploadArea */
+/* Ensure model/product image stays within dashed container height */
 .modelRefImage {
-  max-height: 250px; /* smaller than uploadArea height (300px) */
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;

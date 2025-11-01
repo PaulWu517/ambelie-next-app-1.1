@@ -591,7 +591,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         onSelect={(mode) => {
           setAiOpen(false);
           const target = `/ai-virtual-tryon/${product.slug}?mode=${encodeURIComponent(mode)}${fashionUrl ? `&fashion=${encodeURIComponent(fashionUrl)}` : ''}${modelUrl ? `&model=${encodeURIComponent(modelUrl)}` : ''}`;
-          window.location.href = target;
+          window.open(target, '_blank');
         }}
         productName={product.name}
         previewFashionUrl={fashionUrl || undefined}

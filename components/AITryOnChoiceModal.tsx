@@ -28,24 +28,12 @@ export default function AITryOnChoiceModal({ open, onClose, onSelect, productNam
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>Upload Full-Body Photo (Outfit Try-On)</div>
             <p style={cardDescStyle}>Upload your full-body photo. The system will use the product outfit image to perform garment replacement and generate the try-on result.</p>
-            {/* Outfit preview */}
-            {previewFashionUrl ? (
-              <img src={previewFashionUrl} alt="Fashion preview" style={previewImageStyle} />
-            ) : (
-              <div style={previewPlaceholderStyle}>No outfit preview available</div>
-            )}
             <button style={primaryBtnStyle} onClick={() => onSelect("outfit")}>Choose this mode</button>
           </div>
 
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>Upload Headshot (Model Photo)</div>
-            <p style={cardDescStyle}>Upload a clear headshot. The system will blend your face into the product’s model image to generate a professional photo.</p>
-            {/* Model preview */}
-            {previewModelUrl ? (
-              <img src={previewModelUrl} alt="Model preview" style={previewImageStyle} />
-            ) : (
-              <div style={previewPlaceholderStyle}>No model preview available</div>
-            )}
+            <p style={cardDescStyle}>Upload a clear headshot. The system will blend your face into the product's model image to generate a professional photo.</p>
             <button style={primaryBtnStyle} onClick={() => onSelect("headshot")}>Choose this mode</button>
           </div>
         </div>

@@ -22,6 +22,7 @@ const SlugTryOnPage: React.FC = () => {
   // Fetch prompts from backend fields depending on slug
   const [fashionPrompt, setFashionPrompt] = useState<string | null>(null);
   const [modelPrompt, setModelPrompt] = useState<string | null>(null);
+  const [productName, setProductName] = useState<string | null>(null);
   useEffect(() => {
     const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
     if (!slug) return;
@@ -36,6 +37,7 @@ const SlugTryOnPage: React.FC = () => {
         const prod = item.attributes ? item.attributes : item;
         setFashionPrompt(prod.fashionPrompt || null);
         setModelPrompt(prod.modelPrompt || null);
+        setProductName(prod.name || null);
       } catch (e) {
         console.warn('[slug tryon] fetch prompts failed', e);
       }
@@ -55,6 +57,8 @@ const SlugTryOnPage: React.FC = () => {
   const [showResult, setShowResult] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const baseResultRef = useRef<string | null>(null);
+  const centerPanelRef = useRef<HTMLDivElement | null>(null);
+  const resultAreaRef = useRef<HTMLDivElement | null>(null);
   const defaultWarp = { hip: 0, waist: 0, shoulder: 0, thigh: 0, upper_arm: 0, forearm: 0, calf: 0 };
   const [warpControls, setWarpControls] = useState(defaultWarp);
   const warpDebounce = useRef<number | null>(null);
@@ -136,6 +140,25 @@ const SlugTryOnPage: React.FC = () => {
     }
     setIsProcessing(true);
     setProcessingProgress(0);
+    
+    // Mobile only: auto-scroll to Try-On Result to reveal progress UI
+    setTimeout(() => {
+      try {
+        if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+          console.log('[slug tryon] Mobile detected, scrolling to result area');
+          const targetElement = centerPanelRef.current || resultAreaRef.current;
+          if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log('[slug tryon] Scroll initiated');
+          } else {
+            console.log('[slug tryon] Target element not found');
+          }
+        }
+      } catch (e) {
+        console.warn('[slug tryon] Scroll failed:', e);
+      }
+    }, 100);
+    
     if (progressIntervalRef.current) window.clearInterval(progressIntervalRef.current);
     {
       const start = Date.now();
@@ -237,17 +260,11 @@ const SlugTryOnPage: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>AI Virtual Try-On</h1>
-        <p className={styles.subtitle}>
-          Product: {slug} | Mode: {mode === 'outfit' ? 'Outfit Try-On (Full-Body Photo)' : 'Headshot to Model Photo'}
-        </p>
-        <a href={`/products/${slug}`} style={{ display: 'inline-block', marginTop: 10, color: '#333' }}>Back to Product Details</a>
-      </div>
+      {/* Header removed per requirement: no top textual description */}
 
       <div className={styles.mainContent}>
         <div className={styles.leftPanel}>
-          <h2 className={styles.sectionTitle}>Upload & Preview</h2>
+          <h2 className={styles.sectionTitle}>Upload Your Image</h2>
           <div className={styles.uploadSection}>
             <label htmlFor="userUpload" className={styles.uploadArea}>
               {userPreview ? (
@@ -276,10 +293,10 @@ const SlugTryOnPage: React.FC = () => {
 
           {mode === 'headshot' && (
             <div className={styles.uploadSection}>
-              <h3 style={{ marginBottom: 8, fontWeight: 400 }}>Product Image</h3>
+              <h3 style={{ marginBottom: 8, fontWeight: 400 }}>{productName || 'Product'}</h3>
               <div className={styles.productImageArea}>
                 {fashionUrl ? (
-                  <img src={fashionUrl} alt="Product Image" className={`${styles.uploadedImage} ${styles.modelRefImage}`} />
+                  <img src={fashionUrl} alt={productName || 'Product'} className={`${styles.uploadedImage} ${styles.modelRefImage}`} />
                 ) : (
                   <div className={styles.uploadPlaceholder}>No product image available</div>
                 )}
@@ -299,9 +316,9 @@ const SlugTryOnPage: React.FC = () => {
           </div>
         </div>
 
-        <div className={styles.centerPanel}>
-          <h2 className={styles.sectionTitle}>Try-On Result</h2>
-          <div className={styles.resultArea}>
+        <div className={styles.centerPanel} ref={centerPanelRef}>
+          <h2 className={styles.sectionTitle}>Ai Try-On Result</h2>
+          <div className={styles.resultArea} ref={resultAreaRef}>
             {isProcessing ? (
               <div className={styles.processing}>
                 <div className={styles.progressContainer}>
