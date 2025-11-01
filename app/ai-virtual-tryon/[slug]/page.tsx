@@ -282,12 +282,14 @@ const SlugTryOnPage: React.FC = () => {
 
           {mode === 'outfit' && (
             <div className={styles.uploadSection}>
-              <h3 style={{ marginBottom: 8 }}>Outfit Reference (from product)</h3>
-              {fashionUrl ? (
-                <img src={fashionUrl} alt="Fashion" className={styles.uploadedImage} />
-              ) : (
-                <div className={styles.uploadPlaceholder}>No outfit reference available</div>
-              )}
+              <h3 style={{ marginBottom: 8, fontWeight: 400 }}>{productName || 'Product'}</h3>
+              <div className={styles.productImageArea}>
+                {fashionUrl ? (
+                  <img src={fashionUrl} alt={productName || 'Product'} className={`${styles.uploadedImage} ${styles.modelRefImage}`} />
+                ) : (
+                  <div className={styles.uploadPlaceholder}>No product image available</div>
+                )}
+              </div>
             </div>
           )}
 
