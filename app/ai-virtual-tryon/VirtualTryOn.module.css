@@ -33,7 +33,7 @@
 
 .mainContent {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 0.90fr 1.15fr 0.95fr; /* widen center more for larger result */
   gap: 40px;
   max-width: 1400px;
   margin: 0 auto;
@@ -43,10 +43,12 @@
 .leftPanel {
   background: white;
   border-radius: 16px;
-  padding: 20px;
+  padding: 30px; /* unify bottom spacing */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
   height: fit-content;
+  display: flex;
+  flex-direction: column; /* allow bottom actions to anchor */
 }
 
 .sectionTitle {
@@ -68,7 +70,8 @@
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 200px;
+  min-height: 160px;
+  height: 200px; /* compact height to reduce column size */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -80,13 +83,26 @@
   background: #f5f5f5;
 }
 
+/* Product Image dashed container (same style as uploadArea, without pointer) */
+.productImageArea {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 160px;
+  height: 200px; /* compact to match uploadArea */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
 .uploadedImage {
   max-width: 100%;
-  max-height: 300px;
+  max-height: 100%; /* constrain to uploadArea fixed height */
   width: auto;
   height: auto;
   border-radius: 8px;
-  object-fit: cover;
+  object-fit: contain; /* keep aspect without overflow */
   margin: 0 auto;
   display: block;
 }
@@ -108,6 +124,13 @@
   opacity: 0.7;
 }
 
+/* Image variant for upload icon to ensure consistent sizing */
+.uploadIconImage {
+  width: 56px;
+  height: auto;
+  margin-bottom: 15px;
+  opacity: 0.85;
+}
 .uploadHint {
   font-size: 0.9rem;
   color: #999;
@@ -176,20 +199,28 @@
   padding: 30px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
 }
 
 .measurementsContainer {
   width: 100%;
+  flex: 1; /* take remaining vertical space */
+  display: flex;
+  flex-direction: column;
 }
 
 .sliders {
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
+  flex: 1; /* fill container height */
+  display: flex;
+  flex-direction: column; /* allow actions to push to bottom */
 }
 
 .sliderGroup {
-  margin-bottom: 25px;
+  margin-bottom: 16px; /* tighter spacing to reduce right panel height */
 }
 
 .sliderLabel {
@@ -249,19 +280,74 @@
   padding: 30px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
 }
 
 .resultArea {
   margin-bottom: 30px;
-  min-height: 300px;
+  /* min-height: 300px; */
+  height: 580px; /* enlarged to show bigger result image */
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; /* prevent image overflow beyond bounds */
 }
 
 .processing {
   text-align: center;
   color: #666;
+}
+
+/* Premium progress UI */
+.progressContainer {
+  width: min(640px, 85%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressBar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f0f2f5, #e6e9ef);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6c757d, #495057);
+  transition: width 0.2s ease;
+}
+
+.progressText {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: #555;
+}
+
+.progressPercent {
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.progressEta {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.processingHint {
+  color: #666;
+  font-size: 0.95rem;
 }
 
 .spinner {
@@ -282,39 +368,64 @@
 .result {
   text-align: center;
   width: 100%;
+  height: 100%; /* make child image's % heights resolve */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .resultImage {
-  margin-bottom: 20px;
-  width: 100%;
+  margin-bottom: 0; /* avoid extra vertical space in fixed area */
+  height: 100%; /* fill container height while keeping aspect */
+  max-width: 100%;
+  width: auto;
+  object-fit: contain; /* scale inside fixed box without cropping */
 }
 
 .resultPlaceholder {
-  background: #fafafa;
-  border: 2px dashed #d0d0d0;
+  background: linear-gradient(180deg, #fcfcfc 0%, #f7f7f8 100%);
+  border: 2px dashed #e3e3e3;
   border-radius: 12px;
-  padding: 60px 20px;
+  padding: 48px 20px;
   color: #666;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
+  height: 100%; /* match result image container height */
+  display: flex; /* center icon and texts */
+  flex-direction: column; /* stack icon and text vertically */
+  align-items: center;
+  justify-content: center;
+  gap: 12px; /* refined spacing for premium look */
+  box-sizing: border-box; /* include padding inside fixed height */
+  box-shadow: inset 0 1px 6px rgba(0, 0, 0, 0.06);
 }
 
 .resultPlaceholder:hover {
-  border-color: #999;
-  background: #f5f5f5;
+  border-color: #bdbdbd;
+  background: linear-gradient(180deg, #f9fafb 0%, #f2f3f5 100%);
 }
 
-.resultPlaceholder span {
+/* Dedicated icon style for result placeholder image */
+.resultIcon {
+  width: 72px;
+  height: auto;
+  margin-bottom: 4px;
+  opacity: 0.65;
+}
+
+/* Remove overly large font rule to prevent hint text from being huge */
+/* .resultPlaceholder span {
   font-size: 3rem;
   display: block;
   margin-bottom: 15px;
-}
+} */
 
 .resultActions {
   display: flex;
   gap: 10px;
   justify-content: center;
+  margin-top: auto; /* anchor actions to panel bottom */
 }
 
 .saveButton, .shareButton {
@@ -443,9 +554,79 @@
   }
 }
 
+/* 身型选择器样式 */
+.bodyTypeSelector {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.bodyTypeButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.bodyTypeButton {
+  flex: 1;
+  padding: 8px 16px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.bodyTypeButton:hover {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.bodyTypeButton.active {
+  border-color: #007bff;
+  background: #007bff;
+  color: white;
+}
+
+/* 等级指示器样式 */
+.levelIndicators {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+.levelDot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  transition: all 0.2s ease;
+}
+
+.levelDot.active {
+  background: #007bff;
+  color: white;
+  transform: scale(1.1);
+}
+
 @media (max-width: 768px) {
   .container {
-    padding: 120px 15px 40px;
+    padding: 100px 10px 40px;
+  }
+  
+  .mainContent {
+    grid-template-columns: 1fr;
+    gap: 30px;
   }
   
   .title {
@@ -472,6 +653,18 @@
   .feature {
     padding: 30px 20px;
   }
+  
+  .actionButtons {
+    flex-direction: column;
+  }
+  
+  .bodyTypeButtons {
+    flex-direction: column;
+  }
+  
+  .resultArea {
+    height: 520px; /* keep mobile comfortable height */
+  }
 }
 
 @media (max-width: 480px) {
@@ -487,4 +680,16 @@
   .uploadIcon {
     font-size: 2rem;
   }
+  
+  .resultArea {
+    height: 420px; /* smaller height for small phones */
+  }
+}
+
+/* Specific style to reduce Model Reference image scale inside uploadArea */
+.modelRefImage {
+  max-height: 250px; /* smaller than uploadArea height (300px) */
+  width: auto;
+  height: auto;
+  object-fit: contain;
 }

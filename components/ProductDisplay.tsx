@@ -9,6 +9,7 @@ import { useCollectionStore } from '@/lib/stores/collectionStore';
 import { Product as CartProduct } from '@/types';
 import styles from '../app/products/[slug]/ProductDetailPage.module.css';
 import QRCodeModal from './QRCodeModal';
+import AITryOnChoiceModal from './AITryOnChoiceModal';
 
 interface ImageItem {
   url: string;
@@ -31,6 +32,9 @@ interface Product {
   vrModelUrl?: string;
   vrUsdzUrl?: string;
   currencyKeyword?: string; // 新增：货币关键字（如 CNY, USD 等）
+  // 新增：AI试穿依赖的单媒体字段
+  fashionImage?: ImageItem | null;
+  modelImage?: ImageItem | null;
 }
 
 interface ProductDisplayProps {
@@ -106,6 +110,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchEndX, setTouchEndX] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const vrPageUrl = useMemo(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     return `${origin}/vr/${product.slug}`;
@@ -136,6 +141,23 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     alt: img.alternativeText || product.name
   })) || [];
 
+  // 判断媒体字段是否存在且有有效URL（兼容两种结构）
+  const hasMedia = (media: any) => {
+    if (!media) return false;
+    const url = (media as any).url || media?.data?.attributes?.url;
+    return !!(url && String(url).trim());
+  };
+  const hasAIInputs = hasMedia(product.fashionImage) && hasMedia(product.modelImage);
+
+  // 解析媒体的绝对 URL
+  const resolveMediaUrl = (media: any): string | null => {
+    if (!media) return null;
+    const raw = (media as any).url || media?.data?.attributes?.url;
+    if (!raw) return null;
+    return /^(https?:)?\/\//i.test(raw) ? raw : `${API_URL}${raw}`;
+  };
+  const fashionUrl = resolveMediaUrl(product.fashionImage);
+  const modelUrl = resolveMediaUrl(product.modelImage);
   const handleAddToCart = async () => {
     if (isInquiryOnly) return;
     
@@ -532,6 +554,18 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
                 <span className={styles.buttonText}>3D MODEL VIEW</span>
               </button>
             )}
+            {/* 新增：AI TRY ON 按钮（当 fashionImage 和 modelImage 都存在时显示），样式参考 3D MODEL VIEW */}
+            {hasAIInputs && (
+              <button
+                className={`${styles.actionButton} ${styles.inquireButton}`}
+                onClick={() => {
+                  // 打开选择弹窗，而不是直接跳转
+                  setAiOpen(true);
+                }}
+              >
+                <span className={styles.buttonText}>AI VIRTUAL TRY-ON</span>
+              </button>
+            )}
             <button 
               className={`${styles.actionButton} ${styles.addToCollectionButton}`}
               onClick={handleAddToCollection}
@@ -551,6 +585,18 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
       />
       {/* 保持 QRCodeModal 功能，用于引导到 VR 路由 */}
       <QRCodeModal open={qrOpen} targetUrl={vrPageUrl} onClose={() => setQrOpen(false)} />
+      <AITryOnChoiceModal
+        open={aiOpen}
+        onClose={() => setAiOpen(false)}
+        onSelect={(mode) => {
+          setAiOpen(false);
+          const target = `/ai-virtual-tryon/${product.slug}?mode=${encodeURIComponent(mode)}${fashionUrl ? `&fashion=${encodeURIComponent(fashionUrl)}` : ''}${modelUrl ? `&model=${encodeURIComponent(modelUrl)}` : ''}`;
+          window.location.href = target;
+        }}
+        productName={product.name}
+        previewFashionUrl={fashionUrl || undefined}
+        previewModelUrl={modelUrl || undefined}
+      />
     </>
   );
 }

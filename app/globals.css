@@ -3908,6 +3908,27 @@ body:has(.product-detail-container) main {
     width: 100%;
 }
 
+/* Disabled state for global submit-button */
+.submit-button:disabled {
+    color: #9e9e9e;
+    border-color: transparent; /* hide border when disabled */
+    background-color: rgba(0, 0, 0, 0.05);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.submit-button:disabled::before {
+    width: 0 !important;
+    background-color: transparent !important;
+}
+.submit-button:disabled:hover {
+    color: #9e9e9e;
+    border-color: transparent;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.submit-button:disabled:hover::before {
+    width: 0 !important;
+}
+
 
 .contact-section {
     margin-top: -20px !important;

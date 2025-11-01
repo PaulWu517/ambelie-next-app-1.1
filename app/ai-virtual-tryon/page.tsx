@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+
 import styles from './VirtualTryOn.module.css';
+import { applyPoseWarpToDataUrl } from '@/lib/vision/poseWarp';
 
 interface BodyMeasurements {
-  height: number;
-  weight: number;
-  shoulders: number;
-  chest: number;
-  waist: number;
-  hips: number;
-  arms: number;
-  legs: number;
+  height: number; // 具体数值，如170cm
+  bodyType: 'slim' | 'normal' | 'full'; // 身型选择：苗条型、正常型、丰满型
+  shoulders: number; // 1-5等级，3为正常
+  chest: number; // 1-5等级，3为正常
+  waist: number; // 1-5等级，3为正常
+  hips: number; // 1-5等级，3为正常
+  arms: number; // 1-5等级，3为正常
+  legs: number; // 1-5等级，3为正常
 }
 
 const VirtualTryOnPage: React.FC = () => {
@@ -33,21 +35,51 @@ const VirtualTryOnPage: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedClothing, setUploadedClothing] = useState<string | null>(null);
   const [uploadedResult, setUploadedResult] = useState<string | null>(null);
+  const [aiGeneratedResult, setAiGeneratedResult] = useState<{ base64: string; mimeType: string } | null>(null);
+
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurements>({
-    height: 170,
-    weight: 60,
-    shoulders: 40,
-    chest: 90,
-    waist: 75,
-    hips: 95,
-    arms: 60,
-    legs: 100
+    height: 170, // 默认170cm
+    bodyType: 'normal', // 默认正常身型
+    shoulders: 3, // 默认正常肩宽
+    chest: 3, // 默认正常胸围
+    waist: 3, // 默认正常腰围
+    hips: 3, // 默认正常臀围
+    arms: 3, // 默认正常臂围
+    legs: 3 // 默认正常腿长
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const clothingInputRef = useRef<HTMLInputElement>(null);
   const resultInputRef = useRef<HTMLInputElement>(null);
+
+  // 新增：与 Python GUI 一致的七个滑杆控制（百分比，-20~20）
+  const [warpControls, setWarpControls] = useState({
+    hip: 0,
+    waist: 0,
+    shoulder: 0,
+    thigh: 0,
+    upper_arm: 0,
+    forearm: 0,
+    calf: 0,
+  });
+  // 记录未变形的基准结果图，以便滑杆实时基于同一基准图进行变形
+  const baseResultRef = useRef<string | null>(null);
+  const warpDebounce = useRef<number | null>(null);
+
+  // 过滤 Mediapipe 的 XNNPACK 信息日志，避免 Next 重载红色错误浮层
+  useEffect(() => {
+    const origError = console.error;
+    console.error = (...args: any[]) => {
+      const msg = args?.[0];
+      if (typeof msg === 'string' && msg.includes('TensorFlow Lite XNNPACK delegate for CPU')) {
+        console.info('[mediapipe]', ...args);
+        return;
+      }
+      origError(...args);
+    };
+    return () => { console.error = origError; };
+  }, []);
 
   const clothingOptions = [
     { id: 'dress1', name: 'Elegant Evening Dress', image: '/assets/clothing/dress1.jpg' },
@@ -83,7 +115,12 @@ const VirtualTryOnPage: React.FC = () => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setUploadedResult(e.target?.result as string);
+        const url = e.target?.result as string;
+        setUploadedResult(url);
+        baseResultRef.current = url; // 设置基准图
+        // 上传后立即应用当前滑杆值
+        if (warpDebounce.current) window.clearTimeout(warpDebounce.current);
+        warpDebounce.current = window.setTimeout(applyWarpFromControls, 20);
       };
       reader.readAsDataURL(file);
     }
@@ -96,32 +133,113 @@ const VirtualTryOnPage: React.FC = () => {
     }));
   };
 
+  // 根据当前滑杆值进行变形（基于 baseResultRef 的原始图像）
+  const applyWarpFromControls = async () => {
+    if (!baseResultRef.current) return;
+    try {
+      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, warpControls);
+      setUploadedResult(adjusted);
+    } catch (e) {
+      console.warn('[warp] apply failed', e);
+    }
+  };
+
+  const handleControlChange = (key: keyof typeof warpControls, value: number) => {
+    setWarpControls(prev => ({ ...prev, [key]: value }));
+    if (warpDebounce.current) window.clearTimeout(warpDebounce.current);
+    warpDebounce.current = window.setTimeout(applyWarpFromControls, 80);
+  };
+
   const handleTryOn = async () => {
     if (!uploadedImage || !uploadedClothing) return;
-    
     setIsProcessing(true);
-    // Simulate AI processing
-    setTimeout(() => {
+    try {
+      const toBlob = async (dataUrl: string) => {
+        const res = await fetch(dataUrl);
+        return await res.blob();
+      };
+  
+      console.log('[tryon] start', { hasUser: !!uploadedImage, hasModel: !!uploadedClothing });
+  
+      const formData = new FormData();
+      formData.append('user_image', await toBlob(uploadedImage), 'user.jpg');
+      formData.append('model_image', await toBlob(uploadedClothing), 'model.jpg');
+      formData.append('measurements', JSON.stringify(bodyMeasurements));
+      formData.append('prompt', 'Replace the model\'s entire head with the user\'s identity; preserve clothing and pose; seamless blending at hairline and neck.');
+  
+      const resp = await fetch('/api/virtual-tryon', {
+        method: 'POST',
+        body: formData
+      });
+  
+      if (!resp.ok) {
+        let detail: any = null;
+        try { detail = await resp.json(); } catch { detail = await resp.text(); }
+        console.error('[tryon] api failed', detail);
+        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+      }
+  
+      const json = await resp.json();
+      console.log('[tryon] success', { mimeType: json?.mimeType, hasImage: !!json?.imageBase64 });
+      if (json?.imageBase64) {
+        const mime = json?.mimeType || 'image/png';
+        const baseDataUrl = `data:${mime};base64,${json.imageBase64}`;
+        setAiGeneratedResult({ base64: json.imageBase64, mimeType: mime });
+        // 保存基准图（未变形）
+        baseResultRef.current = baseDataUrl;
+        let adjustedUrl = baseDataUrl;
+        try {
+          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
+        } catch (e) {
+          console.warn('[tryon] pose warp failed', e);
+        }
+        setUploadedResult(adjustedUrl);
+        setShowResult(true);
+      } else {
+        setShowResult(true);
+      }
+    } catch (err) {
+      console.error('[tryon] error', err);
+      alert('Failed to generate: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
       setIsProcessing(false);
-      setShowResult(true);
-    }, 3000);
+    }
   };
 
   const resetAll = () => {
     setUploadedImage(null);
     setUploadedClothing(null);
     setUploadedResult(null);
+    setAiGeneratedResult(null);
     setShowResult(false);
     setBodyMeasurements({
       height: 170,
-      weight: 60,
-      shoulders: 40,
-      chest: 90,
-      waist: 75,
-      hips: 95,
-      arms: 60,
-      legs: 100
+      bodyType: 'normal',
+      shoulders: 3,
+      chest: 3,
+      waist: 3,
+      hips: 3,
+      arms: 3,
+      legs: 3
     });
+    setWarpControls({ hip: 0, waist: 0, shoulder: 0, thigh: 0, upper_arm: 0, forearm: 0, calf: 0 });
+    baseResultRef.current = null;
+  };
+
+  // 获取等级描述 - 改为英文
+  const getLevelDescription = (level: number): string => {
+    const descriptions = ['very small', 'smaller', 'normal', 'larger', 'very large'];
+    return descriptions[level - 1] || 'normal';
+  };
+
+  // 获取身型描述 - 改为英文
+  const getBodyTypeDescription = (type: string): string => {
+    const descriptions = {
+      'slim': 'Slim',
+      'normal': 'Normal', 
+      'full': 'Full'
+    };
+    return descriptions[type as keyof typeof descriptions] || 'Normal';
   };
 
   return (
@@ -187,20 +305,27 @@ const VirtualTryOnPage: React.FC = () => {
           <h2 className={styles.sectionTitle}>Adjust Body Measurements</h2>
           <div className={styles.measurementsContainer}>
             <div className={styles.sliders}>
-              {Object.entries(bodyMeasurements).map(([key, value]) => (
+              {[
+                { key: 'hip', label: 'Hip Width' },
+                { key: 'waist', label: 'Waist Width' },
+                { key: 'shoulder', label: 'Shoulder Width' },
+                { key: 'thigh', label: 'Thigh Width' },
+                { key: 'upper_arm', label: 'Upper Arm Width' },
+                { key: 'forearm', label: 'Forearm Width' },
+                { key: 'calf', label: 'Calf Width' },
+              ].map(({ key, label }) => (
                 <div key={key} className={styles.sliderGroup}>
                   <label className={styles.sliderLabel}>
-                    {key.charAt(0).toUpperCase() + key.slice(1)}
-                    <span className={styles.sliderValue}>
-                      {value}{key === 'height' ? 'cm' : key === 'weight' ? 'kg' : '%'}
-                    </span>
+                    {label}
+                    <span className={styles.sliderValue}>{(warpControls as any)[key]}%</span>
                   </label>
                   <input
                     type="range"
-                    min={key === 'height' ? 150 : key === 'weight' ? 40 : 20}
-                    max={key === 'height' ? 200 : key === 'weight' ? 120 : 120}
-                    value={value}
-                    onChange={(e) => handleMeasurementChange(key as keyof BodyMeasurements, parseInt(e.target.value))}
+                    min="-10"
+                    max="10"
+                    step="1"
+                    value={(warpControls as any)[key]}
+                    onChange={(e) => handleControlChange(key as keyof typeof warpControls, parseInt(e.target.value))}
                     className={styles.slider}
                   />
                 </div>
@@ -221,11 +346,13 @@ const VirtualTryOnPage: React.FC = () => {
             ) : showResult || uploadedResult ? (
               <div className={styles.resultArea}>
                 {uploadedResult ? (
-                  <img 
-                    src={uploadedResult} 
-                    alt="Try-on result" 
-                    className={styles.resultImage}
-                  />
+                  <div>
+                    <img 
+                      src={uploadedResult} 
+                      alt="Try-on result" 
+                      className={styles.resultImage}
+                    />
+                  </div>
                 ) : showResult ? (
                   <img 
                     src="/api/placeholder/300/400" 
