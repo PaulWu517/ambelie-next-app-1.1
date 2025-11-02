@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { applyPoseWarpToDataUrl } from '@/lib/vision/poseWarp';
 import { useParams, useSearchParams } from 'next/navigation';
+import { compressImage } from '@/lib/utils/imageCompression';
 import styles from '../VirtualTryOn.module.css';
 
 const SlugTryOnPage: React.FC = () => {
@@ -175,7 +176,21 @@ const SlugTryOnPage: React.FC = () => {
         return await res.blob();
       };
       const userBlob = await toBlob(userPreview);
-      const userFile = new File([userBlob], mode === 'outfit' ? 'user-fullbody.jpg' : 'user-headshot.jpg', { type: userBlob.type || 'image/jpeg' });
+      const originalFile = new File([userBlob], mode === 'outfit' ? 'user-fullbody.jpg' : 'user-headshot.jpg', { type: userBlob.type || 'image/jpeg' });
+      
+      // 压缩用户图片以减少传输时间
+      const userFile = await compressImage(originalFile, {
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 0.8,
+        outputFormat: 'jpeg'
+      });
+      
+      console.log('[slug tryon] image compression', { 
+        originalSize: originalFile.size, 
+        compressedSize: userFile.size, 
+        compressionRatio: (1 - userFile.size / originalFile.size).toFixed(2) 
+      });
       // 不再在前端抓取参考图，改为传 URL 由后端拉取，避免跨域
       const formData = new FormData();
       formData.append('user_image', userFile);

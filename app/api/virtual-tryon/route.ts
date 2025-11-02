@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProxyAgent } from 'undici';
 
+// Vercel 配置优化
+export const runtime = 'nodejs';
+export const preferredRegion = ['hkg1', 'sin1', 'nrt1']; // 香港、新加坡、东京 - 更接近 Google API
+export const maxDuration = 60; // 60秒超时
+
 // 使用 Gemini 2.5 Flash Image（Nano Banana）进行整头替换生成
 const MODEL = 'gemini-2.5-flash-image';
 
@@ -12,8 +17,21 @@ function buildPrompt(measurements?: any, extraPrompt?: string) {
 export async function POST(req: NextRequest) {
   const startedAt = Date.now();
   console.log('[virtual-tryon] start', { model: MODEL, ts: new Date().toISOString() });
+  
+  // 性能监控时间点
+  const perf = {
+    start: startedAt,
+    formParsed: 0,
+    imageProcessed: 0,
+    geminiCalled: 0,
+    geminiResponded: 0,
+    responseProcessed: 0
+  };
+  
   try {
     const form = await req.formData();
+    perf.formParsed = Date.now();
+    
     const userImage = form.get('user_image');
     const modelImage = form.get('model_image');
     const modelImageUrl = (form.get('model_image_url') as string) || '';
@@ -56,6 +74,7 @@ export async function POST(req: NextRequest) {
       modelMime = (modelImage as File).type || 'image/jpeg';
     } else {
       // 服务器端拉取参考图，规避前端跨域问题
+      const downloadStart = Date.now();
       try {
         const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
         const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
@@ -68,11 +87,14 @@ export async function POST(req: NextRequest) {
         modelBase64 = buf.toString('base64');
         const ct = resp.headers.get('content-type') || 'image/jpeg';
         modelMime = ct.split(';')[0];
+        console.log('[virtual-tryon] model image download', { durationMs: Date.now() - downloadStart, size: buf.length });
       } catch (e: any) {
         console.error('[virtual-tryon] network error downloading model_image_url', e?.message);
         return NextResponse.json({ error: 'Network error downloading model_image_url', message: e?.message || String(e) }, { status: 400 });
       }
     }
+    
+    perf.imageProcessed = Date.now();
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -87,7 +109,7 @@ export async function POST(req: NextRequest) {
     const systemInstruction = {
       role: 'system',
       parts: [
-        { text: 'Two input images are provided in order. Edit image #1 (the base/person). Use image #2 as clothing reference. Put the jacket from image #2 on the girl in image #1. Keep background, pose, and face unchanged. Return exactly one edited image of the person; avoid text or multi-panel outputs.' }
+        { text: 'You are a clothing replacement AI. Input: person image + clothing reference. Task: Replace person\'s clothing with reference clothing. Keep: original face, pose, background, lighting. Output: Single edited image only, no text, no collages.' }
       ]
     } as any;
 
@@ -104,7 +126,14 @@ export async function POST(req: NextRequest) {
           ]
         }
       ],
-      generationConfig: { temperature, topP, topK, candidateCount: 1, ...(seed !== undefined ? { seed } : {}) }
+      generationConfig: { 
+        temperature, 
+        topP, 
+        topK, 
+        candidateCount: 1, 
+        maxOutputTokens: 1024, // 限制输出token数量
+        ...(seed !== undefined ? { seed } : {}) 
+      }
     } as any;
 
     const controller = new AbortController();
@@ -126,8 +155,14 @@ export async function POST(req: NextRequest) {
       };
 
       console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher });
+      perf.geminiCalled = Date.now();
       resp = await fetch(endpoint, fetchOptions);
-      console.log('[virtual-tryon] gemini response', { status: resp.status, statusText: resp.statusText });
+      perf.geminiResponded = Date.now();
+      console.log('[virtual-tryon] gemini response', { 
+        status: resp.status, 
+        statusText: resp.statusText,
+        geminiDurationMs: perf.geminiResponded - perf.geminiCalled
+      });
     } catch (netErr: any) {
       clearTimeout(timeout);
       const duration = Date.now() - startedAt;
@@ -163,7 +198,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No image returned from Gemini', raw: data, durationMs: duration }, { status: 500 });
     }
 
-    console.log('[virtual-tryon] success', { mime: outMime, base64Len: outBase64.length, durationMs: Date.now() - startedAt });
+    perf.responseProcessed = Date.now();
+    const totalDuration = perf.responseProcessed - perf.start;
+    
+    console.log('[virtual-tryon] success', { 
+      mime: outMime, 
+      base64Len: outBase64.length, 
+      durationMs: totalDuration,
+      breakdown: {
+        formParsing: perf.formParsed - perf.start,
+        imageProcessing: perf.imageProcessed - perf.formParsed,
+        geminiCall: perf.geminiResponded - perf.geminiCalled,
+        responseProcessing: perf.responseProcessed - perf.geminiResponded,
+        total: totalDuration
+      }
+    });
     return NextResponse.json({ imageBase64: outBase64, mimeType: outMime });
   } catch (err: any) {
     const duration = Date.now() - startedAt;

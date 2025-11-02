@@ -2,7 +2,7 @@
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding: 20px 20px 60px; /* further reduce top padding to shrink top gap */
+  padding: 40px 20px 60px; /* increase top padding for better visual spacing */
   font-family: var(--font-body);
 }
 
@@ -622,7 +622,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 44px 10px 40px; /* further reduce mobile top padding */
+    padding: 80px 10px 40px; /* increase mobile top padding for better visual spacing */
   }
   
   .mainContent {
