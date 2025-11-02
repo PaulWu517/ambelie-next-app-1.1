@@ -57,6 +57,7 @@ const SlugTryOnPage: React.FC = () => {
   const [isApplying, setIsApplying] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
@@ -118,6 +119,36 @@ const SlugTryOnPage: React.FC = () => {
       setIsSharing(false);
     }
   };
+
+  // 图片放大功能
+  const handleImageClick = () => {
+    if (resultUrl) {
+      setShowImageModal(true);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowImageModal(false);
+  };
+
+  // 键盘事件监听
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showImageModal) {
+        setShowImageModal(false);
+      }
+    };
+
+    if (showImageModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showImageModal]);
 
   const handleUserUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -351,7 +382,14 @@ const SlugTryOnPage: React.FC = () => {
               </div>
             ) : resultUrl ? (
               <div className={styles.result}>
-                <img src={resultUrl} alt="Try-on result" className={styles.resultImage} />
+                <img 
+                  src={resultUrl} 
+                  alt="Try-on result" 
+                  className={styles.resultImage} 
+                  onClick={handleImageClick}
+                  style={{ cursor: 'pointer' }}
+                  title="点击放大查看"
+                />
               </div>
             ) : (
               <div className={styles.resultPlaceholder}>
@@ -422,6 +460,22 @@ const SlugTryOnPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 图片放大模态框 */}
+      {showImageModal && resultUrl && (
+        <div className={styles.imageModal} onClick={handleCloseModal}>
+          <div className={styles.imageModalContent} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.closeButton} onClick={handleCloseModal}>
+              ×
+            </button>
+            <img 
+              src={resultUrl} 
+              alt="Try-on result - enlarged" 
+              className={styles.enlargedImage}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

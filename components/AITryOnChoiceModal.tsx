@@ -13,18 +13,49 @@ type Props = {
 
 export default function AITryOnChoiceModal({ open, onClose, onSelect, productName, previewFashionUrl, previewModelUrl }: Props) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => { 
+    setMounted(true);
+    
+    // 检测是否为移动端
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
   if (!open || !mounted) return null;
+
+  // 根据设备类型动态调整样式
+  const dynamicCardsWrapStyle: React.CSSProperties = {
+    ...cardsWrapStyle,
+    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+    gap: isMobile ? 20 : 16,
+  };
+
+  const dynamicModalStyle: React.CSSProperties = {
+    ...modalStyle,
+    width: isMobile ? "100%" : 860,
+    maxWidth: isMobile ? "90vw" : "95vw",
+    padding: isMobile ? 20 : 24,
+  };
 
   return (
     <div style={overlayStyle} role="dialog" aria-modal="true" onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+      <div style={dynamicModalStyle} onClick={(e) => e.stopPropagation()}>
         <button onClick={onClose} style={closeBtnStyle} aria-label="Close">✕</button>
         <h3 style={titleStyle}>AI VIRTUAL TRY-ON</h3>
         <p style={subtitleStyle}>
           Choose a try-on mode for "{productName || 'this product'}":
         </p>
-        <div style={cardsWrapStyle}>
+        <div style={dynamicCardsWrapStyle}>
           <div style={cardStyle}>
             <div style={cardHeaderStyle}>Upload Full-Body Photo (Outfit Try-On)</div>
             <p style={cardDescStyle}>Upload your full-body photo. The system will use the product outfit image to perform garment replacement and generate the try-on result.</p>
