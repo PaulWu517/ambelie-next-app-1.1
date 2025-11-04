@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { applyPoseWarpToDataUrl } from '@/lib/vision/poseWarp';
 import { useParams, useSearchParams } from 'next/navigation';
-import { compressImage } from '@/lib/utils/imageCompression';
+ 
 import styles from '../VirtualTryOn.module.css';
 
 const SlugTryOnPage: React.FC = () => {
@@ -209,19 +209,8 @@ const SlugTryOnPage: React.FC = () => {
       const userBlob = await toBlob(userPreview);
       const originalFile = new File([userBlob], mode === 'outfit' ? 'user-fullbody.jpg' : 'user-headshot.jpg', { type: userBlob.type || 'image/jpeg' });
       
-      // 压缩用户图片以减少传输时间
-      const userFile = await compressImage(originalFile, {
-        maxWidth: 1024,
-        maxHeight: 1024,
-        quality: 0.8,
-        outputFormat: 'jpeg'
-      });
-      
-      console.log('[slug tryon] image compression', { 
-        originalSize: originalFile.size, 
-        compressedSize: userFile.size, 
-        compressionRatio: (1 - userFile.size / originalFile.size).toFixed(2) 
-      });
+      const userFile = originalFile;
+      console.log('[slug tryon] image prepared', { size: userFile.size });
       // 不再在前端抓取参考图，改为传 URL 由后端拉取，避免跨域
       const formData = new FormData();
       formData.append('user_image', userFile);
@@ -359,7 +348,9 @@ const SlugTryOnPage: React.FC = () => {
               disabled={isProcessing || !userPreview || !(mode === 'outfit' ? fashionUrl : modelUrl)}
               aria-busy={isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Try On Now'}
+              {isProcessing
+                ? 'Processing...'
+                : (resultUrl ? 'Try On Again' : 'Try On Now')}
             </button>
           </div>
         </div>
@@ -414,12 +405,12 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.measurementsContainer}>
             <div className={styles.sliders}>
               {[
-                { key: 'hip', label: 'Hip Width' },
-                { key: 'waist', label: 'Waist Width' },
                 { key: 'shoulder', label: 'Shoulder Width' },
-                { key: 'thigh', label: 'Thigh Width' },
                 { key: 'upper_arm', label: 'Upper Arm Width' },
+                { key: 'waist', label: 'Waist Width' },
                 { key: 'forearm', label: 'Forearm Width' },
+                { key: 'hip', label: 'Hip Width' },
+                { key: 'thigh', label: 'Thigh Width' },
                 { key: 'calf', label: 'Calf Width' },
               ].map(({ key, label }) => (
                 <div key={key} className={styles.sliderGroup}>

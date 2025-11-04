@@ -306,12 +306,12 @@ const VirtualTryOnPage: React.FC = () => {
           <div className={styles.measurementsContainer}>
             <div className={styles.sliders}>
               {[
-                { key: 'hip', label: 'Hip Width' },
-                { key: 'waist', label: 'Waist Width' },
                 { key: 'shoulder', label: 'Shoulder Width' },
-                { key: 'thigh', label: 'Thigh Width' },
                 { key: 'upper_arm', label: 'Upper Arm Width' },
+                { key: 'waist', label: 'Waist Width' },
                 { key: 'forearm', label: 'Forearm Width' },
+                { key: 'hip', label: 'Hip Width' },
+                { key: 'thigh', label: 'Thigh Width' },
                 { key: 'calf', label: 'Calf Width' },
               ].map(({ key, label }) => (
                 <div key={key} className={styles.sliderGroup}>
@@ -400,7 +400,9 @@ const VirtualTryOnPage: React.FC = () => {
               onClick={handleTryOn}
               disabled={!uploadedImage || !uploadedClothing || isProcessing}
             >
-              {isProcessing ? 'Processing...' : 'Try On Now'}
+              {isProcessing
+                ? 'Processing...'
+                : ((aiGeneratedResult || baseResultRef.current) ? 'Try On Again' : 'Try On Now')}
             </button>
             <button className={styles.resetButton} onClick={resetAll}>
               Reset All

@@ -10,7 +10,7 @@ export const maxDuration = 60; // 60秒超时
 const MODEL = 'gemini-2.5-flash-image';
 
 function buildPrompt(measurements?: any, extraPrompt?: string) {
-  const base = '';
+  const base = 'Maintain character consistency.';
   return extraPrompt ? `${base} ${extraPrompt}` : base;
 }
 

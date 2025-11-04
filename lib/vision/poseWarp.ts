@@ -219,18 +219,13 @@ export async function applyPoseWarpToDataUrl(dataUrl: string, measurements: Body
     const src33 = new Float32Array(33 * 2);
     for (let i = 0; i < 33; i++) { src33[i * 2] = lms[i].x * img.width; src33[i * 2 + 1] = lms[i].y * img.height; }
     // View sizing
-    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1200;
-    const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const maxImgW = Math.min(Math.floor(screenW * 0.65), 1000);
-    const maxImgH = Math.floor(screenH * 0.85);
-    const scale = Math.min(maxImgW / img.width, maxImgH / img.height);
-    const viewW = Math.max(1, Math.floor(img.width * scale));
-    const viewH = Math.max(1, Math.floor(img.height * scale));
+    const viewW = img.width;
+    const viewH = img.height;
     const canvas = document.createElement('canvas'); canvas.width = viewW; canvas.height = viewH;
     const ctx = canvas.getContext('2d')!; ctx.drawImage(img, 0, 0, viewW, viewH);
     const srcFull = appendMidPoints(src33, img.width, img.height);
     const srcPts = new Float32Array(srcFull.length);
-    for (let i = 0; i < srcFull.length / 2; i++) { srcPts[i * 2] = srcFull[i * 2] * scale; srcPts[i * 2 + 1] = srcFull[i * 2 + 1] * scale; }
+    for (let i = 0; i < srcFull.length / 2; i++) { srcPts[i * 2] = srcFull[i * 2]; srcPts[i * 2 + 1] = srcFull[i * 2 + 1]; }
     const dstPts = new Float32Array(srcPts.length); dstPts.set(srcPts);
     // indices
     const idx_ls = POSE_IDXS.left_shoulder, idx_rs = POSE_IDXS.right_shoulder;
