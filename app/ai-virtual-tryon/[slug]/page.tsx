@@ -261,13 +261,30 @@ const SlugTryOnPage: React.FC = () => {
         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
       // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
-      await diag('api-blob-start');
-      const blob = await resp.blob();
-      await diag('api-blob-success', { size: blob.size, type: blob.type });
-      const mime = blob.type || 'image/png';
-      await diag('dataurl-start');
-      const baseDataUrl = await blobToDataUrl(blob);
-      await diag('dataurl-success', { length: baseDataUrl.length });
+      const contentType = resp.headers.get('Content-Type') || '';
+      let mime = 'image/png';
+      let baseDataUrl: string;
+      if (contentType.startsWith('image/')) {
+        await diag('api-blob-start');
+        const blob = await resp.blob();
+        await diag('api-blob-success', { size: blob.size, type: blob.type });
+        mime = blob.type || 'image/png';
+        await diag('dataurl-start');
+        baseDataUrl = await blobToDataUrl(blob);
+        await diag('dataurl-success', { length: baseDataUrl.length });
+      } else {
+        await diag('api-json-start');
+        const data = await resp.json();
+        await diag('api-json-success', { hasUrl: !!data?.imageUrl });
+        const url = data?.imageUrl;
+        if (!url) throw new Error('No imageUrl in response');
+        await diag('download-start', { url });
+        const r2 = await fetch(url);
+        const blob = await r2.blob();
+        await diag('download-success', { size: blob.size, type: blob.type });
+        mime = blob.type || 'image/png';
+        baseDataUrl = await blobToDataUrl(blob);
+      }
       baseResultRef.current = baseDataUrl;
       let adjustedUrl = baseDataUrl;
       try {

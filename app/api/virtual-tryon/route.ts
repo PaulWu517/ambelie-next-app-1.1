@@ -1,6 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProxyAgent } from 'undici';
 
+async function uploadToStrapi(buffer: Buffer, mime: string, traceId: string) {
+  const base = process.env.STRAPI_URL || process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
+  const token = process.env.STRAPI_UPLOAD_TOKEN;
+  const folderName = process.env.STRAPI_UPLOAD_FOLDER_NAME || 'user_images';
+  const publicBase = process.env.STRAPI_PUBLIC_URL || base;
+  if (!token) {
+    console.warn('[virtual-tryon] upload skipped: missing STRAPI_UPLOAD_TOKEN');
+    return null;
+  }
+  try {
+    // Find folder id by name (if Upload folders feature is enabled)
+    let folderId: number | undefined;
+    try {
+      const respFolder = await fetch(`${base}/api/upload/folders?filters[name][$eq]=${encodeURIComponent(folderName)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (respFolder.ok) {
+        const jf = await respFolder.json();
+        const found = jf?.data?.[0];
+        folderId = found?.id;
+      }
+    } catch (e) {
+      console.warn('[virtual-tryon] query folders failed', (e as any)?.message);
+    }
+    // If not found, attempt to create
+    if (!folderId) {
+      try {
+        const respCreate = await fetch(`${base}/api/upload/folders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ name: folderName, path: `/${folderName}` })
+        });
+        if (respCreate.ok) {
+          const jc = await respCreate.json();
+          folderId = jc?.data?.id;
+        }
+      } catch (e) {
+        console.warn('[virtual-tryon] create folder failed', (e as any)?.message);
+      }
+    }
+
+    // Upload file
+    const fileName = `tryon-${traceId}.${mime.includes('png') ? 'png' : 'jpg'}`;
+    const blob = new Blob([buffer], { type: mime as any });
+    const fd = new FormData();
+    fd.append('files', blob, fileName);
+    if (folderId) fd.append('folder', String(folderId));
+    fd.append('fileInfo', JSON.stringify({ alternativeText: 'Ambelie Try-On Result', caption: traceId }));
+    const respUp = await fetch(`${base}/api/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd
+    });
+    if (!respUp.ok) {
+      const txt = await respUp.text();
+      console.warn('[virtual-tryon] upload failed', { status: respUp.status, txt });
+      return null;
+    }
+    const arr = await respUp.json();
+    const file = Array.isArray(arr) ? arr[0] : arr?.[0];
+    const url = file?.url || file?.data?.attributes?.url;
+    if (!url) return null;
+    const fullUrl = url.startsWith('http') ? url : `${publicBase}${url}`;
+    return { url: fullUrl, id: file?.id };
+  } catch (e: any) {
+    console.warn('[virtual-tryon] upload error', e?.message);
+    return null;
+  }
+}
+
 // Vercel 配置优化
 export const runtime = 'nodejs';
 export const preferredRegion = ['hkg1', 'sin1', 'nrt1']; // 香港、新加坡、东京 - 更接近 Google API
@@ -216,7 +286,7 @@ export async function POST(req: NextRequest) {
       },
       traceId
     });
-    // 改为直接返回二进制图片，减少大 JSON 传输的失败概率
+    // 优先：上传到 Strapi 媒体库的 user_images 文件夹，返回 URL；失败则回退为二进制图片
     const buf = Buffer.from(outBase64, 'base64');
     const perfHeader = JSON.stringify({
       formParsing: perf.formParsed - perf.start,
@@ -225,11 +295,17 @@ export async function POST(req: NextRequest) {
       responseProcessing: perf.responseProcessed - perf.geminiResponded,
       total: totalDuration
     });
+    const uploaded = await uploadToStrapi(buf, outMime, traceId);
+    if (uploaded?.url) {
+      return NextResponse.json({ imageUrl: uploaded.url, mimeType: outMime, traceId }, {
+        headers: { 'X-Trace-Id': traceId, 'X-Perf': perfHeader }
+      });
+    }
     return new NextResponse(buf, {
       headers: {
         'Content-Type': outMime,
         'Cache-Control': 'no-store',
-        'Content-Length': String(buf.length),
+        // 移除 Content-Length，避免代理层长度不一致导致 HTTP2 流重置
         'X-Trace-Id': traceId,
         'X-Perf': perfHeader
       }

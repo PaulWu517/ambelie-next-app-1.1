@@ -222,36 +222,75 @@ const VirtualTryOnPage: React.FC = () => {
       }
   
       // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
-      await diag('api-blob-start');
-      const blob = await resp.blob();
-      await diag('api-blob-success', { size: blob.size, type: blob.type });
-      console.log('[tryon] success', { mimeType: blob.type, size: blob.size });
-      if (blob && blob.size > 0) {
-        const mime = blob.type || 'image/png';
-        await diag('dataurl-start');
-        const baseDataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = (e) => reject(e);
-          reader.readAsDataURL(blob);
-        });
-        await diag('dataurl-success', { length: baseDataUrl.length });
-        setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
-        // 保存基准图（未变形）
-        baseResultRef.current = baseDataUrl;
-        let adjustedUrl = baseDataUrl;
-        try {
-          await diag('posewarp-start');
-          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
-          await diag('posewarp-success');
-        } catch (e) {
-          console.warn('[tryon] pose warp failed', e);
-          await diag('posewarp-error', String(e));
+      const contentType = resp.headers.get('Content-Type') || '';
+      let handled = false;
+      if (contentType.startsWith('image/')) {
+        await diag('api-blob-start');
+        const blob = await resp.blob();
+        await diag('api-blob-success', { size: blob.size, type: blob.type });
+        console.log('[tryon] success', { mimeType: blob.type, size: blob.size });
+        if (blob && blob.size > 0) {
+          const mime = blob.type || 'image/png';
+          await diag('dataurl-start');
+          const baseDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(blob);
+          });
+          await diag('dataurl-success', { length: baseDataUrl.length });
+          setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
+          // 保存基准图（未变形）
+          baseResultRef.current = baseDataUrl;
+          let adjustedUrl = baseDataUrl;
+          try {
+            await diag('posewarp-start');
+            adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
+            await diag('posewarp-success');
+          } catch (e) {
+            console.warn('[tryon] pose warp failed', e);
+            await diag('posewarp-error', String(e));
+          }
+          setUploadedResult(adjustedUrl);
+          setShowResult(true);
+          await diag('render-success');
+          handled = true;
         }
-        setUploadedResult(adjustedUrl);
-        setShowResult(true);
-        await diag('render-success');
       } else {
+        await diag('api-json-start');
+        const data = await resp.json();
+        await diag('api-json-success', { hasUrl: !!data?.imageUrl });
+        const url = data?.imageUrl;
+        if (url) {
+          await diag('download-start', { url });
+          const r2 = await fetch(url);
+          const blob = await r2.blob();
+          await diag('download-success', { size: blob.size, type: blob.type });
+          const mime = blob.type || 'image/png';
+          const baseDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(blob);
+          });
+          setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
+          baseResultRef.current = baseDataUrl;
+          let adjustedUrl = baseDataUrl;
+          try {
+            await diag('posewarp-start');
+            adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
+            await diag('posewarp-success');
+          } catch (e) {
+            console.warn('[tryon] pose warp failed', e);
+            await diag('posewarp-error', String(e));
+          }
+          setUploadedResult(adjustedUrl);
+          setShowResult(true);
+          await diag('render-success');
+          handled = true;
+        }
+      }
+      if (!handled) {
         setShowResult(true);
       }
     } catch (err) {
