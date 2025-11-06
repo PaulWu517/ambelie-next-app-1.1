@@ -181,7 +181,18 @@ const SlugTryOnPage: React.FC = () => {
       return;
     }
     setIsProcessing(true);
+    const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const diag = async (stage: string, message?: any, extra?: any) => {
+      try {
+        await fetch('/api/diagnostic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ traceId, stage, message, ts: new Date().toISOString(), extra })
+        });
+      } catch {}
+    };
     setProcessingProgress(0);
+    await diag('request-start', { mode, refUrl });
     
     // Mobile only: auto-scroll to Try-On Result to reveal progress UI
     setTimeout(() => {
@@ -238,29 +249,41 @@ const SlugTryOnPage: React.FC = () => {
       formData.append('model_image_url', refUrl);
       formData.append('measurements', JSON.stringify(null));
       formData.append('prompt', mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || ''));
+      formData.append('traceId', traceId);
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
-       const resp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      await diag('api-call');
+      const resp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      await diag('api-headers', { status: resp.status, ok: resp.ok }, { perf: resp.headers.get('X-Perf'), trace: resp.headers.get('X-Trace-Id') });
       if (!resp.ok) {
         let detail: any = null;
         try { detail = await resp.json(); } catch { detail = await resp.text(); }
         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
       // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
+      await diag('api-blob-start');
       const blob = await resp.blob();
+      await diag('api-blob-success', { size: blob.size, type: blob.type });
       const mime = blob.type || 'image/png';
+      await diag('dataurl-start');
       const baseDataUrl = await blobToDataUrl(blob);
+      await diag('dataurl-success', { length: baseDataUrl.length });
       baseResultRef.current = baseDataUrl;
       let adjustedUrl = baseDataUrl;
       try {
+        await diag('posewarp-start');
         adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls, { showKeypoints: false });
+        await diag('posewarp-success');
       } catch (e) {
         console.warn('[slug tryon] pose warp failed', e);
+        await diag('posewarp-error', String(e));
       }
       setResultUrl(adjustedUrl);
       setShowResult(true);
+      await diag('render-success');
     } catch (err) {
       console.error('[slug tryon] error', err);
+      try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
       alert('Failed to generate: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       if (progressIntervalRef.current) {

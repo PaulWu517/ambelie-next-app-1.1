@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     const modelImageUrl = (form.get('model_image_url') as string) || '';
     const measurementsStr = form.get('measurements') as string | null;
     const extraPrompt = (form.get('prompt') as string) || '';
+    const traceId = (form.get('traceId') as string) || `tryon-${Date.now()}`;
     const tempStr = form.get('temperature') as string | null;
     const temperature = tempStr ? Math.max(0, Math.min(2, parseFloat(tempStr))) : parseFloat(process.env.GENERATION_TEMPERATURE || '0');
     // 新增：topP/topK/seed
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
     const topP = topPStr ? Math.max(0, Math.min(1, parseFloat(topPStr))) : parseFloat(process.env.GENERATION_TOP_P || '0.98');
     const topK = topKStr ? Math.max(1, Math.min(50, parseInt(topKStr))) : parseInt(process.env.GENERATION_TOP_K || '20');
     const seed = seedStr ? parseInt(seedStr) : (process.env.GENERATION_SEED ? parseInt(process.env.GENERATION_SEED) : undefined);
-    console.log('[virtual-tryon] generationConfig', { temperature, topP, topK, seed });
+    console.log('[virtual-tryon] generationConfig', { temperature, topP, topK, seed, traceId });
 
     // 允许：user_image 必须为 File；model 输入可以是 File 或 URL
     if (!(userImage instanceof File) || (!modelImage && !modelImageUrl)) {
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const prompt = buildPrompt(measurements, extraPrompt);
-    console.log('[virtual-tryon] prompt built', { promptLength: prompt.length, prompt });
+    console.log('[virtual-tryon] prompt built', { promptLength: prompt.length, prompt, traceId });
 
     // 新增：明确的系统指令，约束图片角色与输出
     const systemInstruction = {
@@ -154,14 +155,15 @@ export async function POST(req: NextRequest) {
         ...(dispatcher ? { dispatcher } : {})
       };
 
-      console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher });
+      console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher, traceId });
       perf.geminiCalled = Date.now();
       resp = await fetch(endpoint, fetchOptions);
       perf.geminiResponded = Date.now();
       console.log('[virtual-tryon] gemini response', { 
         status: resp.status, 
         statusText: resp.statusText,
-        geminiDurationMs: perf.geminiResponded - perf.geminiCalled
+        geminiDurationMs: perf.geminiResponded - perf.geminiCalled,
+        traceId
       });
     } catch (netErr: any) {
       clearTimeout(timeout);
@@ -211,15 +213,25 @@ export async function POST(req: NextRequest) {
         geminiCall: perf.geminiResponded - perf.geminiCalled,
         responseProcessing: perf.responseProcessed - perf.geminiResponded,
         total: totalDuration
-      }
+      },
+      traceId
     });
     // 改为直接返回二进制图片，减少大 JSON 传输的失败概率
     const buf = Buffer.from(outBase64, 'base64');
+    const perfHeader = JSON.stringify({
+      formParsing: perf.formParsed - perf.start,
+      imageProcessing: perf.imageProcessed - perf.formParsed,
+      geminiCall: perf.geminiResponded - perf.geminiCalled,
+      responseProcessing: perf.responseProcessed - perf.geminiResponded,
+      total: totalDuration
+    });
     return new NextResponse(buf, {
       headers: {
         'Content-Type': outMime,
         'Cache-Control': 'no-store',
-        'Content-Length': String(buf.length)
+        'Content-Length': String(buf.length),
+        'X-Trace-Id': traceId,
+        'X-Perf': perfHeader
       }
     });
   } catch (err: any) {

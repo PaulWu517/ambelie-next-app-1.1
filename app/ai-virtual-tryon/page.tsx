@@ -154,6 +154,16 @@ const VirtualTryOnPage: React.FC = () => {
   const handleTryOn = async () => {
     if (!uploadedImage || !uploadedClothing) return;
     setIsProcessing(true);
+    const traceId = `page-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const diag = async (stage: string, message?: any, extra?: any) => {
+      try {
+        await fetch('/api/diagnostic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ traceId, stage, message, ts: new Date().toISOString(), extra })
+        });
+      } catch {}
+    };
     try {
       const toBlob = async (dataUrl: string) => {
         const res = await fetch(dataUrl);
@@ -195,11 +205,14 @@ const VirtualTryOnPage: React.FC = () => {
       formData.append('model_image', modelFile);
       formData.append('measurements', JSON.stringify(bodyMeasurements));
       formData.append('prompt', 'Replace the model\'s entire head with the user\'s identity; preserve clothing and pose; seamless blending at hairline and neck.');
+      formData.append('traceId', traceId);
   
+      await diag('api-call');
       const resp = await fetch('/api/virtual-tryon', {
         method: 'POST',
         body: formData
       });
+      await diag('api-headers', { status: resp.status, ok: resp.ok }, { perf: resp.headers.get('X-Perf'), trace: resp.headers.get('X-Trace-Id') });
   
       if (!resp.ok) {
         let detail: any = null;
@@ -209,32 +222,41 @@ const VirtualTryOnPage: React.FC = () => {
       }
   
       // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
+      await diag('api-blob-start');
       const blob = await resp.blob();
+      await diag('api-blob-success', { size: blob.size, type: blob.type });
       console.log('[tryon] success', { mimeType: blob.type, size: blob.size });
       if (blob && blob.size > 0) {
         const mime = blob.type || 'image/png';
+        await diag('dataurl-start');
         const baseDataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
           reader.onerror = (e) => reject(e);
           reader.readAsDataURL(blob);
         });
+        await diag('dataurl-success', { length: baseDataUrl.length });
         setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
         // 保存基准图（未变形）
         baseResultRef.current = baseDataUrl;
         let adjustedUrl = baseDataUrl;
         try {
+          await diag('posewarp-start');
           adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
+          await diag('posewarp-success');
         } catch (e) {
           console.warn('[tryon] pose warp failed', e);
+          await diag('posewarp-error', String(e));
         }
         setUploadedResult(adjustedUrl);
         setShowResult(true);
+        await diag('render-success');
       } else {
         setShowResult(true);
       }
     } catch (err) {
       console.error('[tryon] error', err);
+      try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
       alert('Failed to generate: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsProcessing(false);
