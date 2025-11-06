@@ -51,9 +51,19 @@ export async function getBufferFromCOS(key: string): Promise<{ buf: Buffer, mime
     cos.getObject({ Bucket: bucket, Region: region, Key: key }, (err: any, data: any) => {
       if (err) return reject(err);
       const body = data?.Body;
-      const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
-      const ct = data?.Headers?.['content-type'] || data?.ContentType || 'image/png';
-      resolve({ buf, mime: ct });
+      if (!body) {
+        return reject(new Error(`Empty body from COS for key: ${key}`));
+      }
+      try {
+        const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+        if (!buf || buf.length === 0) {
+          return reject(new Error(`Invalid buffer from COS for key: ${key}`));
+        }
+        const ct = data?.Headers?.['content-type'] || data?.ContentType || 'image/png';
+        resolve({ buf, mime: ct });
+      } catch (bufferErr: any) {
+        reject(new Error(`Buffer conversion failed for key: ${key}: ${bufferErr.message}`));
+      }
     });
   });
 }
