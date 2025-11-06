@@ -9,16 +9,19 @@ export async function GET(req: NextRequest, { params }: { params: { traceId: str
   const ext = (url.searchParams.get('ext') || 'png').toLowerCase();
   const basePath = process.env.TRYON_COS_BASE_PATH || 'tryon-results/';
   const key = `${basePath}${traceId}.${ext}`;
-  
-  console.log('[virtual-tryon-result] attempting to fetch from COS', { traceId, key });
-  
   try {
     const { buf, mime } = await getBufferFromCOS(key);
-    console.log('[virtual-tryon-result] successfully fetched from COS', { traceId, key, size: buf.length, mime });
-    return new NextResponse(buf, { headers: { 'Content-Type': mime || (ext === 'png' ? 'image/png' : 'image/jpeg'), 'Cache-Control': 'no-store' } });
+    // The Node.js Buffer from COS SDK might be backed by a SharedArrayBuffer,
+    // which is not compatible with Blob or NextResponse constructors.
+    // We must explicitly copy it into a new, non-shared ArrayBuffer.
+    const arrayBuffer = new ArrayBuffer(buf.length);
+    const view = new Uint8Array(arrayBuffer);
+    view.set(buf);
+
+    return new NextResponse(arrayBuffer, { headers: { 'Content-Type': mime || (ext === 'png' ? 'image/png' : 'image/jpeg'), 'Cache-Control': 'no-store' } });
   } catch (e: any) {
     const msg = e?.message || String(e);
-    console.error('[virtual-tryon-result] fetch from COS failed', { key, msg, traceId });
-    return NextResponse.json({ error: 'Not found', message: msg, key, traceId }, { status: 404 });
+    console.error('[virtual-tryon-result] fetch from COS failed', { key, msg });
+    return NextResponse.json({ error: 'Not found', message: msg, key }, { status: 404 });
   }
 }

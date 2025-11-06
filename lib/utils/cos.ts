@@ -3,10 +3,11 @@ import COS from 'cos-nodejs-sdk-v5';
 function getCosEnv() {
   const secretId = process.env.TENCENT_COS_SECRET_ID;
   const secretKey = process.env.TENCENT_COS_SECRET_KEY;
-  const bucket = process.env.TENCENT_COS_BUCKET;
-  const region = process.env.TENCENT_COS_REGION;
-  if (!secretId || !secretKey || !bucket || !region) {
-    throw new Error('Missing COS config: TENCENT_COS_SECRET_ID/TENCENT_COS_SECRET_KEY/TENCENT_COS_BUCKET/TENCENT_COS_REGION');
+  // 默认 bucket/region/CDN 域名，减少环境变量依赖
+  const bucket = process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639';
+  const region = process.env.TENCENT_COS_REGION || 'ap-guangzhou';
+  if (!secretId || !secretKey) {
+    throw new Error('Missing COS credentials: TENCENT_COS_SECRET_ID/TENCENT_COS_SECRET_KEY');
   }
   return { secretId, secretKey, bucket, region } as const;
 }
@@ -36,7 +37,7 @@ export async function uploadBufferToCOS(buf: Buffer, key: string, mime: string):
       ACL: 'public-read'
     }, (err: any, data: any) => {
       if (err) return reject(err);
-      const cdnDomain = process.env.TENCENT_COS_CDN_DOMAIN;
+      const cdnDomain = process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com';
       const base = cdnDomain ? cdnDomain.replace(/\/$/, '') : `https://${bucket}.cos.${region}.myqcloud.com`;
       const url = `${base}/${key}`;
       resolve({ url });
@@ -51,19 +52,9 @@ export async function getBufferFromCOS(key: string): Promise<{ buf: Buffer, mime
     cos.getObject({ Bucket: bucket, Region: region, Key: key }, (err: any, data: any) => {
       if (err) return reject(err);
       const body = data?.Body;
-      if (!body) {
-        return reject(new Error(`Empty body from COS for key: ${key}`));
-      }
-      try {
-        const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
-        if (!buf || buf.length === 0) {
-          return reject(new Error(`Invalid buffer from COS for key: ${key}`));
-        }
-        const ct = data?.Headers?.['content-type'] || data?.ContentType || 'image/png';
-        resolve({ buf, mime: ct });
-      } catch (bufferErr: any) {
-        reject(new Error(`Buffer conversion failed for key: ${key}: ${bufferErr.message}`));
-      }
+      const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+      const ct = data?.Headers?.['content-type'] || data?.ContentType || 'image/png';
+      resolve({ buf, mime: ct });
     });
   });
 }
