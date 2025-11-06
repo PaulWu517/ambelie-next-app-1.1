@@ -71,6 +71,15 @@ const SlugTryOnPage: React.FC = () => {
     return await res.blob();
   };
 
+  const blobToDataUrl = async (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const handleDownloadResult = async () => {
     if (!resultUrl) return;
     setIsDownloading(true);
@@ -237,9 +246,10 @@ const SlugTryOnPage: React.FC = () => {
         try { detail = await resp.json(); } catch { detail = await resp.text(); }
         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
-      const json = await resp.json();
-      const mime = json?.mimeType || 'image/png';
-      const baseDataUrl = `data:${mime};base64,${json?.imageBase64}`;
+      // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
+      const blob = await resp.blob();
+      const mime = blob.type || 'image/png';
+      const baseDataUrl = await blobToDataUrl(blob);
       baseResultRef.current = baseDataUrl;
       let adjustedUrl = baseDataUrl;
       try {

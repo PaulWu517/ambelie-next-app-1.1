@@ -213,7 +213,15 @@ export async function POST(req: NextRequest) {
         total: totalDuration
       }
     });
-    return NextResponse.json({ imageBase64: outBase64, mimeType: outMime });
+    // 改为直接返回二进制图片，减少大 JSON 传输的失败概率
+    const buf = Buffer.from(outBase64, 'base64');
+    return new NextResponse(buf, {
+      headers: {
+        'Content-Type': outMime,
+        'Cache-Control': 'no-store',
+        'Content-Length': String(buf.length)
+      }
+    });
   } catch (err: any) {
     const duration = Date.now() - startedAt;
     console.error('[virtual-tryon] server error', err);

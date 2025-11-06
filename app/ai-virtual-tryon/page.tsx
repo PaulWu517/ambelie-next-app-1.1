@@ -208,12 +208,18 @@ const VirtualTryOnPage: React.FC = () => {
         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
   
-      const json = await resp.json();
-      console.log('[tryon] success', { mimeType: json?.mimeType, hasImage: !!json?.imageBase64 });
-      if (json?.imageBase64) {
-        const mime = json?.mimeType || 'image/png';
-        const baseDataUrl = `data:${mime};base64,${json.imageBase64}`;
-        setAiGeneratedResult({ base64: json.imageBase64, mimeType: mime });
+      // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
+      const blob = await resp.blob();
+      console.log('[tryon] success', { mimeType: blob.type, size: blob.size });
+      if (blob && blob.size > 0) {
+        const mime = blob.type || 'image/png';
+        const baseDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = (e) => reject(e);
+          reader.readAsDataURL(blob);
+        });
+        setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
         // 保存基准图（未变形）
         baseResultRef.current = baseDataUrl;
         let adjustedUrl = baseDataUrl;
