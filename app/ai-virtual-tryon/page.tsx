@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 import styles from './VirtualTryOn.module.css';
 import { applyPoseWarpToDataUrl } from '@/lib/vision/poseWarp';
+import { compressImage } from '@/lib/utils/imageCompression';
 
 interface BodyMeasurements {
   height: number; // 具体数值，如170cm
@@ -162,8 +163,36 @@ const VirtualTryOnPage: React.FC = () => {
       console.log('[tryon] start', { hasUser: !!uploadedImage, hasModel: !!uploadedClothing });
   
       const formData = new FormData();
-      formData.append('user_image', await toBlob(uploadedImage), 'user.jpg');
-      formData.append('model_image', await toBlob(uploadedClothing), 'model.jpg');
+      const userBlob = await toBlob(uploadedImage);
+      const modelBlob = await toBlob(uploadedClothing);
+
+      // 将 Blob 转为 File
+      let userFile = new File([userBlob], 'user.jpg', { type: userBlob.type || 'image/jpeg' });
+      let modelFile = new File([modelBlob], 'model.jpg', { type: modelBlob.type || 'image/jpeg' });
+
+      // 云端限制保护：仅当超限时进行轻量压缩（默认阈值 ≈ 9.5MB）
+      const MAX_MB = 9.5;
+      if (userFile.size > MAX_MB * 1024 * 1024) {
+        try {
+          const compressed = await compressImage(userFile, { maxWidth: 2048, maxHeight: 2048, quality: 0.9, outputFormat: 'jpeg' });
+          console.log('[tryon] user image compressed due to size', { before: userFile.size, after: compressed.size });
+          userFile = compressed;
+        } catch (e) {
+          console.warn('[tryon] user compress failed, using original', e);
+        }
+      }
+      if (modelFile.size > MAX_MB * 1024 * 1024) {
+        try {
+          const compressed = await compressImage(modelFile, { maxWidth: 2048, maxHeight: 2048, quality: 0.9, outputFormat: 'jpeg' });
+          console.log('[tryon] model image compressed due to size', { before: modelFile.size, after: compressed.size });
+          modelFile = compressed;
+        } catch (e) {
+          console.warn('[tryon] model compress failed, using original', e);
+        }
+      }
+
+      formData.append('user_image', userFile);
+      formData.append('model_image', modelFile);
       formData.append('measurements', JSON.stringify(bodyMeasurements));
       formData.append('prompt', 'Replace the model\'s entire head with the user\'s identity; preserve clothing and pose; seamless blending at hairline and neck.');
   
