@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getBufferFromCOS } from '@/lib/utils/cos';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest, { params }: { params: { traceId: string } }) {
-  const traceId = params.traceId;
+export async function GET(req: Request, ctx: { params: Promise<{ traceId: string }> }) {
+  const { traceId } = await ctx.params;
   const url = new URL(req.url);
   const ext = (url.searchParams.get('ext') || 'png').toLowerCase();
   const basePath = process.env.TRYON_COS_BASE_PATH || 'tryon-results/';
