@@ -44,9 +44,14 @@ async function uploadToStrapi(buffer: Buffer, mime: string, traceId: string) {
 
     // Upload file
     const fileName = `tryon-${traceId}.${mime.includes('png') ? 'png' : 'jpg'}`;
-    const blob = new Blob([buffer], { type: mime as any });
+    // 将 Node Buffer 转换为 Uint8Array，这是 BlobPart 的一种安全类型
+    const uint8Array = new Uint8Array(buffer);
+    // 在 Node.js (Undici) 环境下优先使用 File；若不可用则降级为 Blob
+    const filePart: any = (typeof File !== 'undefined')
+      ? new File([uint8Array], fileName, { type: mime })
+      : new Blob([uint8Array], { type: mime as any });
     const fd = new FormData();
-    fd.append('files', blob, fileName);
+    fd.append('files', filePart, fileName);
     if (folderId) fd.append('folder', String(folderId));
     fd.append('fileInfo', JSON.stringify({ alternativeText: 'Ambelie Try-On Result', caption: traceId }));
     const respUp = await fetch(`${base}/api/upload`, {
