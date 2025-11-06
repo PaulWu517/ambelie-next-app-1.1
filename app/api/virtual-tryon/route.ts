@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProxyAgent } from 'undici';
+import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
 
 // Vercel 配置优化
 export const runtime = 'nodejs';
@@ -216,8 +217,18 @@ export async function POST(req: NextRequest) {
       },
       traceId
     });
-    // 改为直接返回二进制图片，减少大 JSON 传输的失败概率
+    // 上传到腾讯云 COS，并返回 imageUrl 以避免大响应体传输
     const buf = Buffer.from(outBase64, 'base64');
+    const key = buildTryonKey(traceId, outMime);
+    let imageUrl: string | null = null;
+    try {
+      const uploaded = await uploadBufferToCOS(buf, key, outMime);
+      imageUrl = uploaded.url;
+    } catch (uploadErr: any) {
+      console.error('[virtual-tryon] COS upload failed', uploadErr?.message || uploadErr);
+      return NextResponse.json({ error: 'Upload to COS failed', message: uploadErr?.message || String(uploadErr), traceId }, { status: 502 });
+    }
+
     const perfHeader = JSON.stringify({
       formParsing: perf.formParsed - perf.start,
       imageProcessing: perf.imageProcessed - perf.formParsed,
@@ -225,14 +236,16 @@ export async function POST(req: NextRequest) {
       responseProcessing: perf.responseProcessed - perf.geminiResponded,
       total: totalDuration
     });
-    return new NextResponse(buf, {
-      headers: {
-        'Content-Type': outMime,
-        'Cache-Control': 'no-store',
-        'X-Trace-Id': traceId,
-        'X-Perf': perfHeader
-      }
-    });
+    return NextResponse.json(
+      { imageUrl, traceId, mime: outMime, perf: {
+        formParsing: perf.formParsed - perf.start,
+        imageProcessing: perf.imageProcessed - perf.formParsed,
+        geminiCall: perf.geminiResponded - perf.geminiCalled,
+        responseProcessing: perf.responseProcessed - perf.geminiResponded,
+        total: totalDuration
+      } },
+      { headers: { 'X-Trace-Id': traceId, 'X-Perf': perfHeader } }
+    );
   } catch (err: any) {
     const duration = Date.now() - startedAt;
     console.error('[virtual-tryon] server error', err);

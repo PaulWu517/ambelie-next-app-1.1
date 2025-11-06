@@ -221,39 +221,54 @@ const VirtualTryOnPage: React.FC = () => {
         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
   
-      // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
-      await diag('api-blob-start');
-      const blob = await resp.blob();
-      await diag('api-blob-success', { size: blob.size, type: blob.type });
-      console.log('[tryon] success', { mimeType: blob.type, size: blob.size });
-      if (blob && blob.size > 0) {
-        const mime = blob.type || 'image/png';
-        await diag('dataurl-start');
-        const baseDataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = (e) => reject(e);
-          reader.readAsDataURL(blob);
-        });
-        await diag('dataurl-success', { length: baseDataUrl.length });
-        setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
-        // 保存基准图（未变形）
-        baseResultRef.current = baseDataUrl;
-        let adjustedUrl = baseDataUrl;
-        try {
-          await diag('posewarp-start');
-          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
-          await diag('posewarp-success');
-        } catch (e) {
-          console.warn('[tryon] pose warp failed', e);
-          await diag('posewarp-error', String(e));
-        }
-        setUploadedResult(adjustedUrl);
-        setShowResult(true);
-        await diag('render-success');
-      } else {
-        setShowResult(true);
+      // 新：后端返回 JSON { imageUrl, traceId, mime }，前端按 URL 下载
+      await diag('api-json-start');
+      const data = await resp.json();
+      await diag('api-json-success', { imageUrl: data?.imageUrl, traceId: data?.traceId, mime: data?.mime });
+      const imageUrl: string = data?.imageUrl;
+      const trace = data?.traceId;
+      const mime = (data?.mime as string) || 'image/png';
+      const ext = mime.includes('png') ? 'png' : 'jpg';
+      if (!imageUrl) {
+        throw new Error('API did not return imageUrl');
       }
+      await diag('download-start', { imageUrl });
+      let imgResp = await fetch(imageUrl, { cache: 'no-store' });
+      if (!imgResp.ok) {
+        await diag('download-fallback-proxy', { status: imgResp.status });
+        const proxyUrl = `/api/virtual-tryon/result/${trace}?ext=${ext}`;
+        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
+        if (!imgResp.ok) {
+          const txt = await imgResp.text().catch(() => '');
+          throw new Error(`Proxy fetch failed: ${imgResp.status} ${txt}`);
+        }
+      }
+      await diag('download-success', { status: imgResp.status });
+      const blob = await imgResp.blob();
+      await diag('api-blob-success', { size: blob.size, type: blob.type });
+      console.log('[tryon] success', { mimeType: mime, size: blob.size });
+      const baseDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(blob);
+      });
+      await diag('dataurl-success', { length: baseDataUrl.length });
+      setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: mime });
+      // 保存基准图（未变形）
+      baseResultRef.current = baseDataUrl;
+      let adjustedUrl = baseDataUrl;
+      try {
+        await diag('posewarp-start');
+        adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
+        await diag('posewarp-success');
+      } catch (e) {
+        console.warn('[tryon] pose warp failed', e);
+        await diag('posewarp-error', String(e));
+      }
+      setUploadedResult(adjustedUrl);
+      setShowResult(true);
+      await diag('render-success');
     } catch (err) {
       console.error('[tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}

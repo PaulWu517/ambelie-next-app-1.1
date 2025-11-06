@@ -260,11 +260,31 @@ const SlugTryOnPage: React.FC = () => {
         try { detail = await resp.json(); } catch { detail = await resp.text(); }
         throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
       }
-      // 新：后端返回二进制图片，前端以 Blob 读取并转为 DataURL
-      await diag('api-blob-start');
-      const blob = await resp.blob();
+      // 新：后端返回 JSON { imageUrl, traceId, mime }，前端按 URL 下载
+      await diag('api-json-start');
+      const data = await resp.json();
+      await diag('api-json-success', { imageUrl: data?.imageUrl, traceId: data?.traceId, mime: data?.mime });
+      const imageUrl: string = data?.imageUrl;
+      const trace = data?.traceId;
+      const mime = (data?.mime as string) || 'image/png';
+      const ext = mime.includes('png') ? 'png' : 'jpg';
+      if (!imageUrl) {
+        throw new Error('API did not return imageUrl');
+      }
+      await diag('download-start', { imageUrl });
+      let imgResp = await fetch(imageUrl, { cache: 'no-store' });
+      if (!imgResp.ok) {
+        await diag('download-fallback-proxy', { status: imgResp.status });
+        const proxyUrl = `/api/virtual-tryon/result/${trace}?ext=${ext}`;
+        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
+        if (!imgResp.ok) {
+          const txt = await imgResp.text().catch(() => '');
+          throw new Error(`Proxy fetch failed: ${imgResp.status} ${txt}`);
+        }
+      }
+      await diag('download-success', { status: imgResp.status });
+      const blob = await imgResp.blob();
       await diag('api-blob-success', { size: blob.size, type: blob.type });
-      const mime = blob.type || 'image/png';
       await diag('dataurl-start');
       const baseDataUrl = await blobToDataUrl(blob);
       await diag('dataurl-success', { length: baseDataUrl.length });
