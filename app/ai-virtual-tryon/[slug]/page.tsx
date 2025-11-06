@@ -255,14 +255,22 @@ const SlugTryOnPage: React.FC = () => {
       await diag('api-call');
       const resp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
       await diag('api-headers', { status: resp.status, ok: resp.ok }, { perf: resp.headers.get('X-Perf'), trace: resp.headers.get('X-Trace-Id') });
+      // 安全错误处理：clone 一份用于日志，避免二次读取同一响应体
+      const respLog = resp.clone();
       if (!resp.ok) {
-        let detail: any = null;
-        try { detail = await resp.json(); } catch { detail = await resp.text(); }
-        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        const errText = await respLog.text().catch(() => '');
+        throw new Error(`HTTP ${resp.status}: ${errText}`);
       }
-      // 新：后端返回 JSON { imageUrl, traceId, mime }，前端按 URL 下载
+      // 新：后端返回 JSON { imageUrl, traceId, mime }，前端按 URL 下载（只读一次）
       await diag('api-json-start');
-      const data = await resp.json();
+      let data: any;
+      try {
+        data = await resp.json();
+      } catch (e) {
+        const errText = await respLog.text().catch(() => '');
+        await diag('error', `JSON parse failed: ${String(e)}; body: ${errText}`);
+        throw e;
+      }
       await diag('api-json-success', { imageUrl: data?.imageUrl, traceId: data?.traceId, mime: data?.mime });
       const imageUrl: string = data?.imageUrl;
       const trace = data?.traceId;
@@ -278,7 +286,7 @@ const SlugTryOnPage: React.FC = () => {
         const proxyUrl = `/api/virtual-tryon/result/${trace}?ext=${ext}`;
         imgResp = await fetch(proxyUrl, { cache: 'no-store' });
         if (!imgResp.ok) {
-          const txt = await imgResp.text().catch(() => '');
+          const txt = await imgResp.clone().text().catch(() => '');
           throw new Error(`Proxy fetch failed: ${imgResp.status} ${txt}`);
         }
       }
