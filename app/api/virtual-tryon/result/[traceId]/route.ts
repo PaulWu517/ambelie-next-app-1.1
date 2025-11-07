@@ -42,7 +42,8 @@ export async function HEAD(req: Request, ctx: { params: Promise<{ traceId: strin
   // 允许客户端不指定扩展名，通过 HEAD 探测两种可能
   const basePath = process.env.TRYON_COS_BASE_PATH || 'tryon-results/';
   const keys = [`${basePath}${traceId}.png`, `${basePath}${traceId}.jpg`];
-  for (const k of keys) {
+  // 并发检查两种扩展，优先返回先就绪的结果
+  const checks = keys.map(async (k) => {
     try {
       const meta = await objectExistsInCOS(k);
       if (meta.exists) {
@@ -51,7 +52,12 @@ export async function HEAD(req: Request, ctx: { params: Promise<{ traceId: strin
         if (meta.contentLength) headers.set('Content-Length', String(meta.contentLength));
         return new NextResponse(null, { status: 200, headers });
       }
-    } catch { /* ignore and try next */ }
+    } catch { /* ignore */ }
+    return null;
+  });
+  const settled = await Promise.allSettled(checks);
+  for (const s of settled) {
+    if (s.status === 'fulfilled' && s.value) return s.value;
   }
   return new NextResponse(null, { status: 404, headers: { 'Cache-Control': 'no-store' } });
 }

@@ -9,6 +9,7 @@ export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
 export const maxDuration = 60;
 
 const MODEL = 'gemini-2.5-flash-image';
+const DEBUG = process.env.VIRTUAL_TRYON_DEBUG === '1';
 
 function buildPrompt(measurements?: any, extraPrompt?: string) {
   const base = 'Maintain character consistency.';
@@ -19,7 +20,7 @@ function buildPrompt(measurements?: any, extraPrompt?: string) {
 // It throws a serializable object on error, and returns a serializable object on success.
 async function handleVirtualTryon(req: NextRequest) {
   const startedAt = Date.now();
-  console.log('[virtual-tryon] start', { model: MODEL, ts: new Date().toISOString() });
+  if (DEBUG) console.log('[virtual-tryon] start', { model: MODEL, ts: new Date().toISOString() });
   
   const perf = {
     start: startedAt,
@@ -48,14 +49,14 @@ async function handleVirtualTryon(req: NextRequest) {
     const topP = topPStr ? Math.max(0, Math.min(1, parseFloat(topPStr))) : parseFloat(process.env.GENERATION_TOP_P || '0.98');
     const topK = topKStr ? Math.max(1, Math.min(50, parseInt(topKStr))) : parseInt(process.env.GENERATION_TOP_K || '20');
     const seed = seedStr ? parseInt(seedStr) : (process.env.GENERATION_SEED ? parseInt(process.env.GENERATION_SEED) : undefined);
-    console.log('[virtual-tryon] generationConfig', { temperature, topP, topK, seed, traceId });
+    if (DEBUG) console.log('[virtual-tryon] generationConfig', { temperature, topP, topK, seed, traceId });
 
     if (!(userImage instanceof File) || (!modelImage && !modelImageUrl)) {
       console.warn('[virtual-tryon] missing inputs', { hasUserFile: userImage instanceof File, hasModelFile: modelImage instanceof File, hasModelUrl: !!modelImageUrl });
       throw { error: 'Missing images: user_image (File) and model_image (File or model_image_url) are required.', status: 400 };
     }
 
-    console.log('[virtual-tryon] input meta', {
+    if (DEBUG) console.log('[virtual-tryon] input meta', {
       userType: (userImage as File).type, userSize: (userImage as File).size,
       modelType: modelImage instanceof File ? (modelImage as File).type : 'via-url',
       modelUrl: modelImage instanceof File ? undefined : modelImageUrl,
@@ -63,7 +64,7 @@ async function handleVirtualTryon(req: NextRequest) {
     });
 
     const measurements = measurementsStr ? JSON.parse(measurementsStr) : null;
-    console.log('[virtual-tryon] measurements', measurements);
+    if (DEBUG) console.log('[virtual-tryon] measurements', measurements);
 
     const toBase64 = async (file: File) => Buffer.from(await file.arrayBuffer()).toString('base64');
     const userBase64 = await toBase64(userImage as File);
@@ -86,7 +87,7 @@ async function handleVirtualTryon(req: NextRequest) {
         modelBase64 = buf.toString('base64');
         const ct = resp.headers.get('content-type') || 'image/jpeg';
         modelMime = ct.split(';')[0];
-        console.log('[virtual-tryon] model image download', { durationMs: Date.now() - downloadStart, size: buf.length });
+        if (DEBUG) console.log('[virtual-tryon] model image download', { durationMs: Date.now() - downloadStart, size: buf.length });
       } catch (e: any) {
         console.error('[virtual-tryon] network error downloading model_image_url', e?.message);
         if (e.error) throw e; // re-throw our own structured error
@@ -103,7 +104,7 @@ async function handleVirtualTryon(req: NextRequest) {
     }
 
     const prompt = buildPrompt(measurements, extraPrompt);
-    console.log('[virtual-tryon] prompt built', { promptLength: prompt.length, prompt, traceId });
+    if (DEBUG) console.log('[virtual-tryon] prompt built', { promptLength: prompt.length, prompt, traceId });
 
     const systemInstruction = {
       role: 'system',
@@ -150,11 +151,11 @@ async function handleVirtualTryon(req: NextRequest) {
         ...(dispatcher ? { dispatcher } : {})
       };
 
-      console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher, traceId });
+      if (DEBUG) console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher, traceId });
       perf.geminiCalled = Date.now();
       resp = await fetch(endpoint, fetchOptions);
       perf.geminiResponded = Date.now();
-      console.log('[virtual-tryon] gemini response', { 
+      if (DEBUG) console.log('[virtual-tryon] gemini response', { 
         status: resp.status, 
         statusText: resp.statusText,
         geminiDurationMs: perf.geminiResponded - perf.geminiCalled,
@@ -198,7 +199,7 @@ async function handleVirtualTryon(req: NextRequest) {
     perf.responseProcessed = Date.now();
     const totalDuration = perf.responseProcessed - perf.start;
     
-    console.log('[virtual-tryon] success', { 
+    if (DEBUG) console.log('[virtual-tryon] success', { 
       mime: outMime, 
       base64Len: outBase64.length, 
       durationMs: totalDuration,

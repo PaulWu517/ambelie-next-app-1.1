@@ -182,17 +182,24 @@ const SlugTryOnPage: React.FC = () => {
     }
     setIsProcessing(true);
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const diag = async (stage: string, message?: any, extra?: any) => {
+    const diag = (stage: string, message?: any, extra?: any) => {
       try {
-        await fetch('/api/diagnostic', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ traceId, stage, message, ts: new Date().toISOString(), extra })
-        });
+        const payload = { traceId, stage, message, ts: new Date().toISOString(), extra };
+        if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
+          const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+          navigator.sendBeacon('/api/diagnostic', blob);
+        } else {
+          void fetch('/api/diagnostic', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(() => {});
+        }
       } catch {}
     };
     setProcessingProgress(0);
-    await diag('request-start', { mode, refUrl });
+    diag('request-start', { mode, refUrl });
     
     // Mobile only: auto-scroll to Try-On Result to reveal progress UI
     setTimeout(() => {
@@ -215,7 +222,7 @@ const SlugTryOnPage: React.FC = () => {
     if (progressIntervalRef.current) window.clearInterval(progressIntervalRef.current);
     {
       const start = Date.now();
-      const rampDuration = 15000; // reach 99% then tail wait
+      const rampDuration = 20000; // reach 99% in 20s then tail wait
       progressIntervalRef.current = window.setInterval(() => {
         const elapsed = Date.now() - start;
         const pct = Math.min(99, Math.round((elapsed / rampDuration) * 99));
@@ -252,10 +259,10 @@ const SlugTryOnPage: React.FC = () => {
       formData.append('traceId', traceId);
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
-      await diag('api-call');
+      diag('api-call');
       const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
-      // 两阶段流程：通过 HEAD 轮询结果是否可读
-      await diag('head-poll-start');
+      // 两阶段流程：通过 HEAD 轮询结果是否可读（动态间隔）
+      diag('head-poll-start');
       const deadlineMs = 60_000;
       const pollStart = Date.now();
       let foundExt: 'png' | 'jpg' | null = null;
@@ -263,41 +270,56 @@ const SlugTryOnPage: React.FC = () => {
         const head = await fetch(`/api/virtual-tryon/result/${traceId}`, { method: 'HEAD', cache: 'no-store' });
         if (head.ok) {
           foundExt = (head.headers.get('X-Found-Ext') as any) || 'png';
-          await diag('head-200', { ext: foundExt });
+          diag('head-200', { ext: foundExt });
           break;
         }
-        await new Promise(r => setTimeout(r, 1500));
+        const elapsed = Date.now() - pollStart;
+        const interval = elapsed < 20_000 ? 1200 : 700;
+        await new Promise(r => setTimeout(r, interval));
       }
       if (!foundExt) {
-        await diag('head-timeout');
+        diag('head-timeout');
         throw new Error('Timeout waiting for result image');
       }
-      const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
-      await diag('download-start', { proxyUrl });
-      const imgResp = await fetch(proxyUrl, { cache: 'no-store' });
+      // CDN 直链优先，代理回退
+      const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
+      const basePath = (process.env.NEXT_PUBLIC_TRYON_COS_BASE_PATH || 'tryon-results/').replace(/\/?$/, '/');
+      const cdnUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
+      diag('download-start', { cdnUrl });
+      let imgResp = await fetch(cdnUrl, { cache: 'no-store' });
       if (!imgResp.ok) {
-        const txt = await imgResp.clone().text().catch(() => '');
-        throw new Error(`Result fetch failed: ${imgResp.status} ${txt}`);
+        diag('download-fallback-proxy', { status: imgResp.status });
+        const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
+        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
+        if (!imgResp.ok) {
+          const txt = await imgResp.clone().text().catch(() => '');
+          throw new Error(`Result fetch failed: ${imgResp.status} ${txt}`);
+        }
       }
-      await diag('download-success', { status: imgResp.status });
+      diag('download-success', { status: imgResp.status });
       const blob = await imgResp.blob();
-      await diag('api-blob-success', { size: blob.size, type: blob.type });
-      await diag('dataurl-start');
+      diag('api-blob-success', { size: blob.size, type: blob.type });
+      // 先用 Blob URL 即显，提升体感速度
+      const objUrl = URL.createObjectURL(blob);
+      setResultUrl(objUrl);
+      setShowResult(true);
+      diag('dataurl-start');
       const baseDataUrl = await blobToDataUrl(blob);
-      await diag('dataurl-success', { length: baseDataUrl.length });
+      diag('dataurl-success', { length: baseDataUrl.length });
       baseResultRef.current = baseDataUrl;
       let adjustedUrl = baseDataUrl;
       try {
-        await diag('posewarp-start');
+        diag('posewarp-start');
         adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls, { showKeypoints: false });
-        await diag('posewarp-success');
+        diag('posewarp-success');
       } catch (e) {
         console.warn('[slug tryon] pose warp failed', e);
-        await diag('posewarp-error', String(e));
+        diag('posewarp-error', String(e));
       }
+      URL.revokeObjectURL(objUrl);
       setResultUrl(adjustedUrl);
       setShowResult(true);
-      await diag('render-success');
+      diag('render-success');
     } catch (err) {
       console.error('[slug tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
