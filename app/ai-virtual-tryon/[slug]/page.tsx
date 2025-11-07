@@ -261,14 +261,22 @@ const SlugTryOnPage: React.FC = () => {
         const errText = await respLog.text().catch(() => '');
         throw new Error(`HTTP ${resp.status}: ${errText}`);
       }
-      // 新：后端返回 JSON { imageUrl, traceId, mime }，前端按 URL 下载（只读一次）
-      await diag('api-json-start');
+      // 流式响应处理
+      await diag('api-stream-start');
       let data: any;
       try {
-        data = await resp.json();
+        const reader = resp.body!.getReader();
+        const decoder = new TextDecoder();
+        let result = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          result += decoder.decode(value, { stream: true });
+        }
+        data = JSON.parse(result);
       } catch (e) {
         const errText = await respLog.text().catch(() => '');
-        await diag('error', `JSON parse failed: ${String(e)}; body: ${errText}`);
+        await diag('error', `Stream/JSON parse failed: ${String(e)}; body: ${errText}`);
         throw e;
       }
       await diag('api-json-success', { imageUrl: data?.imageUrl, traceId: data?.traceId, mime: data?.mime });

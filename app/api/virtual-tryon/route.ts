@@ -5,10 +5,9 @@ import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
 // Vercel 配置优化
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const preferredRegion = ['hkg1', 'sin1', 'nrt1']; // 香港、新加坡、东京 - 更接近 Google API
-export const maxDuration = 60; // 60秒超时
+export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
+export const maxDuration = 60;
 
-// 使用 Gemini 2.5 Flash Image（Nano Banana）进行整头替换生成
 const MODEL = 'gemini-2.5-flash-image';
 
 function buildPrompt(measurements?: any, extraPrompt?: string) {
@@ -16,11 +15,12 @@ function buildPrompt(measurements?: any, extraPrompt?: string) {
   return extraPrompt ? `${base} ${extraPrompt}` : base;
 }
 
-export async function POST(req: NextRequest) {
+// The core logic is moved into this function.
+// It throws a serializable object on error, and returns a serializable object on success.
+async function handleVirtualTryon(req: NextRequest) {
   const startedAt = Date.now();
   console.log('[virtual-tryon] start', { model: MODEL, ts: new Date().toISOString() });
   
-  // 性能监控时间点
   const perf = {
     start: startedAt,
     formParsed: 0,
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
     const traceId = (form.get('traceId') as string) || `tryon-${Date.now()}`;
     const tempStr = form.get('temperature') as string | null;
     const temperature = tempStr ? Math.max(0, Math.min(2, parseFloat(tempStr))) : parseFloat(process.env.GENERATION_TEMPERATURE || '0');
-    // 新增：topP/topK/seed
     const topPStr = form.get('topP') as string | null;
     const topKStr = form.get('topK') as string | null;
     const seedStr = form.get('seed') as string | null;
@@ -51,13 +50,11 @@ export async function POST(req: NextRequest) {
     const seed = seedStr ? parseInt(seedStr) : (process.env.GENERATION_SEED ? parseInt(process.env.GENERATION_SEED) : undefined);
     console.log('[virtual-tryon] generationConfig', { temperature, topP, topK, seed, traceId });
 
-    // 允许：user_image 必须为 File；model 输入可以是 File 或 URL
     if (!(userImage instanceof File) || (!modelImage && !modelImageUrl)) {
       console.warn('[virtual-tryon] missing inputs', { hasUserFile: userImage instanceof File, hasModelFile: modelImage instanceof File, hasModelUrl: !!modelImageUrl });
-      return NextResponse.json({ error: 'Missing images: user_image (File) and model_image (File or model_image_url) are required.' }, { status: 400 });
+      throw { error: 'Missing images: user_image (File) and model_image (File or model_image_url) are required.', status: 400 };
     }
 
-    // 记录输入元数据（如果是 URL 则记录 URL）
     console.log('[virtual-tryon] input meta', {
       userType: (userImage as File).type, userSize: (userImage as File).size,
       modelType: modelImage instanceof File ? (modelImage as File).type : 'via-url',
@@ -76,7 +73,6 @@ export async function POST(req: NextRequest) {
       modelBase64 = await toBase64(modelImage as File);
       modelMime = (modelImage as File).type || 'image/jpeg';
     } else {
-      // 服务器端拉取参考图，规避前端跨域问题
       const downloadStart = Date.now();
       try {
         const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
@@ -84,7 +80,7 @@ export async function POST(req: NextRequest) {
         const resp = await fetch(modelImageUrl, { method: 'GET', ...(dispatcher ? { dispatcher } : {}) });
         if (!resp.ok) {
           console.error('[virtual-tryon] fetch model_image_url failed', { status: resp.status, statusText: resp.statusText, url: modelImageUrl });
-          return NextResponse.json({ error: 'Failed to download model_image_url', status: resp.status, statusText: resp.statusText }, { status: 400 });
+          throw { error: 'Failed to download model_image_url', status: resp.status, statusText: resp.statusText };
         }
         const buf = Buffer.from(await resp.arrayBuffer());
         modelBase64 = buf.toString('base64');
@@ -93,7 +89,8 @@ export async function POST(req: NextRequest) {
         console.log('[virtual-tryon] model image download', { durationMs: Date.now() - downloadStart, size: buf.length });
       } catch (e: any) {
         console.error('[virtual-tryon] network error downloading model_image_url', e?.message);
-        return NextResponse.json({ error: 'Network error downloading model_image_url', message: e?.message || String(e) }, { status: 400 });
+        if (e.error) throw e; // re-throw our own structured error
+        throw { error: 'Network error downloading model_image_url', message: e?.message || String(e), status: 400 };
       }
     }
     
@@ -102,13 +99,12 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error('[virtual-tryon] missing GEMINI_API_KEY');
-      return NextResponse.json({ error: 'Server missing GEMINI_API_KEY. Please set it in .env.local' }, { status: 500 });
+      throw { error: 'Server missing GEMINI_API_KEY. Please set it in .env.local', status: 500 };
     }
 
     const prompt = buildPrompt(measurements, extraPrompt);
     console.log('[virtual-tryon] prompt built', { promptLength: prompt.length, prompt, traceId });
 
-    // 新增：明确的系统指令，约束图片角色与输出
     const systemInstruction = {
       role: 'system',
       parts: [
@@ -116,7 +112,6 @@ export async function POST(req: NextRequest) {
       ]
     } as any;
 
-    // 将图片顺序设为：第1张为人物底图（user_image），第2张为服装参考（model_image），最后是文本提示
     const payload = {
       systemInstruction,
       contents: [
@@ -134,7 +129,7 @@ export async function POST(req: NextRequest) {
         topP, 
         topK, 
         candidateCount: 1, 
-        maxOutputTokens: 1024, // 限制输出token数量
+        maxOutputTokens: 1024,
         ...(seed !== undefined ? { seed } : {}) 
       }
     } as any;
@@ -149,9 +144,7 @@ export async function POST(req: NextRequest) {
       const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
       const fetchOptions: any = {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
         signal: controller.signal,
         ...(dispatcher ? { dispatcher } : {})
@@ -171,7 +164,7 @@ export async function POST(req: NextRequest) {
       clearTimeout(timeout);
       const duration = Date.now() - startedAt;
       console.error('[virtual-tryon] network error', netErr?.message);
-      return NextResponse.json({ error: 'Network failure when calling Gemini', message: netErr?.message || String(netErr), durationMs: duration }, { status: 502 });
+      throw { error: 'Network failure when calling Gemini', message: netErr?.message || String(netErr), durationMs: duration, status: 502 };
     }
 
     clearTimeout(timeout);
@@ -180,7 +173,7 @@ export async function POST(req: NextRequest) {
     if (!resp.ok) {
       const duration = Date.now() - startedAt;
       console.error('[virtual-tryon] api error', { status: resp.status, details: data });
-      return NextResponse.json({ error: 'Gemini API error', status: resp.status, statusText: resp.statusText, details: data, durationMs: duration }, { status: 500 });
+      throw { error: 'Gemini API error', status: resp.status, statusText: resp.statusText, details: data, durationMs: duration };
     }
 
     const parts = data?.candidates?.[0]?.content?.parts ?? [];
@@ -199,7 +192,7 @@ export async function POST(req: NextRequest) {
     if (!outBase64) {
       const duration = Date.now() - startedAt;
       console.warn('[virtual-tryon] no image in response', { partsCount: parts?.length, sample: parts?.[0] });
-      return NextResponse.json({ error: 'No image returned from Gemini', raw: data, durationMs: duration }, { status: 500 });
+      throw { error: 'No image returned from Gemini', raw: data, durationMs: duration, status: 500 };
     }
 
     perf.responseProcessed = Date.now();
@@ -218,7 +211,7 @@ export async function POST(req: NextRequest) {
       },
       traceId
     });
-    // 上传到腾讯云 COS，并返回 imageUrl 以避免大响应体传输
+    
     const buf = Buffer.from(outBase64, 'base64');
     const key = buildTryonKey(traceId, outMime);
     let imageUrl: string | null = null;
@@ -227,29 +220,55 @@ export async function POST(req: NextRequest) {
       imageUrl = uploaded.url;
     } catch (uploadErr: any) {
       console.error('[virtual-tryon] COS upload failed', uploadErr?.message || uploadErr);
-      return NextResponse.json({ error: 'Upload to COS failed', message: uploadErr?.message || String(uploadErr), traceId }, { status: 502 });
+      throw { error: 'Upload to COS failed', message: uploadErr?.message || String(uploadErr), traceId, status: 502 };
     }
 
-    const perfHeader = JSON.stringify({
+    const perfData = {
       formParsing: perf.formParsed - perf.start,
       imageProcessing: perf.imageProcessed - perf.formParsed,
       geminiCall: perf.geminiResponded - perf.geminiCalled,
       responseProcessing: perf.responseProcessed - perf.geminiResponded,
       total: totalDuration
-    });
-    return NextResponse.json(
-      { imageUrl, traceId, mime: outMime, perf: {
-        formParsing: perf.formParsed - perf.start,
-        imageProcessing: perf.imageProcessed - perf.formParsed,
-        geminiCall: perf.geminiResponded - perf.geminiCalled,
-        responseProcessing: perf.responseProcessed - perf.geminiResponded,
-        total: totalDuration
-      } },
-      { headers: { 'X-Trace-Id': traceId, 'X-Perf': perfHeader } }
-    );
+    };
+
+    return { imageUrl, traceId, mime: outMime, perf: perfData };
+
   } catch (err: any) {
     const duration = Date.now() - startedAt;
-    console.error('[virtual-tryon] server error', err);
-    return NextResponse.json({ error: 'Server error', message: err?.message || String(err), durationMs: duration, stack: err?.stack }, { status: 500 });
+    console.error('[virtual-tryon] unhandled server error', err);
+    // Ensure the thrown object is serializable and has a consistent shape
+    if (err.error) { // re-throw if it's already our structured error
+        throw { ...err, durationMs: duration };
+    }
+    throw { error: 'Unhandled server error', message: err?.message || String(err), durationMs: duration, stack: err?.stack, status: 500 };
   }
+}
+
+export async function POST(req: NextRequest) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Clone the request to read it in the main function and in the background processing.
+        const result = await handleVirtualTryon(req);
+        controller.enqueue(encoder.encode(JSON.stringify(result)));
+      } catch (error) {
+        // The error from handleVirtualTryon is a serializable object.
+        // We should also include a status code if available, for client-side handling.
+        const errorPayload = typeof error === 'object' && error !== null ? error : { error: 'Unknown error' };
+        controller.enqueue(encoder.encode(JSON.stringify(errorPayload)));
+      } finally {
+        controller.close();
+      }
+    }
+  });
+
+  return new NextResponse(stream, {
+    status: 200, // Always 200, as the stream itself is successfully delivered.
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-cache, no-transform', // Important for streaming
+    }
+  });
 }
