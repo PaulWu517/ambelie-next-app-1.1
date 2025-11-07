@@ -248,16 +248,16 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      // 心跳：避免长时间无下行数据导致边缘网关 524
+      const heartbeat = setInterval(() => controller.enqueue(encoder.encode(' \n')), 5000);
       try {
-        // Clone the request to read it in the main function and in the background processing.
         const result = await handleVirtualTryon(req);
         controller.enqueue(encoder.encode(JSON.stringify(result)));
       } catch (error) {
-        // The error from handleVirtualTryon is a serializable object.
-        // We should also include a status code if available, for client-side handling.
         const errorPayload = typeof error === 'object' && error !== null ? error : { error: 'Unknown error' };
         controller.enqueue(encoder.encode(JSON.stringify(errorPayload)));
       } finally {
+        clearInterval(heartbeat);
         controller.close();
       }
     }
@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
       'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'no-cache, no-transform', // Important for streaming
+      'Cache-Control': 'no-store, no-transform', // Important for streaming and avoiding caching
     }
   });
 }

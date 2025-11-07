@@ -58,3 +58,24 @@ export async function getBufferFromCOS(key: string): Promise<{ buf: Buffer, mime
     });
   });
 }
+
+// 仅检查对象是否存在，返回少量元信息（更轻量）
+export async function objectExistsInCOS(key: string): Promise<{ exists: boolean, contentType?: string, contentLength?: number }> {
+  const { bucket, region } = getCosEnv();
+  const cos = getCosClient();
+  return new Promise((resolve) => {
+    // Tencent COS SDK 支持 headObject；若出现 404 或 NoSuchResource，认为不存在
+    // 其他错误也按不存在处理，以避免阻塞主流程
+    cos.headObject({ Bucket: bucket, Region: region, Key: key }, (err: any, data: any) => {
+      if (err) {
+        // 常见返回：{ statusCode: 404, code: 'NoSuchResource' }
+        return resolve({ exists: false });
+      }
+      const headers = data?.Headers || {};
+      const ct = headers['content-type'] || data?.ContentType;
+      const lenStr = headers['content-length'] || (data?.ContentLength ? String(data.ContentLength) : undefined);
+      const contentLength = lenStr ? parseInt(lenStr, 10) : undefined;
+      resolve({ exists: true, contentType: ct, contentLength });
+    });
+  });
+}

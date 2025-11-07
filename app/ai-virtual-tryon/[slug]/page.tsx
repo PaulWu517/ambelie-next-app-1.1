@@ -253,50 +253,31 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       await diag('api-call');
-      const resp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
-      await diag('api-headers', { status: resp.status, ok: resp.ok }, { perf: resp.headers.get('X-Perf'), trace: resp.headers.get('X-Trace-Id') });
-      // 安全错误处理：clone 一份用于日志，避免二次读取同一响应体
-      const respLog = resp.clone();
-      if (!resp.ok) {
-        const errText = await respLog.text().catch(() => '');
-        throw new Error(`HTTP ${resp.status}: ${errText}`);
-      }
-      // 流式响应处理
-      await diag('api-stream-start');
-      let data: any;
-      try {
-        const reader = resp.body!.getReader();
-        const decoder = new TextDecoder();
-        let result = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          result += decoder.decode(value, { stream: true });
+      const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      // 两阶段流程：通过 HEAD 轮询结果是否可读
+      await diag('head-poll-start');
+      const deadlineMs = 60_000;
+      const pollStart = Date.now();
+      let foundExt: 'png' | 'jpg' | null = null;
+      while (!foundExt && (Date.now() - pollStart) < deadlineMs) {
+        const head = await fetch(`/api/virtual-tryon/result/${traceId}`, { method: 'HEAD', cache: 'no-store' });
+        if (head.ok) {
+          foundExt = (head.headers.get('X-Found-Ext') as any) || 'png';
+          await diag('head-200', { ext: foundExt });
+          break;
         }
-        data = JSON.parse(result);
-      } catch (e) {
-        const errText = await respLog.text().catch(() => '');
-        await diag('error', `Stream/JSON parse failed: ${String(e)}; body: ${errText}`);
-        throw e;
+        await new Promise(r => setTimeout(r, 1500));
       }
-      await diag('api-json-success', { imageUrl: data?.imageUrl, traceId: data?.traceId, mime: data?.mime });
-      const imageUrl: string = data?.imageUrl;
-      const trace = data?.traceId;
-      const mime = (data?.mime as string) || 'image/png';
-      const ext = mime.includes('png') ? 'png' : 'jpg';
-      if (!imageUrl) {
-        throw new Error('API did not return imageUrl');
+      if (!foundExt) {
+        await diag('head-timeout');
+        throw new Error('Timeout waiting for result image');
       }
-      await diag('download-start', { imageUrl });
-      let imgResp = await fetch(imageUrl, { cache: 'no-store' });
+      const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
+      await diag('download-start', { proxyUrl });
+      const imgResp = await fetch(proxyUrl, { cache: 'no-store' });
       if (!imgResp.ok) {
-        await diag('download-fallback-proxy', { status: imgResp.status });
-        const proxyUrl = `/api/virtual-tryon/result/${trace}?ext=${ext}`;
-        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
-        if (!imgResp.ok) {
-          const txt = await imgResp.clone().text().catch(() => '');
-          throw new Error(`Proxy fetch failed: ${imgResp.status} ${txt}`);
-        }
+        const txt = await imgResp.clone().text().catch(() => '');
+        throw new Error(`Result fetch failed: ${imgResp.status} ${txt}`);
       }
       await diag('download-success', { status: imgResp.status });
       const blob = await imgResp.blob();
