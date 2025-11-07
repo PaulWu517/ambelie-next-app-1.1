@@ -4,6 +4,7 @@ import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
 
 // Vercel 配置优化
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 export const preferredRegion = ['hkg1', 'sin1', 'nrt1']; // 香港、新加坡、东京 - 更接近 Google API
 export const maxDuration = 60; // 60秒超时
 
