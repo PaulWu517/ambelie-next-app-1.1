@@ -168,6 +168,34 @@ const SlugTryOnPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Drag-and-drop support for user photo upload
+  const [isUserDragActive, setIsUserDragActive] = useState(false);
+  const handleUserDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(true);
+  };
+  const handleUserDragEnter = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(true);
+  };
+  const handleUserDragLeave = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(false);
+  };
+  const handleUserDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setUserPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
   // Removed: goToBeta (no longer needed per design)
 
   const handleTryOn = async () => {
@@ -383,9 +411,16 @@ const SlugTryOnPage: React.FC = () => {
 
       <div className={styles.mainContent}>
         <div className={styles.leftPanel}>
-          <h2 className={styles.sectionTitle}>Upload Your Image</h2>
+          <h2 className={styles.sectionTitle}>{mode === 'outfit' ? 'Upload Your Full-body Shot' : 'Upload Your Headshot'}</h2>
           <div className={styles.uploadSection}>
-            <label htmlFor="userUpload" className={styles.uploadArea}>
+            <label
+              htmlFor="userUpload"
+              className={`${styles.uploadArea} ${isUserDragActive ? styles.uploadAreaDragActive : ''}`}
+              onDragOver={handleUserDragOver}
+              onDragEnter={handleUserDragEnter}
+              onDragLeave={handleUserDragLeave}
+              onDrop={handleUserDrop}
+            >
               {userPreview ? (
                 <img src={userPreview} className={styles.uploadedImage} alt="User Preview" />
               ) : (

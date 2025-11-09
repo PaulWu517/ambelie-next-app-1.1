@@ -48,6 +48,8 @@ const SweepPage: React.FC = () => {
 
   const userInputRef = useRef<HTMLInputElement>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
+  const [isUserDragActive, setIsUserDragActive] = useState(false);
+  const [isRefDragActive, setIsRefDragActive] = useState(false);
 
   // 移除了查询参数自动填充参考图的逻辑，必须通过上传选择产品图
 
@@ -59,6 +61,18 @@ const SweepPage: React.FC = () => {
     reader.onload = (ev) => setUserImage(ev.target?.result as string);
     reader.readAsDataURL(file);
   };
+  const handleUserDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; setIsUserDragActive(true); };
+  const handleUserDragEnter = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsUserDragActive(true); };
+  const handleUserDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsUserDragActive(false); };
+  const handleUserDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) { setIsUserDragActive(false); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setUserImage(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    setIsUserDragActive(false);
+  };
 
   const handleRefUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -66,6 +80,18 @@ const SweepPage: React.FC = () => {
     const reader = new FileReader();
     reader.onload = (ev) => setRefImage(ev.target?.result as string);
     reader.readAsDataURL(file);
+  };
+  const handleRefDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; setIsRefDragActive(true); };
+  const handleRefDragEnter = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsRefDragActive(true); };
+  const handleRefDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsRefDragActive(false); };
+  const handleRefDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) { setIsRefDragActive(false); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setRefImage(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    setIsRefDragActive(false);
   };
 
   const canRun = useMemo(() => !!userImage && !!refImage, [userImage, refImage]);
@@ -145,13 +171,20 @@ const SweepPage: React.FC = () => {
           <h2 className={styles.sectionTitle}>Inputs</h2>
           <div className={styles.uploadSection}>
             <h3 className={styles.sectionTitle} style={{ fontSize: '1.1rem' }}>Upload Person Photo</h3>
-            <div className={styles.uploadArea} onClick={() => userInputRef.current?.click()}>
+            <div
+              className={`${styles.uploadArea} ${isUserDragActive ? styles.uploadAreaDragActive : ''}`}
+              onClick={() => userInputRef.current?.click()}
+              onDragOver={handleUserDragOver}
+              onDragEnter={handleUserDragEnter}
+              onDragLeave={handleUserDragLeave}
+              onDrop={handleUserDrop}
+            >
               {userImage ? (
                 <img src={userImage} alt="User" className={styles.uploadedImage} />
               ) : (
                 <div className={styles.uploadPlaceholder}>
                   <div className={styles.uploadIcon}>📷</div>
-                  <p>Click to upload your full-body photo</p>
+                  <p>Click or drag to upload your full-body photo</p>
                   <span className={styles.uploadHint}>Recommended: Front-facing, good lighting</span>
                 </div>
               )}
@@ -161,7 +194,14 @@ const SweepPage: React.FC = () => {
 
           <div className={styles.uploadSection}>
             <h3 className={styles.sectionTitle} style={{ fontSize: '1.1rem' }}>Upload Reference Outfit</h3>
-            <div className={styles.uploadArea} onClick={() => refInputRef.current?.click()}>
+            <div
+              className={`${styles.uploadArea} ${isRefDragActive ? styles.uploadAreaDragActive : ''}`}
+              onClick={() => refInputRef.current?.click()}
+              onDragOver={handleRefDragOver}
+              onDragEnter={handleRefDragEnter}
+              onDragLeave={handleRefDragLeave}
+              onDrop={handleRefDrop}
+            >
               {refImage ? (
                 typeof refImage === 'string' && refImage.startsWith('http') ? (
                   <img src={refImage} alt="Reference" className={styles.uploadedImage} />
@@ -171,7 +211,7 @@ const SweepPage: React.FC = () => {
               ) : (
                 <div className={styles.uploadPlaceholder}>
                   <div className={styles.uploadIcon}>🧥</div>
-                  <p>Click to upload a clothing reference photo</p>
+                  <p>Click or drag to upload a clothing reference photo</p>
                   {/* hint removed */}
                 </div>
               )}

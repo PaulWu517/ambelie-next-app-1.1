@@ -83,6 +83,12 @@
   background: #f5f5f5;
 }
 
+/* Drag active state for upload area */
+.uploadAreaDragActive {
+  border-color: #0070f3;
+  background: #eef6ff;
+}
+
 /* Product Image dashed container (same style as uploadArea, without pointer) */
 .productImageArea {
   border: 2px dashed #ddd;

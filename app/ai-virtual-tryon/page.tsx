@@ -100,6 +100,34 @@ const VirtualTryOnPage: React.FC = () => {
     }
   };
 
+  // Drag-and-drop support for user image upload
+  const [isUserDragActive, setIsUserDragActive] = useState(false);
+  const handleUserDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(true);
+  };
+  const handleUserDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(true);
+  };
+  const handleUserDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(false);
+  };
+  const handleUserDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsUserDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setUploadedImage(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const handleClothingUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -347,13 +375,20 @@ const VirtualTryOnPage: React.FC = () => {
         <div className={styles.leftPanel}>
           <div className={styles.uploadSection}>
             <h2 className={styles.sectionTitle}>Upload Your Photo</h2>
-            <div className={styles.uploadArea} onClick={() => fileInputRef.current?.click()}>
+            <div
+              className={`${styles.uploadArea} ${isUserDragActive ? styles.uploadAreaDragActive : ''}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleUserDragEnter}
+              onDragOver={handleUserDragOver}
+              onDragLeave={handleUserDragLeave}
+              onDrop={handleUserDrop}
+            >
               {uploadedImage ? (
                 <img src={uploadedImage} alt="Uploaded" className={styles.uploadedImage} />
               ) : (
                 <div className={styles.uploadPlaceholder}>
                   <div className={styles.uploadIcon}>📷</div>
-                  <p>Click to upload your full-body photo</p>
+                  <p>Click or drag to upload your full-body photo</p>
                   <span className={styles.uploadHint}>Recommended: Front-facing, good lighting</span>
                 </div>
               )}
