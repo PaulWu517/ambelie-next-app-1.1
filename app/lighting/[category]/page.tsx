@@ -118,7 +118,7 @@ export default function CategoryPage() {
       setError(null);
       
       try {
-        const query = `filters[category][slug][$eq]=${activeCategory}&populate[0]=main_image&populate[1]=hover_image`;
+        const query = `filters[category][slug][$eq]=${activeCategory}&populate[0]=main_image&populate[1]=hover_image&sort[0]=updatedAt:desc`;
         
         const response = await fetch(`${API_URL}/api/products?${query}`, {
           cache: 'no-store',

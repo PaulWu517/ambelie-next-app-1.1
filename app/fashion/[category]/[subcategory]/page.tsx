@@ -137,9 +137,9 @@ export default function SubCategoryPage() {
       try {
         let query = '';
         if (activeSubCategory === 'all') {
-          query = `filters[category][slug][$eq]=${activeCategory}&populate[0]=main_image&populate[1]=hover_image`;
+          query = `filters[category][slug][$eq]=${activeCategory}&populate[0]=main_image&populate[1]=hover_image&sort[0]=updatedAt:desc`;
         } else {
-          query = `filters[subcategory][slug][$eq]=${activeSubCategory}&populate[0]=main_image&populate[1]=hover_image`;
+          query = `filters[subcategory][slug][$eq]=${activeSubCategory}&populate[0]=main_image&populate[1]=hover_image&sort[0]=updatedAt:desc`;
         }
         
         const response = await fetch(`${API_URL}/api/products?${query}`, {

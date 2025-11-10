@@ -121,7 +121,9 @@ export default function ArtCategoryPage() {
           setLoading(false);
           return;
         }
-        
+        // 按更新时间倒序显示（后端最新修改在最前）
+        query += `&sort[0]=updatedAt:desc`;
+
         console.log('Art category page query:', query);
         console.log('Active category:', activeCategory, 'Active subcategory:', activeSubCategory);
         

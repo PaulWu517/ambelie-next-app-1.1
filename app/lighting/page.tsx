@@ -195,7 +195,9 @@ function LightingContent() {
           }
           return;
         }
-        
+        // 统一按后端更新时间倒序排序（最新修改的产品排在最前）
+        query += `&sort[0]=updatedAt:desc`;
+
         console.log('Lighting page query:', query);
         console.log('Active category:', activeCategory, 'Active subcategory:', activeSubCategory);
         
