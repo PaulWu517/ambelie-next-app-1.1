@@ -12,7 +12,7 @@ const MODEL = 'gemini-2.5-flash-image';
 const DEBUG = process.env.VIRTUAL_TRYON_DEBUG === '1';
 
 function buildPrompt(measurements?: any, extraPrompt?: string) {
-  const base = 'Maintain character consistency.';
+  const base = 'Maintain character consistency.Front-facing photo.';
   return extraPrompt ? `${base} ${extraPrompt}` : base;
 }
 
@@ -136,7 +136,7 @@ async function handleVirtualTryon(req: NextRequest) {
     } as any;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
     let resp: Response;
     try {

@@ -485,7 +485,7 @@ const SlugTryOnPage: React.FC = () => {
                   </div>
                   <div className={styles.progressText}>
                     <span className={styles.progressPercent}>{processingProgress}%</span>
-                    <span className={styles.progressEta}>{processingProgress >= 99 ? 'Finalizing...' : `~${Math.max(0, 15 - Math.round((processingProgress / 100) * 15))}s remaining`}</span>
+                    <span className={styles.progressEta}>{processingProgress >= 99 ? 'Finalizing...' : `~${Math.max(0, 20 - Math.round((processingProgress / 100) * 20))}s remaining`}</span>
                   </div>
                   <p className={styles.processingHint}>Generating high-fidelity try-on image...</p>
                 </div>
