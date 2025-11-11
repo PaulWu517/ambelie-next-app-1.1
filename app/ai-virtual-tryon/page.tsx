@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import styles from './VirtualTryOn.module.css';
-import { applyPoseWarpToDataUrl } from '@/lib/vision/poseWarp';
+import { applyPoseWarpToDataUrl, detectPoseLandmarksNormalized } from '@/lib/vision/poseWarp';
 import { compressImage } from '@/lib/utils/imageCompression';
 
 interface BodyMeasurements {
@@ -67,6 +67,14 @@ const VirtualTryOnPage: React.FC = () => {
   // 记录未变形的基准结果图，以便滑杆实时基于同一基准图进行变形
   const baseResultRef = useRef<string | null>(null);
   const warpDebounce = useRef<number | null>(null);
+  const warpPreviewDebounce = useRef<number | null>(null);
+  const warpFinalDebounce = useRef<number | null>(null);
+  const poseLmsRef = useRef<Float32Array | null>(null);
+  // 保持最新的滑杆值以避免定时器闭包读取旧值
+  const warpControlsRef = useRef(warpControls);
+  useEffect(() => { warpControlsRef.current = warpControls; }, [warpControls]);
+  // 异步竞态保护：仅提交最新一次变形结果
+  const applySeq = useRef(0);
 
   // 过滤 Mediapipe 的 XNNPACK 信息日志，避免 Next 重载红色错误浮层
   useEffect(() => {
@@ -147,9 +155,11 @@ const VirtualTryOnPage: React.FC = () => {
         const url = e.target?.result as string;
         setUploadedResult(url);
         baseResultRef.current = url; // 设置基准图
-        // 上传后立即应用当前滑杆值
-        if (warpDebounce.current) window.clearTimeout(warpDebounce.current);
-        warpDebounce.current = window.setTimeout(applyWarpFromControls, 20);
+        // 上传后先快速预览，再高清渲染
+        if (warpPreviewDebounce.current) window.clearTimeout(warpPreviewDebounce.current);
+        if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
+        warpPreviewDebounce.current = window.setTimeout(applyWarpPreviewFromControls, 40);
+        warpFinalDebounce.current = window.setTimeout(applyWarpFinalFromControls, 280);
       };
       reader.readAsDataURL(file);
     }
@@ -165,18 +175,52 @@ const VirtualTryOnPage: React.FC = () => {
   // 根据当前滑杆值进行变形（基于 baseResultRef 的原始图像）
   const applyWarpFromControls = async () => {
     if (!baseResultRef.current) return;
+    const mySeq = ++applySeq.current;
     try {
-      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, warpControls);
-      setUploadedResult(adjusted);
+      const controls = warpControlsRef.current;
+      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { landmarksNormalized: poseLmsRef.current || undefined });
+      if (mySeq === applySeq.current) {
+        setUploadedResult(adjusted);
+      }
     } catch (e) {
       console.warn('[warp] apply failed', e);
     }
   };
 
+  const applyWarpPreviewFromControls = async () => {
+    if (!baseResultRef.current) return;
+    const mySeq = ++applySeq.current;
+    try {
+      const controls = warpControlsRef.current;
+      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+      if (mySeq === applySeq.current) {
+        setUploadedResult(adjusted);
+      }
+    } catch (e) {
+      console.warn('[warp] preview apply failed', e);
+    }
+  };
+
+  const applyWarpFinalFromControls = async () => {
+    if (!baseResultRef.current) return;
+    const mySeq = ++applySeq.current;
+    try {
+      const controls = warpControlsRef.current;
+      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { landmarksNormalized: poseLmsRef.current || undefined });
+      if (mySeq === applySeq.current) {
+        setUploadedResult(adjusted);
+      }
+    } catch (e) {
+      console.warn('[warp] final apply failed', e);
+    }
+  };
+
   const handleControlChange = (key: keyof typeof warpControls, value: number) => {
     setWarpControls(prev => ({ ...prev, [key]: value }));
-    if (warpDebounce.current) window.clearTimeout(warpDebounce.current);
-    warpDebounce.current = window.setTimeout(applyWarpFromControls, 80);
+    if (warpPreviewDebounce.current) window.clearTimeout(warpPreviewDebounce.current);
+    if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
+    warpPreviewDebounce.current = window.setTimeout(applyWarpPreviewFromControls, 60);
+    warpFinalDebounce.current = window.setTimeout(applyWarpFinalFromControls, 300);
   };
 
   const handleTryOn = async () => {
@@ -301,18 +345,67 @@ const VirtualTryOnPage: React.FC = () => {
       setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: dataUrlMime });
       // 保存基准图（未变形）
       baseResultRef.current = baseDataUrl;
+      // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
+      try {
+        const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+        const runDetect = async () => {
+          const lms = await detectPoseLandmarksNormalized(baseDataUrl);
+          if (lms) poseLmsRef.current = lms;
+        };
+        if (isMobileDetect) {
+          const schedule = (fn: () => void) => {
+            try {
+              const ric = (window as any).requestIdleCallback;
+              if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400);
+            } catch { setTimeout(fn, 400); }
+          };
+          schedule(() => { void runDetect(); });
+        } else {
+          await runDetect();
+        }
+      } catch {}
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
       let adjustedUrl = baseDataUrl;
       try {
         diag('posewarp-start');
-        adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControls);
-        diag('posewarp-success');
+        if (isMobile) {
+          // 移动端：优先显示原图，后台低分辨率预览，跳过自动高清
+          const schedule = (fn: () => void) => {
+            try {
+              const ric = (window as any).requestIdleCallback;
+              if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 500);
+            } catch { setTimeout(fn, 500); }
+          };
+          schedule(async () => {
+            try {
+              const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+              setUploadedResult(preview);
+              diag('posewarp-success');
+            } catch (e) {
+              console.warn('[tryon] mobile preview warp failed', e);
+              diag('posewarp-error', String(e));
+            }
+          });
+        } else {
+          // 桌面：先预览，后高清覆盖
+          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+          diag('posewarp-success');
+        }
       } catch (e) {
         console.warn('[tryon] pose warp failed', e);
         diag('posewarp-error', String(e));
       }
       // 替换为变形后的结果，释放临时 Blob URL
       URL.revokeObjectURL(objUrl);
-      setUploadedResult(adjustedUrl);
+      if (!isMobile) {
+        setUploadedResult(adjustedUrl);
+        (async () => {
+          try {
+            const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { landmarksNormalized: poseLmsRef.current || undefined });
+            setUploadedResult(hd);
+          } catch {}
+        })();
+      }
       setShowResult(true);
       diag('render-success');
     } catch (err) {
@@ -448,9 +541,9 @@ const VirtualTryOnPage: React.FC = () => {
                     type="range"
                     min="-10"
                     max="10"
-                    step="1"
+                    step="2"
                     value={(warpControls as any)[key]}
-                    onChange={(e) => handleControlChange(key as keyof typeof warpControls, parseInt(e.target.value))}
+                    onInput={(e) => handleControlChange(key as keyof typeof warpControls, parseInt((e.currentTarget as HTMLInputElement).value))}
                     className={styles.slider}
                   />
                 </div>

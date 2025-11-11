@@ -41,6 +41,23 @@ async function loadPoseLandmarker() {
   return _pose;
 }
 
+// 检测关键点（归一化坐标，0..1），以便重复使用避免多次检测带来的开销
+export async function detectPoseLandmarksNormalized(dataUrl: string): Promise<Float32Array | null> {
+  try {
+    const img = await imageFromDataUrl(dataUrl);
+    const pose = await loadPoseLandmarker();
+    const result = pose.detect(img);
+    const lms = (result as any)?.landmarks?.[0] as Array<{ x: number, y: number }> | undefined;
+    if (!lms || lms.length < 33) return null;
+    const out = new Float32Array(33 * 2);
+    for (let i = 0; i < 33; i++) { out[i * 2] = lms[i].x; out[i * 2 + 1] = lms[i].y; }
+    return out;
+  } catch (e) {
+    console.warn('[poseWarp] detect failed', e);
+    return null;
+  }
+}
+
 async function imageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -209,18 +226,37 @@ function drawKeypoints(ctx: CanvasRenderingContext2D, pts: Float32Array, color =
 }
 
 // 修改：允许第二参数同时支持旧 BodyMeasurements 与新 WarpControls；新增 options.showKeypoints
-export async function applyPoseWarpToDataUrl(dataUrl: string, measurements: BodyMeasurements | WarpControls, options?: { showKeypoints?: boolean }): Promise<string> {
+export async function applyPoseWarpToDataUrl(
+  dataUrl: string,
+  measurements: BodyMeasurements | WarpControls,
+  options?: { showKeypoints?: boolean, maxDimension?: number, landmarksNormalized?: Float32Array }
+): Promise<string> {
   try {
     const img = await imageFromDataUrl(dataUrl);
-    const pose = await loadPoseLandmarker();
-    const result = pose.detect(img);
-    const lms = (result as any)?.landmarks?.[0] as Array<{ x: number, y: number }> | undefined;
-    if (!lms || lms.length < 33) return dataUrl;
+    const origW = img.width;
+    const origH = img.height;
+    let lmsNorm = options?.landmarksNormalized;
+    if (!lmsNorm) {
+      const pose = await loadPoseLandmarker();
+      const result = pose.detect(img);
+      const lms = (result as any)?.landmarks?.[0] as Array<{ x: number, y: number }> | undefined;
+      if (!lms || lms.length < 33) return dataUrl;
+      lmsNorm = new Float32Array(33 * 2);
+      for (let i = 0; i < 33; i++) { lmsNorm[i * 2] = lms[i].x; lmsNorm[i * 2 + 1] = lms[i].y; }
+    }
     const src33 = new Float32Array(33 * 2);
-    for (let i = 0; i < 33; i++) { src33[i * 2] = lms[i].x * img.width; src33[i * 2 + 1] = lms[i].y * img.height; }
-    // View sizing
-    const viewW = img.width;
-    const viewH = img.height;
+    // View sizing with optional downscale for fast preview
+    let viewW = origW;
+    let viewH = origH;
+    const maxDim = options?.maxDimension;
+    if (typeof maxDim === 'number' && maxDim > 0) {
+      const scale = Math.min(1, maxDim / Math.max(origW, origH));
+      viewW = Math.max(1, Math.round(origW * scale));
+      viewH = Math.max(1, Math.round(origH * scale));
+      for (let i = 0; i < 33; i++) { src33[i * 2] = lmsNorm[i * 2] * origW * scale; src33[i * 2 + 1] = lmsNorm[i * 2 + 1] * origH * scale; }
+    } else {
+      for (let i = 0; i < 33; i++) { src33[i * 2] = lmsNorm[i * 2] * origW; src33[i * 2 + 1] = lmsNorm[i * 2 + 1] * origH; }
+    }
     const canvas = document.createElement('canvas'); canvas.width = viewW; canvas.height = viewH;
     const ctx = canvas.getContext('2d')!; ctx.drawImage(img, 0, 0, viewW, viewH);
     const srcFull = appendMidPoints(src33, img.width, img.height);
