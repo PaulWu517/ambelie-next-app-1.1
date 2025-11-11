@@ -75,8 +75,6 @@ const VirtualTryOnPage: React.FC = () => {
   useEffect(() => { warpControlsRef.current = warpControls; }, [warpControls]);
   // 异步竞态保护：仅提交最新一次变形结果
   const applySeq = useRef(0);
-  // 首帧标记：避免重复首帧绘制
-  const firstPaintRef = useRef(false);
 
   // 过滤 Mediapipe 的 XNNPACK 信息日志，避免 Next 重载红色错误浮层
   useEffect(() => {
@@ -291,158 +289,40 @@ const VirtualTryOnPage: React.FC = () => {
   
       diag('api-call');
       const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
-      // 优先：解析 POST 流结果，直接读取 API Blob 显示（避免等待 CDN/HEAD）
-      try {
-        const postResp = await Promise.race([
-          postRespPromise,
-          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('post-timeout')), 40000))
-        ]);
-        const txt = await postResp.text();
-        const candidate = txt.trim().split('\n').reverse().find(line => line.trim().startsWith('{')) || '';
-        let parsed: any = null;
-        try { parsed = candidate ? JSON.parse(candidate) : null; } catch {}
-        if (parsed?.traceId && parsed?.mime) {
-          const ext = String(parsed.mime).includes('jpeg') ? 'jpg' : 'png';
-          diag('api-stream-success', { traceId: parsed.traceId, mime: parsed.mime });
-          const proxyUrl = `/api/virtual-tryon/result/${parsed.traceId}?ext=${ext}`;
-          const imgResp2 = await fetch(proxyUrl, { cache: 'no-store' });
-          if (imgResp2.ok) {
-            const blob = await imgResp2.blob();
-            diag('api-blob-success', { size: blob.size, type: blob.type });
-            const objUrl = URL.createObjectURL(blob);
-            setUploadedResult(objUrl);
-            setShowResult(true);
-            firstPaintRef.current = true;
-            diag('first-paint', { source: 'api_blob' });
-            // 后台转换 DataURL 供姿态变形使用
-            const baseDataUrl = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = (e) => reject(e);
-              reader.readAsDataURL(blob);
-            });
-            diag('dataurl-success', { length: baseDataUrl.length });
-            // MIME 由浏览器 Blob 类型决定，此处按 DataURL 推断
-            const dataUrlMime = baseDataUrl.substring(baseDataUrl.indexOf(':') + 1, baseDataUrl.indexOf(';')) || 'image/png';
-            setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: dataUrlMime });
-            // 保存基准图（未变形）
-            baseResultRef.current = baseDataUrl;
-            // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
-            try {
-              const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-              const runDetect = async () => {
-                const lms = await detectPoseLandmarksNormalized(baseDataUrl);
-                if (lms) poseLmsRef.current = lms;
-              };
-              if (isMobileDetect) {
-                const schedule = (fn: () => void) => {
-                  try {
-                    const ric = (window as any).requestIdleCallback;
-                    if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400);
-                  } catch { setTimeout(fn, 400); }
-                };
-                schedule(() => { void runDetect(); });
-              } else {
-                await runDetect();
-              }
-            } catch {}
-            // 移动端后台低清预览；桌面预览后高清
-            try {
-              diag('posewarp-start');
-              const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-              let adjustedUrl = baseDataUrl;
-              if (isMobile) {
-                const schedule = (fn: () => void) => {
-                  try {
-                    const ric = (window as any).requestIdleCallback;
-                    if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 500);
-                  } catch { setTimeout(fn, 500); }
-                };
-                schedule(async () => {
-                  try {
-                    const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-                    setUploadedResult(preview);
-                    diag('posewarp-success');
-                  } catch (e) {
-                    console.warn('[tryon] mobile preview warp failed', e);
-                    diag('posewarp-error', String(e));
-                  }
-                });
-              } else {
-                // 桌面：先预览后高清
-                adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-                setUploadedResult(adjustedUrl);
-                diag('posewarp-success');
-                (async () => {
-                  try {
-                    const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
-                    setUploadedResult(hd);
-                  } catch {}
-                })();
-              }
-              setShowResult(true);
-              diag('render-success');
-            } catch {}
-            // 已完成首帧显示与后续调度，跳过 HEAD 回退路径
-            return;
-          } else {
-            diag('api-stream-fetch-failed', { status: imgResp2.status });
-          }
-        } else {
-          diag('api-stream-parse-failed');
-        }
-      } catch (e) {
-        diag('api-stream-error', String(e));
-      }
-      // 不再等待 POST 完整响应，改为两阶段：通过 HEAD 轮询结果是否可读（动态间隔）
-      diag('head-poll-start');
-      const deadlineMs = 60_000;
-      const pollStart = Date.now();
-      let foundExt: 'png' | 'jpg' | null = null;
-      while (!foundExt && (Date.now() - pollStart) < deadlineMs) {
-        const head = await fetch(`/api/virtual-tryon/result/${traceId}`, { method: 'HEAD', cache: 'no-store' });
-        if (head.ok) {
-          foundExt = (head.headers.get('X-Found-Ext') as any) || 'png';
-          diag('head-200', { ext: foundExt });
-          break;
-        }
-        const elapsed = Date.now() - pollStart;
-        const interval = elapsed < 20_000 ? 1200 : 700; // 前段较慢，尾部加速探测
-        await new Promise(r => setTimeout(r, interval));
-      }
-      if (!foundExt) {
-        diag('head-timeout');
-        throw new Error('Timeout waiting for result image');
-      }
-      // CDN 直链优先，代理回退
+      // 两阶段下载：优先显示 CDN 预览，再后台替换高清
       const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
       const basePath = (process.env.NEXT_PUBLIC_TRYON_COS_BASE_PATH || 'tryon-results/').replace(/\/?$/, '/');
-      const cdnUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
-      diag('download-start', { cdnUrl });
-      let imgResp = await fetch(cdnUrl, { cache: 'no-store' });
-      if (!imgResp.ok) {
-        diag('download-fallback-proxy', { status: imgResp.status });
-        const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
-        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
-        if (!imgResp.ok) {
-          const txt = await imgResp.clone().text().catch(() => '');
-          throw new Error(`Result fetch failed: ${imgResp.status} ${txt}`);
+      const fullPng = `${cdnBase}/${basePath}${traceId}.png`;
+      const fullJpg = `${cdnBase}/${basePath}${traceId}.jpg`;
+      const previewPng = `${fullPng}?imageView2/2/w/640/format/webp/q/85`;
+      const previewJpg = `${fullJpg}?imageView2/2/w/640/format/webp/q/85`;
+
+      const tryFetch = async (url: string) => {
+        try { const r = await fetch(url, { cache: 'no-store' }); return r.ok ? r : null; } catch { return null; }
+      };
+      let previewResp = await tryFetch(previewPng) || await tryFetch(previewJpg);
+      if (!previewResp) {
+        diag('download-fallback-proxy');
+        const proxyResp = await fetch(`/api/virtual-tryon/result/${traceId}?ext=png`, { cache: 'no-store' });
+        if (!proxyResp.ok) {
+          const txt = await proxyResp.clone().text().catch(() => '');
+          throw new Error(`Result fetch failed: ${proxyResp.status} ${txt}`);
         }
+        previewResp = proxyResp;
       }
-      diag('download-success', { status: imgResp.status });
-      const blob = await imgResp.blob();
-      diag('api-blob-success', { size: blob.size, type: blob.type });
-      console.log('[tryon] success', { size: blob.size });
-      // 先用 Blob URL 即显，提升体感速度
-      const objUrl = URL.createObjectURL(blob);
+      const previewBlob = await previewResp.blob();
+      console.log('[tryon] preview ok', { size: previewBlob.size });
+      const objUrl = URL.createObjectURL(previewBlob);
       setUploadedResult(objUrl);
       setShowResult(true);
+      diag('first-paint', { source: previewResp.url.includes('imageView2') ? 'cdn_preview' : 'api_proxy' });
+
       // 后台转换 DataURL 供姿态变形使用
       const baseDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(previewBlob);
       });
       diag('dataurl-success', { length: baseDataUrl.length });
       // MIME 由浏览器 Blob 类型决定，此处按 DataURL 推断
@@ -513,6 +393,19 @@ const VirtualTryOnPage: React.FC = () => {
       }
       setShowResult(true);
       diag('render-success');
+
+      // 并行拉取高清原图，一旦CDN可用则替换提升清晰度
+      (async () => {
+        try {
+          const fullResp = await tryFetch(fullPng) || await tryFetch(fullJpg);
+          if (fullResp) {
+            const fullBlob = await fullResp.blob();
+            const fullObjUrl = URL.createObjectURL(fullBlob);
+            setUploadedResult(fullObjUrl);
+            diag('replace-full', { status: fullResp.status });
+          }
+        } catch {}
+      })();
     } catch (err) {
       console.error('[tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
