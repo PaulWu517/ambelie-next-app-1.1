@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProxyAgent } from 'undici';
 import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
-import { pushUrlsCache, buildPreviewUrlByCI } from '@/lib/utils/tencentCdn';
 
 // Vercel 配置优化
 export const runtime = 'nodejs';
@@ -217,31 +216,13 @@ async function handleVirtualTryon(req: NextRequest) {
     const buf = Buffer.from(outBase64, 'base64');
     const key = buildTryonKey(traceId, outMime);
     let imageUrl: string | null = null;
-    let previewUrl: string | null = null;
     try {
       const uploaded = await uploadBufferToCOS(buf, key, outMime);
       imageUrl = uploaded.url;
-      // Build a CI preview URL (webp, width 640, q=85)
-      previewUrl = buildPreviewUrlByCI(imageUrl, { width: 640, quality: 85, format: 'webp' });
     } catch (uploadErr: any) {
       console.error('[virtual-tryon] COS upload failed', uploadErr?.message || uploadErr);
       throw { error: 'Upload to COS failed', message: uploadErr?.message || String(uploadErr), traceId, status: 502 };
     }
-
-    // Fire-and-forget CDN preheat for both preview and full URLs
-    (async () => {
-      try {
-        const urls = [imageUrl!, previewUrl!].filter(Boolean) as string[];
-        const res = await pushUrlsCache(urls);
-        if (!res.ok) {
-          console.warn('[virtual-tryon] CDN preheat failed', res.error);
-        } else if (DEBUG) {
-          console.log('[virtual-tryon] CDN preheat ok', { requestId: res.requestId, urls });
-        }
-      } catch (e: any) {
-        console.warn('[virtual-tryon] CDN preheat exception', e?.message || e);
-      }
-    })();
 
     const perfData = {
       formParsing: perf.formParsed - perf.start,
@@ -251,7 +232,7 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
-    return { imageUrl, previewUrl, traceId, mime: outMime, perf: perfData };
+    return { imageUrl, traceId, mime: outMime, perf: perfData };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;

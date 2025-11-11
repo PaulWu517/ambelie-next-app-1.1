@@ -66,6 +66,8 @@ const VirtualTryOnPage: React.FC = () => {
   });
   // 记录未变形的基准结果图，以便滑杆实时基于同一基准图进行变形
   const baseResultRef = useRef<string | null>(null);
+  // 跟踪当前展示的 ObjectURL，便于在替换/完成后释放
+  const currentObjUrlRef = useRef<string | null>(null);
   const warpDebounce = useRef<number | null>(null);
   const warpPreviewDebounce = useRef<number | null>(null);
   const warpFinalDebounce = useRef<number | null>(null);
@@ -289,42 +291,88 @@ const VirtualTryOnPage: React.FC = () => {
   
       diag('api-call');
       const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
-      // 两阶段下载：优先显示 CDN 预览，再后台替换高清
+      // 不再等待 POST 完整响应，改为两阶段：通过 HEAD 轮询结果是否可读（动态间隔）
+      diag('head-poll-start');
+      const deadlineMs = 60_000;
+      const pollStart = Date.now();
+      let foundExt: 'png' | 'jpg' | null = null;
+      while (!foundExt && (Date.now() - pollStart) < deadlineMs) {
+        const head = await fetch(`/api/virtual-tryon/result/${traceId}`, { method: 'HEAD', cache: 'no-store' });
+        if (head.ok) {
+          foundExt = (head.headers.get('X-Found-Ext') as any) || 'png';
+          diag('head-200', { ext: foundExt });
+          break;
+        }
+        const elapsed = Date.now() - pollStart;
+        const interval = elapsed < 20_000 ? 1200 : 700; // 前段较慢，尾部加速探测
+        await new Promise(r => setTimeout(r, interval));
+      }
+      if (!foundExt) {
+        diag('head-timeout');
+        throw new Error('Timeout waiting for result image');
+      }
+      // CDN 直链优先，代理回退；先尝试加载“预览版”以加速首帧
       const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
       const basePath = (process.env.NEXT_PUBLIC_TRYON_COS_BASE_PATH || 'tryon-results/').replace(/\/?$/, '/');
-      const fullPng = `${cdnBase}/${basePath}${traceId}.png`;
-      const fullJpg = `${cdnBase}/${basePath}${traceId}.jpg`;
-      const previewPng = `${fullPng}?imageView2/2/w/640/format/webp/q/85`;
-      const previewJpg = `${fullJpg}?imageView2/2/w/640/format/webp/q/85`;
+      const cdnUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
+      const previewQuery = (process.env.NEXT_PUBLIC_COS_PREVIEW_QUERY || '?imageMogr2/format/webp/quality/85');
+      const previewUrl = `${cdnUrl}${previewQuery}`;
+      diag('download-start', { cdnUrl, previewUrl });
 
-      const tryFetch = async (url: string) => {
-        try { const r = await fetch(url, { cache: 'no-store' }); return r.ok ? r : null; } catch { return null; }
-      };
-      let previewResp = await tryFetch(previewPng) || await tryFetch(previewJpg);
-      if (!previewResp) {
-        diag('download-fallback-proxy');
-        const proxyResp = await fetch(`/api/virtual-tryon/result/${traceId}?ext=png`, { cache: 'no-store' });
-        if (!proxyResp.ok) {
-          const txt = await proxyResp.clone().text().catch(() => '');
-          throw new Error(`Result fetch failed: ${proxyResp.status} ${txt}`);
+      let firstPaintLogged = false;
+      let previewShown = false;
+      try {
+        const preResp = await fetch(previewUrl, { cache: 'no-store' });
+        if (preResp.ok) {
+          const preBlob = await preResp.blob();
+          diag('cdn-preview-success', { status: preResp.status, size: preBlob.size });
+          const preObjUrl = URL.createObjectURL(preBlob);
+          // 如果之前有对象URL，先释放
+          if (currentObjUrlRef.current) URL.revokeObjectURL(currentObjUrlRef.current);
+          setUploadedResult(preObjUrl);
+          setShowResult(true);
+          if (!firstPaintLogged) { diag('first-paint', { source: 'cdn_preview' }); firstPaintLogged = true; }
+          previewShown = true;
+          currentObjUrlRef.current = preObjUrl;
+        } else {
+          diag('cdn-preview-failed', { status: preResp.status });
         }
-        previewResp = proxyResp;
+      } catch (e) {
+        diag('cdn-preview-error', String(e));
       }
-      const previewBlob = await previewResp.blob();
-      console.log('[tryon] preview ok', { size: previewBlob.size });
-      const objUrl = URL.createObjectURL(previewBlob);
-      setUploadedResult(objUrl);
-      setShowResult(true);
-      diag('first-paint', { source: previewResp.url.includes('imageView2') ? 'cdn_preview' : 'api_proxy' });
 
-      // 后台转换 DataURL 供姿态变形使用
-      const baseDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(previewBlob);
-      });
-      diag('dataurl-success', { length: baseDataUrl.length });
+      const loadFull = async () => {
+        let fullResp = await fetch(cdnUrl, { cache: 'no-store' });
+        if (!fullResp.ok) {
+          diag('download-fallback-proxy', { status: fullResp.status });
+          const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
+          fullResp = await fetch(proxyUrl, { cache: 'no-store' });
+          if (!fullResp.ok) {
+            const txt = await fullResp.clone().text().catch(() => '');
+            throw new Error(`Result fetch failed: ${fullResp.status} ${txt}`);
+          }
+        }
+        diag('cdn-full-success', { status: fullResp.status });
+        const fullBlob = await fullResp.blob();
+        diag('api-blob-success', { size: fullBlob.size, type: fullBlob.type });
+        const fullObjUrl = URL.createObjectURL(fullBlob);
+        // 释放上一次的对象URL（可能是预览）
+        if (currentObjUrlRef.current) URL.revokeObjectURL(currentObjUrlRef.current);
+        setUploadedResult(fullObjUrl);
+        currentObjUrlRef.current = fullObjUrl;
+        if (!firstPaintLogged) { diag('first-paint', { source: 'cdn_full' }); firstPaintLogged = true; } else { diag('swap-full', { reason: 'cdn_full_ready' }); }
+        // 转换 DataURL 供姿态变形使用
+        const baseDataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = (e) => reject(e);
+          reader.readAsDataURL(fullBlob);
+        });
+        diag('dataurl-success', { length: baseDataUrl.length });
+        return baseDataUrl;
+      };
+
+      const baseDataUrl = await loadFull();
       // MIME 由浏览器 Blob 类型决定，此处按 DataURL 推断
       const dataUrlMime = baseDataUrl.substring(baseDataUrl.indexOf(':') + 1, baseDataUrl.indexOf(';')) || 'image/png';
       setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: dataUrlMime });
@@ -381,7 +429,8 @@ const VirtualTryOnPage: React.FC = () => {
         diag('posewarp-error', String(e));
       }
       // 替换为变形后的结果，释放临时 Blob URL
-      URL.revokeObjectURL(objUrl);
+      // 在切换到变形后的 DataURL 前释放当前对象URL
+      if (currentObjUrlRef.current) { URL.revokeObjectURL(currentObjUrlRef.current); currentObjUrlRef.current = null; }
       if (!isMobile) {
         setUploadedResult(adjustedUrl);
         (async () => {
@@ -393,19 +442,6 @@ const VirtualTryOnPage: React.FC = () => {
       }
       setShowResult(true);
       diag('render-success');
-
-      // 并行拉取高清原图，一旦CDN可用则替换提升清晰度
-      (async () => {
-        try {
-          const fullResp = await tryFetch(fullPng) || await tryFetch(fullJpg);
-          if (fullResp) {
-            const fullBlob = await fullResp.blob();
-            const fullObjUrl = URL.createObjectURL(fullBlob);
-            setUploadedResult(fullObjUrl);
-            diag('replace-full', { status: fullResp.status });
-          }
-        } catch {}
-      })();
     } catch (err) {
       console.error('[tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}

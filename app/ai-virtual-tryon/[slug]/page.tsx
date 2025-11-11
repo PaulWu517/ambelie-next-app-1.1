@@ -69,6 +69,8 @@ const SlugTryOnPage: React.FC = () => {
   const warpPreviewDebounce = useRef<number | null>(null);
   const warpFinalDebounce = useRef<number | null>(null);
   const poseLmsRef = useRef<Float32Array | null>(null);
+  // 跟踪当前展示的 ObjectURL，便于在替换/完成后释放
+  const currentObjUrlRef = useRef<string | null>(null);
   // 保持最新的滑杆值以避免定时器闭包读取旧值
   const warpControlsRef = useRef(warpControls);
   useEffect(() => { warpControlsRef.current = warpControls; }, [warpControls]);
@@ -318,36 +320,69 @@ const SlugTryOnPage: React.FC = () => {
         diag('head-timeout');
         throw new Error('Timeout waiting for result image');
       }
-      // CDN 直链优先：先显示预览，再替换高清
+      // CDN 直链优先，代理回退；先尝试加载“预览版”加速首帧
       const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
       const basePath = (process.env.NEXT_PUBLIC_TRYON_COS_BASE_PATH || 'tryon-results/').replace(/\/?$/, '/');
-      const cdnFullUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
-      const cdnPreviewUrl = `${cdnFullUrl}?imageView2/2/w/640/format/webp/q/85`;
+      const cdnUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
+      const previewQuery = (process.env.NEXT_PUBLIC_COS_PREVIEW_QUERY || '?imageMogr2/format/webp/quality/85');
+      const previewUrl = `${cdnUrl}${previewQuery}`;
+      diag('download-start', { cdnUrl, previewUrl });
 
-      diag('download-start-preview', { url: cdnPreviewUrl });
-      let previewResp = await fetch(cdnPreviewUrl, { cache: 'no-store' });
-      if (!previewResp.ok) {
-        // 失败则回退到代理获取原图
-        diag('download-fallback-proxy', { status: previewResp.status });
-        const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
-        previewResp = await fetch(proxyUrl, { cache: 'no-store' });
-        if (!previewResp.ok) {
-          const txt = await previewResp.clone().text().catch(() => '');
-          throw new Error(`Result fetch failed: ${previewResp.status} ${txt}`);
+      // 标记首帧来源（仅记录一次）
+      let firstPaintLogged = false;
+
+      // 1) 优先加载预热的 preview（若失败则回退到 full 或代理）
+      let previewShown = false;
+      try {
+        const preResp = await fetch(previewUrl, { cache: 'no-store' });
+        if (preResp.ok) {
+          const preBlob = await preResp.blob();
+          diag('cdn-preview-success', { status: preResp.status, size: preBlob.size });
+          const preObjUrl = URL.createObjectURL(preBlob);
+          if (currentObjUrlRef.current) URL.revokeObjectURL(currentObjUrlRef.current);
+          setResultUrl(preObjUrl);
+          currentObjUrlRef.current = preObjUrl;
+          setShowResult(true);
+          if (!firstPaintLogged) { diag('first-paint', { source: 'cdn_preview' }); firstPaintLogged = true; }
+          previewShown = true;
+        } else {
+          diag('cdn-preview-failed', { status: preResp.status });
         }
+      } catch (e) {
+        diag('cdn-preview-error', String(e));
       }
-      diag('download-success-preview', { status: previewResp.status });
-      const previewBlob = await previewResp.blob();
-      const previewObjUrl = URL.createObjectURL(previewBlob);
-      setResultUrl(previewObjUrl);
-      setShowResult(true);
-      diag('first-paint', { source: previewResp.url.includes('imageView2') ? 'cdn_preview' : 'api_proxy', ms: Date.now() - start });
 
-      // 后台转换 DataURL 供姿态变形使用
-      diag('dataurl-start');
-      const baseDataUrl = await blobToDataUrl(previewBlob);
-      diag('dataurl-success', { length: baseDataUrl.length });
-      baseResultRef.current = baseDataUrl;
+      // 2) 后台加载高清 full；若 preview 未成功则直接加载 full（再回退代理）
+      const loadFull = async () => {
+        let fullResp = await fetch(cdnUrl, { cache: 'no-store' });
+        if (!fullResp.ok) {
+          diag('download-fallback-proxy', { status: fullResp.status });
+          const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
+          fullResp = await fetch(proxyUrl, { cache: 'no-store' });
+          if (!fullResp.ok) {
+            const txt = await fullResp.clone().text().catch(() => '');
+            throw new Error(`Result fetch failed: ${fullResp.status} ${txt}`);
+          }
+        }
+        diag('cdn-full-success', { status: fullResp.status });
+        const fullBlob = await fullResp.blob();
+        diag('api-blob-success', { size: fullBlob.size, type: fullBlob.type });
+        // 如果之前展示了预览，这里无缝替换为高清
+        const fullObjUrl = URL.createObjectURL(fullBlob);
+        if (currentObjUrlRef.current) URL.revokeObjectURL(currentObjUrlRef.current);
+        setResultUrl(fullObjUrl);
+        currentObjUrlRef.current = fullObjUrl;
+        if (!firstPaintLogged) { diag('first-paint', { source: 'cdn_full' }); firstPaintLogged = true; }
+        else { diag('swap-full', { reason: 'cdn_full_ready' }); }
+        // 转换为 DataURL 供后续姿态变形使用
+        diag('dataurl-start');
+        const baseDataUrl = await blobToDataUrl(fullBlob);
+        diag('dataurl-success', { length: baseDataUrl.length });
+        baseResultRef.current = baseDataUrl;
+        return baseDataUrl;
+      };
+
+      const baseDataUrl = previewShown ? await loadFull() : await loadFull();
       // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
       try {
         const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -398,7 +433,7 @@ const SlugTryOnPage: React.FC = () => {
         console.warn('[slug tryon] pose warp failed', e);
         diag('posewarp-error', String(e));
       }
-      URL.revokeObjectURL(previewObjUrl);
+      if (currentObjUrlRef.current) { URL.revokeObjectURL(currentObjUrlRef.current); currentObjUrlRef.current = null; }
       if (!isMobile) {
         setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
@@ -411,19 +446,6 @@ const SlugTryOnPage: React.FC = () => {
       }
       setShowResult(true);
       diag('render-success');
-
-      // 并行拉取高清原图，一旦CDN可用则替换提升清晰度
-      (async () => {
-        try {
-          const fullResp = await fetch(cdnFullUrl, { cache: 'no-store' });
-          if (fullResp.ok) {
-            const fullBlob = await fullResp.blob();
-            const fullObjUrl = URL.createObjectURL(fullBlob);
-            setResultUrl(fullObjUrl);
-            diag('replace-full', { status: fullResp.status });
-          }
-        } catch {}
-      })();
     } catch (err) {
       console.error('[slug tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
