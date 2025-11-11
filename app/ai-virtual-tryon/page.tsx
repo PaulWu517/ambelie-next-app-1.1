@@ -75,6 +75,8 @@ const VirtualTryOnPage: React.FC = () => {
   useEffect(() => { warpControlsRef.current = warpControls; }, [warpControls]);
   // 异步竞态保护：仅提交最新一次变形结果
   const applySeq = useRef(0);
+  // 首帧标记：避免重复首帧绘制
+  const firstPaintRef = useRef(false);
 
   // 过滤 Mediapipe 的 XNNPACK 信息日志，避免 Next 重载红色错误浮层
   useEffect(() => {
@@ -289,6 +291,109 @@ const VirtualTryOnPage: React.FC = () => {
   
       diag('api-call');
       const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      // 优先：解析 POST 流结果，直接读取 API Blob 显示（避免等待 CDN/HEAD）
+      try {
+        const postResp = await Promise.race([
+          postRespPromise,
+          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('post-timeout')), 40000))
+        ]);
+        const txt = await postResp.text();
+        const candidate = txt.trim().split('\n').reverse().find(line => line.trim().startsWith('{')) || '';
+        let parsed: any = null;
+        try { parsed = candidate ? JSON.parse(candidate) : null; } catch {}
+        if (parsed?.traceId && parsed?.mime) {
+          const ext = String(parsed.mime).includes('jpeg') ? 'jpg' : 'png';
+          diag('api-stream-success', { traceId: parsed.traceId, mime: parsed.mime });
+          const proxyUrl = `/api/virtual-tryon/result/${parsed.traceId}?ext=${ext}`;
+          const imgResp2 = await fetch(proxyUrl, { cache: 'no-store' });
+          if (imgResp2.ok) {
+            const blob = await imgResp2.blob();
+            diag('api-blob-success', { size: blob.size, type: blob.type });
+            const objUrl = URL.createObjectURL(blob);
+            setUploadedResult(objUrl);
+            setShowResult(true);
+            firstPaintRef.current = true;
+            diag('first-paint', { source: 'api_blob' });
+            // 后台转换 DataURL 供姿态变形使用
+            const baseDataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = (e) => reject(e);
+              reader.readAsDataURL(blob);
+            });
+            diag('dataurl-success', { length: baseDataUrl.length });
+            // MIME 由浏览器 Blob 类型决定，此处按 DataURL 推断
+            const dataUrlMime = baseDataUrl.substring(baseDataUrl.indexOf(':') + 1, baseDataUrl.indexOf(';')) || 'image/png';
+            setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: dataUrlMime });
+            // 保存基准图（未变形）
+            baseResultRef.current = baseDataUrl;
+            // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
+            try {
+              const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+              const runDetect = async () => {
+                const lms = await detectPoseLandmarksNormalized(baseDataUrl);
+                if (lms) poseLmsRef.current = lms;
+              };
+              if (isMobileDetect) {
+                const schedule = (fn: () => void) => {
+                  try {
+                    const ric = (window as any).requestIdleCallback;
+                    if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400);
+                  } catch { setTimeout(fn, 400); }
+                };
+                schedule(() => { void runDetect(); });
+              } else {
+                await runDetect();
+              }
+            } catch {}
+            // 移动端后台低清预览；桌面预览后高清
+            try {
+              diag('posewarp-start');
+              const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+              let adjustedUrl = baseDataUrl;
+              if (isMobile) {
+                const schedule = (fn: () => void) => {
+                  try {
+                    const ric = (window as any).requestIdleCallback;
+                    if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 500);
+                  } catch { setTimeout(fn, 500); }
+                };
+                schedule(async () => {
+                  try {
+                    const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+                    setUploadedResult(preview);
+                    diag('posewarp-success');
+                  } catch (e) {
+                    console.warn('[tryon] mobile preview warp failed', e);
+                    diag('posewarp-error', String(e));
+                  }
+                });
+              } else {
+                // 桌面：先预览后高清
+                adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+                setUploadedResult(adjustedUrl);
+                diag('posewarp-success');
+                (async () => {
+                  try {
+                    const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
+                    setUploadedResult(hd);
+                  } catch {}
+                })();
+              }
+              setShowResult(true);
+              diag('render-success');
+            } catch {}
+            // 已完成首帧显示与后续调度，跳过 HEAD 回退路径
+            return;
+          } else {
+            diag('api-stream-fetch-failed', { status: imgResp2.status });
+          }
+        } else {
+          diag('api-stream-parse-failed');
+        }
+      } catch (e) {
+        diag('api-stream-error', String(e));
+      }
       // 不再等待 POST 完整响应，改为两阶段：通过 HEAD 轮询结果是否可读（动态间隔）
       diag('head-poll-start');
       const deadlineMs = 60_000;
