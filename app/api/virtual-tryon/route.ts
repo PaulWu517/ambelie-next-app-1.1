@@ -242,9 +242,29 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
-    // Immediately return DataURL + traceId to client for first-frame display.
-    const dataUrl = `data:${outMime};base64,${outBase64}`;
-    return { traceId, mime: outMime, base64: outBase64, dataUrl, perf: perfData };
+    // Build original buffer
+    const origBuf = Buffer.from(outBase64, 'base64');
+    // Create a compressed preview (webp 640px) to reduce first-frame size
+    let previewBuf = origBuf;
+    let previewMime = 'image/webp';
+    try {
+      const t0 = Date.now();
+      const sharpMod = await import('sharp');
+      const sharpFn: any = (sharpMod as any).default || sharpMod;
+      previewBuf = await sharpFn(origBuf)
+        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      previewBuf = origBuf;
+      previewMime = outMime || 'image/png';
+      await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
+    }
+
+    const previewBase64 = previewBuf.toString('base64');
+    const dataUrl = `data:${previewMime};base64,${previewBase64}`;
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
