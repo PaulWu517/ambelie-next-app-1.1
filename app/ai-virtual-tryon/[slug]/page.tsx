@@ -329,21 +329,51 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
       // 记录响应元信息
-      diag('server-response-meta', { status: genResp.status, contentType: genResp.headers.get('Content-Type') || genResp.headers.get('content-type') });
-      // 明确先解析服务端响应，确保 DataURL 首帧立即显示
+      const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
+      diag('server-response-meta', { status: genResp.status, contentType });
       let genData: any = null;
-      try {
-        // 优先使用标准 JSON 解析
-        genData = await genResp.json();
-      } catch (e: any) {
-        diag('server-response-json-error', e?.message || String(e));
+      // 二进制首帧：当返回的是图片时，直接读取 blob 并转换为 DataURL
+      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
+      if (genResp.ok && isImage) {
+        const readStart = Date.now();
+        diag('server-body-read-start');
+        const blob = await genResp.blob();
+        diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
+        const reader = new FileReader();
+        const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+        setResultImgLoading(true);
+        setIsResultPending(true);
+        emitUI('before-set-url', { urlKind: 'server-blob-dataurl', length: dataUrl.length });
+        setResultUrl(dataUrl);
+        setShowResult(true);
+        baseResultRef.current = dataUrl;
+        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        setProcessingProgress(100);
+        setIsProcessing(false);
+        // 轻量姿态检测（移动端后台）
         try {
-          const txt = await genResp.text();
-          genData = JSON.parse((txt || '').trim());
-        } catch (e2: any) {
-          diag('server-response-parse-error', e2?.message || String(e2));
+          const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+          const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(dataUrl); if (lms) poseLmsRef.current = lms; };
+          if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
+        } catch {}
+      } else {
+        // 非图片：按旧逻辑回退解析 JSON
+        try {
+          genData = await genResp.json();
+        } catch (e: any) {
+          diag('server-response-json-error', e?.message || String(e));
+          try {
+            const txt = await genResp.clone().text();
+            const head = txt.slice(0, 200);
+            const tail = txt.slice(Math.max(0, txt.length - 200));
+            diag('server-response-snippet', { length: txt.length, head, tail });
+            genData = JSON.parse((txt || '').trim());
+          } catch (e2: any) {
+            try { const txt2 = await genResp.clone().text(); const head2 = txt2.slice(0, 200); const tail2 = txt2.slice(Math.max(0, txt2.length - 200)); diag('server-response-snippet-parse-error', { length: txt2.length, head: head2, tail: tail2, error: e2?.message || String(e2) }); } catch {}
+            diag('server-response-parse-error', e2?.message || String(e2));
+          }
         }
       }
       if (genResp.ok && genData?.dataUrl) {
@@ -389,7 +419,7 @@ const SlugTryOnPage: React.FC = () => {
         // 后续处理（姿态检测/预览/高清）依赖基准图，若无则直接返回，避免误触发预览设置导致再次进入 pending
         return;
       }
-      // 取消 COS 轮询与 CDN 下载：直接使用服务端返回的 DataURL 作为基准
+      // 基准图：优先使用二进制首帧生成的 DataURL，其次回退 JSON dataUrl
       const baseDataUrl = baseResultRef.current || genData?.dataUrl || '';
       if (!baseDataUrl) {
         diag('server-dataurl-missing');

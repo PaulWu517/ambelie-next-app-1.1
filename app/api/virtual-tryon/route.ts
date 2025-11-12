@@ -260,6 +260,28 @@ async function handleVirtualTryon(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const result = await handleVirtualTryon(req);
+    // 支持首帧二进制预览：通过 query 参数 format=blob 或 Accept:image/*
+    const url = new URL(req.url);
+    const format = (url.searchParams.get('format') || '').toLowerCase();
+    const accept = (req.headers.get('accept') || '').toLowerCase();
+    if (format === 'blob' || accept.includes('image/')) {
+      const buf = Buffer.from(result.base64, 'base64');
+      // Convert Buffer to non-shared ArrayBuffer for NextResponse
+      const arrayBuffer = new ArrayBuffer(buf.length);
+      const view = new Uint8Array(arrayBuffer);
+      view.set(buf);
+      await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
+      return new NextResponse(arrayBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': result.mime || 'image/png',
+          'Cache-Control': 'no-store',
+          'X-TraceId': result.traceId,
+          'X-Mime': result.mime || 'image/png'
+        }
+      });
+    }
+    // 默认返回 JSON，用于兼容旧客户端
     return NextResponse.json(result, {
       status: 200,
       headers: {
