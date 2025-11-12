@@ -340,68 +340,23 @@ const VirtualTryOnPage: React.FC = () => {
           // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
         } catch {}
       }).catch(() => {});
-      // 不再等待 POST 完整响应，改为两阶段：通过 HEAD 轮询结果是否可读（动态间隔）
-      diag('head-poll-start');
-      const deadlineMs = 60_000;
-      const pollStart = Date.now();
-      let foundExt: 'png' | 'jpg' | null = null;
-      while (!foundExt && (Date.now() - pollStart) < deadlineMs) {
-        const head = await fetch(`/api/virtual-tryon/result/${traceId}`, { method: 'HEAD', cache: 'no-store' });
-        if (head.ok) {
-          foundExt = (head.headers.get('X-Found-Ext') as any) || 'png';
-          diag('head-200', { ext: foundExt });
-          break;
-        }
-        const elapsed = Date.now() - pollStart;
-        const interval = elapsed < 20_000 ? 1200 : 700; // 前段较慢，尾部加速探测
-        await new Promise(r => setTimeout(r, interval));
+      // 取消轮询与 CDN 下载，直接使用服务端 DataURL 作为基准
+      const baseDataUrl = baseResultRef.current || (uploadedResult || null);
+      if (!baseDataUrl) {
+        diag('dataurl-missing');
+      } else {
+        setResultImgLoading(true);
+        emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
+        setUploadedResult(baseDataUrl);
+        setShowResult(true);
       }
-      if (!foundExt) {
-        diag('head-timeout');
-        // 已显示服务器返回的首帧 DataURL，不再抛错打断用户体验
-        return;
-      }
-      // CDN 直链优先，代理回退
-      const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
-      const basePath = (process.env.NEXT_PUBLIC_TRYON_COS_BASE_PATH || 'tryon-results/').replace(/\/?$/, '/');
-      const cdnUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
-      diag('download-start', { cdnUrl });
-      let imgResp = await fetch(cdnUrl, { cache: 'no-store' });
-      if (!imgResp.ok) {
-        diag('download-fallback-proxy', { status: imgResp.status });
-        const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
-        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
-        if (!imgResp.ok) {
-          const txt = await imgResp.clone().text().catch(() => '');
-          throw new Error(`Result fetch failed: ${imgResp.status} ${txt}`);
-        }
-      }
-      diag('download-success', { status: imgResp.status });
-      const blob = await imgResp.blob();
-      diag('api-blob-success', { size: blob.size, type: blob.type });
-      console.log('[tryon] success', { size: blob.size });
-      // 直接使用 DataURL 作为首帧显示，避免 Blob URL 在移动端/桌面端的撤销与跨源问题
-      const baseDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = (e) => reject(e);
-        reader.readAsDataURL(blob);
-      });
-      setResultImgLoading(true);
-      emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
-      setUploadedResult(baseDataUrl);
-      setShowResult(true);
-      diag('dataurl-success', { length: baseDataUrl.length });
-      // MIME 由浏览器 Blob 类型决定，此处按 DataURL 推断
-      const dataUrlMime = baseDataUrl.substring(baseDataUrl.indexOf(':') + 1, baseDataUrl.indexOf(';')) || 'image/png';
-      setAiGeneratedResult({ base64: baseDataUrl.split(',')[1], mimeType: dataUrlMime });
-      // 保存基准图（未变形）
-      baseResultRef.current = baseDataUrl;
+      // Narrow type after presence check to satisfy TypeScript
+      const baseDataUrlStr: string = baseDataUrl || '';
       // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
       try {
         const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
         const runDetect = async () => {
-          const lms = await detectPoseLandmarksNormalized(baseDataUrl);
+          const lms = await detectPoseLandmarksNormalized(baseDataUrlStr);
           if (lms) poseLmsRef.current = lms;
         };
         if (isMobileDetect) {
@@ -417,7 +372,7 @@ const VirtualTryOnPage: React.FC = () => {
         }
       } catch {}
       const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-      let adjustedUrl = baseDataUrl;
+      let adjustedUrl = baseDataUrlStr;
       try {
         diag('posewarp-start');
         if (isMobile) {
@@ -430,7 +385,7 @@ const VirtualTryOnPage: React.FC = () => {
           };
           schedule(async () => {
             try {
-              const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+              const preview = await applyPoseWarpToDataUrl(baseDataUrlStr, warpControlsRef.current, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
               setUploadedResult(preview);
               diag('posewarp-success');
             } catch (e) {
@@ -440,7 +395,7 @@ const VirtualTryOnPage: React.FC = () => {
           });
         } else {
           // 桌面：先预览，后高清覆盖
-          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrlStr, warpControlsRef.current, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
           diag('posewarp-success');
         }
       } catch (e) {
@@ -453,7 +408,7 @@ const VirtualTryOnPage: React.FC = () => {
         setUploadedResult(adjustedUrl);
         (async () => {
           try {
-            const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { landmarksNormalized: poseLmsRef.current || undefined });
+            const hd = await applyPoseWarpToDataUrl(baseDataUrlStr, warpControlsRef.current, { landmarksNormalized: poseLmsRef.current || undefined });
             setResultImgLoading(true);
             setUploadedResult(hd);
           } catch {}

@@ -330,13 +330,21 @@ const SlugTryOnPage: React.FC = () => {
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
       const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      // 记录响应元信息
+      diag('server-response-meta', { status: genResp.status, contentType: genResp.headers.get('Content-Type') || genResp.headers.get('content-type') });
       // 明确先解析服务端响应，确保 DataURL 首帧立即显示
       let genData: any = null;
       try {
-        const txt = await genResp.text();
-        genData = JSON.parse(txt.trim());
+        // 优先使用标准 JSON 解析
+        genData = await genResp.json();
       } catch (e: any) {
-        diag('server-response-parse-error', e?.message || String(e));
+        diag('server-response-json-error', e?.message || String(e));
+        try {
+          const txt = await genResp.text();
+          genData = JSON.parse((txt || '').trim());
+        } catch (e2: any) {
+          diag('server-response-parse-error', e2?.message || String(e2));
+        }
       }
       if (genResp.ok && genData?.dataUrl) {
         setResultImgLoading(true);
@@ -370,57 +378,19 @@ const SlugTryOnPage: React.FC = () => {
           }
         } catch {}
         // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
+      } else {
+        // 未获取到 DataURL，结束处理态，避免停留在 Preparing
+        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        setProcessingProgress(100);
+        setIsResultPending(false);
+        setIsProcessing(false);
+        diag('ui-no-dataurl');
       }
-      // 两阶段流程：通过 HEAD 轮询结果是否可读（动态间隔）
-      diag('head-poll-start');
-      const deadlineMs = 60_000;
-      const pollStart = Date.now();
-      let foundExt: 'png' | 'jpg' | null = null;
-      while (!foundExt && (Date.now() - pollStart) < deadlineMs) {
-        const head = await fetch(`/api/virtual-tryon/result/${traceId}`, { method: 'HEAD', cache: 'no-store' });
-        if (head.ok) {
-          foundExt = (head.headers.get('X-Found-Ext') as any) || 'png';
-          diag('head-200', { ext: foundExt });
-          break;
-        }
-        const elapsed = Date.now() - pollStart;
-        const interval = elapsed < 20_000 ? 1200 : 700;
-        await new Promise(r => setTimeout(r, interval));
+      // 取消 COS 轮询与 CDN 下载：直接使用服务端返回的 DataURL 作为基准
+      const baseDataUrl = baseResultRef.current || genData?.dataUrl || '';
+      if (!baseDataUrl) {
+        diag('server-dataurl-missing');
       }
-      if (!foundExt) {
-        diag('head-timeout');
-        // 保持首帧 DataURL 已显示的体验；不抛出错误以免打断流程
-        // 这里返回以结束后续CDN下载逻辑（COS未就绪时无需再尝试）
-        return;
-      }
-      // CDN 直链优先，代理回退
-      const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
-      const basePath = (process.env.NEXT_PUBLIC_TRYON_COS_BASE_PATH || 'tryon-results/').replace(/\/?$/, '/');
-      const cdnUrl = `${cdnBase}/${basePath}${traceId}.${foundExt}`;
-      diag('download-start', { cdnUrl });
-      let imgResp = await fetch(cdnUrl, { cache: 'no-store' });
-      if (!imgResp.ok) {
-        diag('download-fallback-proxy', { status: imgResp.status });
-        const proxyUrl = `/api/virtual-tryon/result/${traceId}?ext=${foundExt}`;
-        imgResp = await fetch(proxyUrl, { cache: 'no-store' });
-        if (!imgResp.ok) {
-          const txt = await imgResp.clone().text().catch(() => '');
-          throw new Error(`Result fetch failed: ${imgResp.status} ${txt}`);
-        }
-      }
-      diag('download-success', { status: imgResp.status });
-      const blob = await imgResp.blob();
-      diag('api-blob-success', { size: blob.size, type: blob.type });
-      // 直接使用 DataURL 作为首帧显示，避免 Blob URL 在移动端的解码与撤销问题
-      diag('dataurl-start');
-      const baseDataUrl = await blobToDataUrl(blob);
-      diag('dataurl-success', { length: baseDataUrl.length });
-      baseResultRef.current = baseDataUrl;
-      setResultImgLoading(true);
-      setIsResultPending(true);
-      emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
-      setResultUrl(baseDataUrl);
-      setShowResult(true);
       // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
       try {
         const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
