@@ -51,6 +51,8 @@ const SlugTryOnPage: React.FC = () => {
   const [userPreview, setUserPreview] = useState<string | null>(null);
   // New states for AI result and controls
   const [isProcessing, setIsProcessing] = useState(false);
+  // 结果待呈现状态：用于处理“生成完成但图片仍在下载/解码”的过渡期
+  const [isResultPending, setIsResultPending] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const progressIntervalRef = useRef<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -217,6 +219,9 @@ const SlugTryOnPage: React.FC = () => {
       alert('Missing product reference image for this mode.');
       return;
     }
+    // 开始新一轮生成，进入“待呈现”状态；清空旧结果避免残影
+    setIsResultPending(true);
+    setResultUrl(null);
     setIsProcessing(true);
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const diag = (stage: string, message?: any, extra?: any) => {
@@ -427,8 +432,11 @@ const SlugTryOnPage: React.FC = () => {
     if (resultUrl) {
       // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
       setResultImgLoading(true);
+      setIsResultPending(true);
     } else {
       setResultImgLoading(false);
+      // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
+      // 保持现状：不强制设置 isResultPending=false，这里交由 Try-On 按钮触发时开启
     }
   }, [resultUrl]);
 
@@ -599,9 +607,11 @@ const SlugTryOnPage: React.FC = () => {
             ) : resultUrl ? (
               <div className={styles.result}>
                 {resultImgLoading && (
-                  <div className={styles.processing} style={{ position: 'absolute' }}>
-                    <div className={styles.spinner}></div>
-                    <p>Loading image...</p>
+                  <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div>
+                      <div className={styles.spinner}></div>
+                      <p>Loading image...</p>
+                    </div>
                   </div>
                 )}
                 <img 
@@ -609,18 +619,24 @@ const SlugTryOnPage: React.FC = () => {
                   alt="Try-on result" 
                   className={styles.resultImage} 
                   onClick={handleImageClick}
-                  onLoad={() => setResultImgLoading(false)}
-                  onError={() => setResultImgLoading(false)}
+                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); }}
+                  onError={() => { setResultImgLoading(false); setIsResultPending(false); }}
                   style={{ cursor: 'pointer', display: resultImgLoading ? 'none' : 'block' }}
                   title="点击放大查看"
                 />
               </div>
             ) : (
-              <div className={styles.resultPlaceholder}>
-                <img src="/assets/icon/图片.png" alt="Image icon" className={styles.resultIcon} />
-                <p>Your result will appear here after generation.</p>
-                <span className={styles.uploadHint}>Click "Try On Now" to generate</span>
-              </div>
+              isResultPending ? (
+                <div className={styles.processing} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column' }}>
+                  <div className={styles.spinner}></div>
+                  <p>Preparing result image...</p>
+                </div>
+              ) : (
+                <div className={styles.resultPlaceholder}>
+                  <p>Your result will appear here after generation.</p>
+                  <span className={styles.uploadHint}>Click "Try On Now" to generate</span>
+                </div>
+              )
             )}
           </div>
           <div className={styles.resultActions}>
