@@ -329,47 +329,48 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
-      // 并行：解析服务器返回的即时 DataURL（首帧显示），同时后台发起COS上传
-      postRespPromise.then(async (resp) => {
+      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      // 明确先解析服务端响应，确保 DataURL 首帧立即显示
+      let genData: any = null;
+      try {
+        const txt = await genResp.text();
+        genData = JSON.parse(txt.trim());
+      } catch (e: any) {
+        diag('server-response-parse-error', e?.message || String(e));
+      }
+      if (genResp.ok && genData?.dataUrl) {
+        setResultImgLoading(true);
+        setIsResultPending(true);
+        emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
+        setResultUrl(genData.dataUrl);
+        setShowResult(true);
+        baseResultRef.current = genData.dataUrl;
+        // 异步预检测关键点（移动端后台）
         try {
-          if (!resp.ok) return;
-          const data = await resp.json().catch(() => null);
-          if (!data || !data.dataUrl) return;
-          // 首帧显示（服务端直接返回的 DataURL）
-          setResultImgLoading(true);
-          setIsResultPending(true);
-          emitUI('before-set-url', { urlKind: 'server-dataurl', length: data.dataUrl.length });
-          setResultUrl(data.dataUrl);
-          setShowResult(true);
-          baseResultRef.current = data.dataUrl;
-          // 异步预检测关键点（移动端后台）
-          try {
-            const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-            const runDetect = async () => {
-              const lms = await detectPoseLandmarksNormalized(data.dataUrl);
-              if (lms) poseLmsRef.current = lms;
+          const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+          const runDetect = async () => {
+            const lms = await detectPoseLandmarksNormalized(genData.dataUrl);
+            if (lms) poseLmsRef.current = lms;
+          };
+          if (isMobileDetect) {
+            const schedule = (fn: () => void) => {
+              try { const ric = (window as any).requestIdleCallback; if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400); }
+              catch { setTimeout(fn, 400); }
             };
-            if (isMobileDetect) {
-              const schedule = (fn: () => void) => {
-                try { const ric = (window as any).requestIdleCallback; if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400); }
-                catch { setTimeout(fn, 400); }
-              };
-              schedule(() => { void runDetect(); });
-            } else {
-              await runDetect();
-            }
-          } catch {}
-          // 后台触发COS上传（不等待）
-          try {
-            void fetch('/api/virtual-tryon/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ traceId: data.traceId, mime: data.mime, base64: data.base64 }),
-            });
-          } catch {}
+            schedule(() => { void runDetect(); });
+          } else {
+            await runDetect();
+          }
         } catch {}
-      }).catch(() => {});
+        // 后台触发COS上传（不等待）
+        try {
+          void fetch('/api/virtual-tryon/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ traceId: genData.traceId, mime: genData.mime, base64: genData.base64 }),
+          });
+        } catch {}
+      }
       // 两阶段流程：通过 HEAD 轮询结果是否可读（动态间隔）
       diag('head-poll-start');
       const deadlineMs = 60_000;
