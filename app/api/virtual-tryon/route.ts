@@ -258,30 +258,22 @@ async function handleVirtualTryon(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      // 心跳：避免长时间无下行数据导致边缘网关 524
-      const heartbeat = setInterval(() => controller.enqueue(encoder.encode(' \n')), 5000);
-      try {
-        const result = await handleVirtualTryon(req);
-        controller.enqueue(encoder.encode(JSON.stringify(result)));
-      } catch (error) {
-        const errorPayload = typeof error === 'object' && error !== null ? error : { error: 'Unknown error' };
-        controller.enqueue(encoder.encode(JSON.stringify(errorPayload)));
-      } finally {
-        clearInterval(heartbeat);
-        controller.close();
+  try {
+    const result = await handleVirtualTryon(req);
+    return NextResponse.json(result, {
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store'
       }
-    }
-  });
-
-  return new NextResponse(stream, {
-    status: 200, // Always 200, as the stream itself is successfully delivered.
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'no-store, no-transform', // Important for streaming and avoiding caching
-    }
-  });
+    });
+  } catch (error: any) {
+    const payload = typeof error === 'object' && error !== null ? error : { error: 'Unknown error' };
+    const status = payload?.status || 500;
+    return NextResponse.json(payload, {
+      status,
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
+  }
 }

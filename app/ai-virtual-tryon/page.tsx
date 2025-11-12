@@ -337,14 +337,7 @@ const VirtualTryOnPage: React.FC = () => {
               await runDetect();
             }
           } catch {}
-          // 后台触发COS上传（不等待）
-          try {
-            void fetch('/api/virtual-tryon/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ traceId: data.traceId, mime: data.mime, base64: data.base64 }),
-            });
-          } catch {}
+          // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
         } catch {}
       }).catch(() => {});
       // 不再等待 POST 完整响应，改为两阶段：通过 HEAD 轮询结果是否可读（动态间隔）

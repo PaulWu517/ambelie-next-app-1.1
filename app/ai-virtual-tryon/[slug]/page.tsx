@@ -362,14 +362,7 @@ const SlugTryOnPage: React.FC = () => {
             await runDetect();
           }
         } catch {}
-        // 后台触发COS上传（不等待）
-        try {
-          void fetch('/api/virtual-tryon/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ traceId: genData.traceId, mime: genData.mime, base64: genData.base64 }),
-          });
-        } catch {}
+        // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
       }
       // 两阶段流程：通过 HEAD 轮询结果是否可读（动态间隔）
       diag('head-poll-start');
