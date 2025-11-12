@@ -339,23 +339,48 @@ const SlugTryOnPage: React.FC = () => {
       if (genResp.ok && isImage) {
         const readStart = Date.now();
         diag('server-body-read-start');
-        const blob = await genResp.blob();
+        let blob: Blob;
+        try {
+          blob = await genResp.blob();
+        } catch (e: any) {
+          diag('server-body-read-error', e?.message || String(e));
+          // 读取失败：结束处理态，避免卡住
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsResultPending(false);
+          setResultImgLoading(false);
+          setIsProcessing(false);
+          return;
+        }
         diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
-        const reader = new FileReader();
-        const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+        // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
+        const objUrl = URL.createObjectURL(blob);
         setResultImgLoading(true);
         setIsResultPending(true);
-        emitUI('before-set-url', { urlKind: 'server-blob-dataurl', length: dataUrl.length });
-        setResultUrl(dataUrl);
+        emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
+        setResultUrl(objUrl);
         setShowResult(true);
-        baseResultRef.current = dataUrl;
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsProcessing(false);
+        // 后台转换为 DataURL 并替换，确保后续处理一致
+        (async () => {
+          try {
+            const reader = new FileReader();
+            const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+            emitUI('after-objecturl-converted', { length: dataUrl.length });
+            baseResultRef.current = dataUrl;
+            setResultUrl(dataUrl);
+            try { URL.revokeObjectURL(objUrl); } catch {}
+          } catch (e: any) {
+            diag('blob-to-dataurl-error', e?.message || String(e));
+            // 保留 ObjectURL，不进行 revoke，确保图片可见
+          }
+        })();
         // 轻量姿态检测（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-          const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(dataUrl); if (lms) poseLmsRef.current = lms; };
+          const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
       } else {
