@@ -18,6 +18,20 @@ interface BodyMeasurements {
 }
 
 const VirtualTryOnPage: React.FC = () => {
+  // UI诊断：将关键状态变化打印到控制台并上报到后端终端日志
+  const uiTraceIdRef = useRef<string>(`page-ui-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const emitUI = (stage: string, message?: any) => {
+    try {
+      const payload = { traceId: uiTraceIdRef.current, stage: `ui-${stage}`, message, ts: new Date().toISOString() };
+      console.log(`[page-ui] ${stage}`, message);
+      if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        (navigator as any).sendBeacon('/api/diagnostic', blob);
+      } else {
+        void fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+      }
+    } catch {}
+  };
   // Hide header on this page
   useEffect(() => {
     const header = document.querySelector('header');
@@ -33,6 +47,8 @@ const VirtualTryOnPage: React.FC = () => {
       }
     };
   }, []);
+  // 首次挂载
+  useEffect(() => { emitUI('mount', { at: Date.now() }); }, []);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedClothing, setUploadedClothing] = useState<string | null>(null);
   const [uploadedResult, setUploadedResult] = useState<string | null>(null);
@@ -335,6 +351,7 @@ const VirtualTryOnPage: React.FC = () => {
       // 先用 Blob URL 即显，提升体感速度
       const objUrl = URL.createObjectURL(blob);
       setResultImgLoading(true);
+      emitUI('before-set-url', { urlKind: 'blob', objUrl });
       setUploadedResult(objUrl);
       setShowResult(true);
       // 后台转换 DataURL 供姿态变形使用
@@ -584,8 +601,8 @@ const VirtualTryOnPage: React.FC = () => {
                       src={uploadedResult} 
                       alt="Try-on result" 
                       className={styles.resultImage}
-                      onLoad={() => setResultImgLoading(false)}
-                      onError={() => setResultImgLoading(false)}
+                      onLoad={() => { setResultImgLoading(false); emitUI('img-onload'); }}
+                      onError={() => { setResultImgLoading(false); emitUI('img-onerror'); }}
                       style={{ display: resultImgLoading ? 'none' : 'block' }}
                     />
                   </div>

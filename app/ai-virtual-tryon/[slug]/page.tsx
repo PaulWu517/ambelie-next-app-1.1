@@ -9,12 +9,29 @@ import { compressImage } from '@/lib/utils/imageCompression';
 import styles from '../VirtualTryOn.module.css';
 
 const SlugTryOnPage: React.FC = () => {
+  // UI诊断：统一将关键状态变化上报到后端终端日志，同时在浏览器控制台打印
+  const uiTraceIdRef = useRef<string>(`slug-ui-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const emitUI = (stage: string, message?: any) => {
+    try {
+      const payload = { traceId: uiTraceIdRef.current, stage: `ui-${stage}`, message, ts: new Date().toISOString() };
+      console.log(`[slug-ui] ${stage}`, message);
+      if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        (navigator as any).sendBeacon('/api/diagnostic', blob);
+      } else {
+        void fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+      }
+    } catch {}
+  };
   // Hide header on this page for focused experience
   useEffect(() => {
     const header = document.querySelector('header');
     if (header) header.style.display = 'none';
     return () => { if (header) header.style.display = ''; };
   }, []);
+
+  // 首次挂载打点
+  useEffect(() => { emitUI('mount', { at: Date.now() }); }, []);
 
   const params = useParams();
   const search = useSearchParams();
@@ -65,6 +82,15 @@ const SlugTryOnPage: React.FC = () => {
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    try {
+      const el = resultAreaRef.current;
+      if (el) {
+        const cs = getComputedStyle(el);
+        emitUI('resultArea-style', { position: cs.position, height: cs.height, width: cs.width });
+      }
+    } catch {}
+  }, []);
   const defaultWarp = { hip: 0, waist: 0, shoulder: 0, thigh: 0, upper_arm: 0, forearm: 0, calf: 0 };
   const [warpControls, setWarpControls] = useState(defaultWarp);
   const warpDebounce = useRef<number | null>(null);
@@ -222,6 +248,7 @@ const SlugTryOnPage: React.FC = () => {
     // 开始新一轮生成，进入“待呈现”状态；清空旧结果避免残影
     setIsResultPending(true);
     setResultUrl(null);
+    emitUI('tryon-start', { pending: true, resultUrl: null });
     setIsProcessing(true);
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const diag = (stage: string, message?: any, extra?: any) => {
@@ -346,6 +373,7 @@ const SlugTryOnPage: React.FC = () => {
       // 先置 loading/pending，再设置 URL，避免首帧闪现问号图标
       setResultImgLoading(true);
       setIsResultPending(true);
+      emitUI('before-set-url', { urlKind: 'blob', objUrl });
       setResultUrl(objUrl);
       setShowResult(true);
       diag('dataurl-start');
@@ -389,6 +417,7 @@ const SlugTryOnPage: React.FC = () => {
               // 预览也先置 loading，防止低端设备切换时短暂闪烁
               setResultImgLoading(true);
               setIsResultPending(true);
+              emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
               setResultUrl(preview);
               diag('posewarp-success');
             } catch (e) {
@@ -409,6 +438,7 @@ const SlugTryOnPage: React.FC = () => {
       if (!isMobile) {
         setResultImgLoading(true);
         setIsResultPending(true);
+        emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
         setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
         (async () => {
@@ -416,6 +446,7 @@ const SlugTryOnPage: React.FC = () => {
             const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
             setResultImgLoading(true);
             setIsResultPending(true);
+            emitUI('before-set-url', { urlKind: 'desktop-hd', length: hd?.length });
             setResultUrl(hd);
           } catch {}
         })();
@@ -443,6 +474,7 @@ const SlugTryOnPage: React.FC = () => {
       // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
       setResultImgLoading(true);
       setIsResultPending(true);
+      emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
     } else {
       setResultImgLoading(false);
       // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
@@ -629,8 +661,8 @@ const SlugTryOnPage: React.FC = () => {
                   alt="Try-on result" 
                   className={styles.resultImage} 
                   onClick={handleImageClick}
-                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); }}
-                  onError={() => { setResultImgLoading(false); setIsResultPending(false); }}
+                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
+                  onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
                   style={{ cursor: 'pointer', display: (resultImgLoading || isResultPending) ? 'none' : 'block' }}
                   title="点击放大查看"
                 />
