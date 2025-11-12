@@ -383,13 +383,17 @@ const SlugTryOnPage: React.FC = () => {
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsResultPending(false);
+        setResultImgLoading(false);
         setIsProcessing(false);
         diag('ui-no-dataurl');
+        // 后续处理（姿态检测/预览/高清）依赖基准图，若无则直接返回，避免误触发预览设置导致再次进入 pending
+        return;
       }
       // 取消 COS 轮询与 CDN 下载：直接使用服务端返回的 DataURL 作为基准
       const baseDataUrl = baseResultRef.current || genData?.dataUrl || '';
       if (!baseDataUrl) {
         diag('server-dataurl-missing');
+        return;
       }
       // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
       try {
