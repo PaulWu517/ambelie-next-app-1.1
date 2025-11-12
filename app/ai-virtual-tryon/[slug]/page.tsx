@@ -545,6 +545,30 @@ const SlugTryOnPage: React.FC = () => {
       setResultImgLoading(true);
       setIsResultPending(true);
       emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
+      // 预解码兜底：即使 onLoad 未触发，也尝试主动解码后清除 loading
+      (async () => {
+        try {
+          emitUI('predecode-start');
+          if (typeof createImageBitmap === 'function') {
+            const res = await fetch(resultUrl);
+            const blob = await res.blob();
+            await createImageBitmap(blob);
+          } else {
+            await new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(true);
+              img.onerror = reject;
+              img.src = resultUrl;
+            });
+          }
+          setResultImgLoading(false);
+          setIsResultPending(false);
+          emitUI('predecode-success');
+        } catch (e: any) {
+          emitUI('predecode-error', e?.message || String(e));
+          // 失败时不改变现有 loading 状态，交由 onError/onLoad 处理
+        }
+      })();
     } else {
       setResultImgLoading(false);
       // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
@@ -733,7 +757,7 @@ const SlugTryOnPage: React.FC = () => {
                   onClick={handleImageClick}
                   onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
                   onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                  style={{ cursor: 'pointer', display: (resultImgLoading || isResultPending) ? 'none' : 'block' }}
+                  style={{ cursor: 'pointer', opacity: (resultImgLoading || isResultPending) ? 0.35 : 1, transition: 'opacity 200ms ease' }}
                   title="点击放大查看"
                 />
               </div>
