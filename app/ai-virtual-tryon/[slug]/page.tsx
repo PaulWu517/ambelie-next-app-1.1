@@ -421,6 +421,17 @@ const SlugTryOnPage: React.FC = () => {
     }
   };
 
+  // 控制结果图加载占位：避免 iOS Safari 在图片未解码时显示问号图标
+  const [resultImgLoading, setResultImgLoading] = useState(false);
+  useEffect(() => {
+    if (resultUrl) {
+      // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
+      setResultImgLoading(true);
+    } else {
+      setResultImgLoading(false);
+    }
+  }, [resultUrl]);
+
   const applyWarpFromControls = async () => {
     if (!baseResultRef.current) return;
     const mySeq = ++applySeq.current;
@@ -587,12 +598,20 @@ const SlugTryOnPage: React.FC = () => {
               </div>
             ) : resultUrl ? (
               <div className={styles.result}>
+                {resultImgLoading && (
+                  <div className={styles.processing} style={{ position: 'absolute' }}>
+                    <div className={styles.spinner}></div>
+                    <p>Loading image...</p>
+                  </div>
+                )}
                 <img 
                   src={resultUrl} 
                   alt="Try-on result" 
                   className={styles.resultImage} 
                   onClick={handleImageClick}
-                  style={{ cursor: 'pointer' }}
+                  onLoad={() => setResultImgLoading(false)}
+                  onError={() => setResultImgLoading(false)}
+                  style={{ cursor: 'pointer', display: resultImgLoading ? 'none' : 'block' }}
                   title="点击放大查看"
                 />
               </div>

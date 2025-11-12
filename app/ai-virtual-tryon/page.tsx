@@ -569,14 +569,14 @@ const VirtualTryOnPage: React.FC = () => {
                       src={uploadedResult} 
                       alt="Try-on result" 
                       className={styles.resultImage}
+                      onLoad={(e) => { /* noop: ensure visibility handling if needed */ }}
                     />
                   </div>
                 ) : showResult ? (
-                  <img 
-                    src="/api/placeholder/300/400" 
-                    alt="Try-on result" 
-                    className={styles.resultImage}
-                  />
+                  <div className={styles.processing}>
+                    <div className={styles.spinner}></div>
+                    <p>Loading result image...</p>
+                  </div>
                 ) : (
                   <div 
                     className={styles.resultPlaceholder}
