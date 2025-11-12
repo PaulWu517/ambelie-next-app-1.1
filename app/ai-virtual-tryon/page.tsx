@@ -50,6 +50,7 @@ const VirtualTryOnPage: React.FC = () => {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [resultImgLoading, setResultImgLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const clothingInputRef = useRef<HTMLInputElement>(null);
   const resultInputRef = useRef<HTMLInputElement>(null);
@@ -180,6 +181,7 @@ const VirtualTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
+        setResultImgLoading(true);
         setUploadedResult(adjusted);
       }
     } catch (e) {
@@ -194,6 +196,7 @@ const VirtualTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
+        setResultImgLoading(true);
         setUploadedResult(adjusted);
       }
     } catch (e) {
@@ -208,6 +211,7 @@ const VirtualTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
+        setResultImgLoading(true);
         setUploadedResult(adjusted);
       }
     } catch (e) {
@@ -330,6 +334,7 @@ const VirtualTryOnPage: React.FC = () => {
       console.log('[tryon] success', { size: blob.size });
       // 先用 Blob URL 即显，提升体感速度
       const objUrl = URL.createObjectURL(blob);
+      setResultImgLoading(true);
       setUploadedResult(objUrl);
       setShowResult(true);
       // 后台转换 DataURL 供姿态变形使用
@@ -398,10 +403,12 @@ const VirtualTryOnPage: React.FC = () => {
       // 替换为变形后的结果，释放临时 Blob URL
       URL.revokeObjectURL(objUrl);
       if (!isMobile) {
+        setResultImgLoading(true);
         setUploadedResult(adjustedUrl);
         (async () => {
           try {
             const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { landmarksNormalized: poseLmsRef.current || undefined });
+            setResultImgLoading(true);
             setUploadedResult(hd);
           } catch {}
         })();
@@ -564,12 +571,22 @@ const VirtualTryOnPage: React.FC = () => {
             ) : showResult || uploadedResult ? (
               <div className={styles.resultArea}>
                 {uploadedResult ? (
-                  <div>
+                  <div className={styles.result}>
+                    {resultImgLoading && (
+                      <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div>
+                          <div className={styles.spinner}></div>
+                          <p>Loading image...</p>
+                        </div>
+                      </div>
+                    )}
                     <img 
                       src={uploadedResult} 
                       alt="Try-on result" 
                       className={styles.resultImage}
-                      onLoad={(e) => { /* noop: ensure visibility handling if needed */ }}
+                      onLoad={() => setResultImgLoading(false)}
+                      onError={() => setResultImgLoading(false)}
+                      style={{ display: resultImgLoading ? 'none' : 'block' }}
                     />
                   </div>
                 ) : showResult ? (
