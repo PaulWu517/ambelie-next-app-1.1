@@ -234,33 +234,6 @@ async function handleVirtualTryon(req: NextRequest) {
       traceId
     });
     
-    const buf = Buffer.from(outBase64, 'base64');
-    const key = buildTryonKey(traceId, outMime);
-    let imageUrl: string | null = null;
-    // Diagnostic: about to upload to COS
-    await emitServer(traceId, 'cos-put-start', {
-      key,
-      mime: outMime,
-      size: buf.length,
-      env: {
-        hasSecretId: !!process.env.TENCENT_COS_SECRET_ID,
-        hasSecretKey: !!process.env.TENCENT_COS_SECRET_KEY,
-        bucket: process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639',
-        region: process.env.TENCENT_COS_REGION || 'ap-guangzhou',
-        basePath: process.env.TRYON_COS_BASE_PATH || 'tryon-results/',
-        cdnDomain: process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
-      }
-    });
-    try {
-      const uploaded = await uploadBufferToCOS(buf, key, outMime);
-      imageUrl = uploaded.url;
-      await emitServer(traceId, 'cos-put-success', { key, url: imageUrl });
-    } catch (uploadErr: any) {
-      console.error('[virtual-tryon] COS upload failed', uploadErr?.message || uploadErr);
-      await emitServer(traceId, 'cos-put-error', { key, error: uploadErr?.message || String(uploadErr) });
-      throw { error: 'Upload to COS failed', message: uploadErr?.message || String(uploadErr), traceId, status: 502 };
-    }
-
     const perfData = {
       formParsing: perf.formParsed - perf.start,
       imageProcessing: perf.imageProcessed - perf.formParsed,
@@ -269,7 +242,9 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
-    return { imageUrl, traceId, mime: outMime, perf: perfData };
+    // Immediately return DataURL + traceId to client for first-frame display.
+    const dataUrl = `data:${outMime};base64,${outBase64}`;
+    return { traceId, mime: outMime, base64: outBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;

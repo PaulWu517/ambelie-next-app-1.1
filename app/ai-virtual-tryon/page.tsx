@@ -309,6 +309,44 @@ const VirtualTryOnPage: React.FC = () => {
   
       diag('api-call');
       const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      // 并行：解析服务器返回的即时 DataURL（首帧显示），同时后台发起COS上传
+      postRespPromise.then(async (resp) => {
+        try {
+          if (!resp.ok) return;
+          const data = await resp.json().catch(() => null);
+          if (!data || !data.dataUrl) return;
+          setResultImgLoading(true);
+          emitUI('before-set-url', { urlKind: 'server-dataurl', length: data.dataUrl.length });
+          setUploadedResult(data.dataUrl);
+          setShowResult(true);
+          baseResultRef.current = data.dataUrl;
+          // 预检测关键点（移动端后台）
+          try {
+            const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+            const runDetect = async () => {
+              const lms = await detectPoseLandmarksNormalized(data.dataUrl);
+              if (lms) poseLmsRef.current = lms;
+            };
+            if (isMobileDetect) {
+              const schedule = (fn: () => void) => {
+                try { const ric = (window as any).requestIdleCallback; if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400); }
+                catch { setTimeout(fn, 400); }
+              };
+              schedule(() => { void runDetect(); });
+            } else {
+              await runDetect();
+            }
+          } catch {}
+          // 后台触发COS上传（不等待）
+          try {
+            void fetch('/api/virtual-tryon/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ traceId: data.traceId, mime: data.mime, base64: data.base64 }),
+            });
+          } catch {}
+        } catch {}
+      }).catch(() => {});
       // 不再等待 POST 完整响应，改为两阶段：通过 HEAD 轮询结果是否可读（动态间隔）
       diag('head-poll-start');
       const deadlineMs = 60_000;
@@ -327,7 +365,8 @@ const VirtualTryOnPage: React.FC = () => {
       }
       if (!foundExt) {
         diag('head-timeout');
-        throw new Error('Timeout waiting for result image');
+        // 已显示服务器返回的首帧 DataURL，不再抛错打断用户体验
+        return;
       }
       // CDN 直链优先，代理回退
       const cdnBase = (process.env.NEXT_PUBLIC_TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
