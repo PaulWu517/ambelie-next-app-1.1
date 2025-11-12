@@ -379,6 +379,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative; /* allow absolute spinner overlay to center within */
 }
 
 .resultImage {

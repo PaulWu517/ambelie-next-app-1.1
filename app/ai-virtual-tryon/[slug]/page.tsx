@@ -343,6 +343,9 @@ const SlugTryOnPage: React.FC = () => {
       diag('api-blob-success', { size: blob.size, type: blob.type });
       // 先用 Blob URL 即显，提升体感速度
       const objUrl = URL.createObjectURL(blob);
+      // 先置 loading/pending，再设置 URL，避免首帧闪现问号图标
+      setResultImgLoading(true);
+      setIsResultPending(true);
       setResultUrl(objUrl);
       setShowResult(true);
       diag('dataurl-start');
@@ -383,6 +386,9 @@ const SlugTryOnPage: React.FC = () => {
           schedule(async () => {
             try {
               const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+              // 预览也先置 loading，防止低端设备切换时短暂闪烁
+              setResultImgLoading(true);
+              setIsResultPending(true);
               setResultUrl(preview);
               diag('posewarp-success');
             } catch (e) {
@@ -401,11 +407,15 @@ const SlugTryOnPage: React.FC = () => {
       }
       URL.revokeObjectURL(objUrl);
       if (!isMobile) {
+        setResultImgLoading(true);
+        setIsResultPending(true);
         setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
         (async () => {
           try {
             const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
+            setResultImgLoading(true);
+            setIsResultPending(true);
             setResultUrl(hd);
           } catch {}
         })();
@@ -606,7 +616,7 @@ const SlugTryOnPage: React.FC = () => {
               </div>
             ) : resultUrl ? (
               <div className={styles.result}>
-                {resultImgLoading && (
+                {(resultImgLoading || isResultPending) && (
                   <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div>
                       <div className={styles.spinner}></div>
@@ -621,7 +631,7 @@ const SlugTryOnPage: React.FC = () => {
                   onClick={handleImageClick}
                   onLoad={() => { setResultImgLoading(false); setIsResultPending(false); }}
                   onError={() => { setResultImgLoading(false); setIsResultPending(false); }}
-                  style={{ cursor: 'pointer', display: resultImgLoading ? 'none' : 'block' }}
+                  style={{ cursor: 'pointer', display: (resultImgLoading || isResultPending) ? 'none' : 'block' }}
                   title="点击放大查看"
                 />
               </div>
