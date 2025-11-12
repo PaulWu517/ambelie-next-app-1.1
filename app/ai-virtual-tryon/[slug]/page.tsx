@@ -245,10 +245,9 @@ const SlugTryOnPage: React.FC = () => {
       alert('Missing product reference image for this mode.');
       return;
     }
-    // 开始新一轮生成，进入“待呈现”状态；清空旧结果避免残影
+    // 开始新一轮生成，进入“待呈现”状态；保留上一张结果，避免失败时回到占位图
     setIsResultPending(true);
-    setResultUrl(null);
-    emitUI('tryon-start', { pending: true, resultUrl: null });
+    emitUI('tryon-start', { pending: true, resultUrl });
     setIsProcessing(true);
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const diag = (stage: string, message?: any, extra?: any) => {
@@ -384,22 +383,22 @@ const SlugTryOnPage: React.FC = () => {
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
       } else {
-        // 非图片：按旧逻辑回退解析 JSON
+        // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
         try {
-          genData = await genResp.json();
+          const txt = await genResp.text();
+          const head = txt.slice(0, 200);
+          const tail = txt.slice(Math.max(0, txt.length - 200));
+          diag('server-non-image-response', { length: txt.length, head, tail });
         } catch (e: any) {
-          diag('server-response-json-error', e?.message || String(e));
-          try {
-            const txt = await genResp.clone().text();
-            const head = txt.slice(0, 200);
-            const tail = txt.slice(Math.max(0, txt.length - 200));
-            diag('server-response-snippet', { length: txt.length, head, tail });
-            genData = JSON.parse((txt || '').trim());
-          } catch (e2: any) {
-            try { const txt2 = await genResp.clone().text(); const head2 = txt2.slice(0, 200); const tail2 = txt2.slice(Math.max(0, txt2.length - 200)); diag('server-response-snippet-parse-error', { length: txt2.length, head: head2, tail: tail2, error: e2?.message || String(e2) }); } catch {}
-            diag('server-response-parse-error', e2?.message || String(e2));
-          }
+          diag('server-response-text-error', e?.message || String(e));
         }
+        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        setProcessingProgress(100);
+        setIsResultPending(false);
+        setResultImgLoading(false);
+        setIsProcessing(false);
+        // 保留上一张图片，不回到占位
+        return;
       }
       if (genResp.ok && genData?.dataUrl) {
         setResultImgLoading(true);
