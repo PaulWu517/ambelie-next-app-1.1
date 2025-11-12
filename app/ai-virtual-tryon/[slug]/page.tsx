@@ -345,6 +345,13 @@ const SlugTryOnPage: React.FC = () => {
         setResultUrl(genData.dataUrl);
         setShowResult(true);
         baseResultRef.current = genData.dataUrl;
+        // 生成响应已拿到首帧，提前结束处理态与进度，避免卡在99%
+        if (progressIntervalRef.current) {
+          try { window.clearInterval(progressIntervalRef.current); } catch {}
+          progressIntervalRef.current = null;
+        }
+        setProcessingProgress(100);
+        setIsProcessing(false);
         // 异步预检测关键点（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
