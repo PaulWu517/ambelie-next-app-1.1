@@ -16,6 +16,27 @@ function buildPrompt(measurements?: any, extraPrompt?: string) {
   return extraPrompt ? `${base} ${extraPrompt}` : base;
 }
 
+// Server-side diagnostic emitter: append to DIAG_LOG_PATH if set, else console.log
+async function emitServer(traceId: string, stage: string, message?: any) {
+  try {
+    const payload = { traceId, stage, message, ts: new Date().toISOString() };
+    const target = process.env.DIAG_LOG_PATH;
+    if (target) {
+      try {
+        const fs = await import('fs');
+        const path = await import('path');
+        const dir = path.dirname(target);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.appendFileSync(target, `${payload.ts} [trace:${traceId}] [stage:${stage}] ${JSON.stringify(message || '')}\n`, { encoding: 'utf-8' });
+      } catch (e) {
+        console.log('[diagnostic-fallback]', payload);
+      }
+    } else {
+      console.log('[diagnostic]', payload);
+    }
+  } catch {}
+}
+
 // The core logic is moved into this function.
 // It throws a serializable object on error, and returns a serializable object on success.
 async function handleVirtualTryon(req: NextRequest) {
@@ -216,11 +237,27 @@ async function handleVirtualTryon(req: NextRequest) {
     const buf = Buffer.from(outBase64, 'base64');
     const key = buildTryonKey(traceId, outMime);
     let imageUrl: string | null = null;
+    // Diagnostic: about to upload to COS
+    await emitServer(traceId, 'cos-put-start', {
+      key,
+      mime: outMime,
+      size: buf.length,
+      env: {
+        hasSecretId: !!process.env.TENCENT_COS_SECRET_ID,
+        hasSecretKey: !!process.env.TENCENT_COS_SECRET_KEY,
+        bucket: process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639',
+        region: process.env.TENCENT_COS_REGION || 'ap-guangzhou',
+        basePath: process.env.TRYON_COS_BASE_PATH || 'tryon-results/',
+        cdnDomain: process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
+      }
+    });
     try {
       const uploaded = await uploadBufferToCOS(buf, key, outMime);
       imageUrl = uploaded.url;
+      await emitServer(traceId, 'cos-put-success', { key, url: imageUrl });
     } catch (uploadErr: any) {
       console.error('[virtual-tryon] COS upload failed', uploadErr?.message || uploadErr);
+      await emitServer(traceId, 'cos-put-error', { key, error: uploadErr?.message || String(uploadErr) });
       throw { error: 'Upload to COS failed', message: uploadErr?.message || String(uploadErr), traceId, status: 502 };
     }
 
