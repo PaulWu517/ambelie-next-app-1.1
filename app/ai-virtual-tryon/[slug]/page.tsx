@@ -368,18 +368,16 @@ const SlugTryOnPage: React.FC = () => {
       diag('download-success', { status: imgResp.status });
       const blob = await imgResp.blob();
       diag('api-blob-success', { size: blob.size, type: blob.type });
-      // 先用 Blob URL 即显，提升体感速度
-      const objUrl = URL.createObjectURL(blob);
-      // 先置 loading/pending，再设置 URL，避免首帧闪现问号图标
-      setResultImgLoading(true);
-      setIsResultPending(true);
-      emitUI('before-set-url', { urlKind: 'blob', objUrl });
-      setResultUrl(objUrl);
-      setShowResult(true);
+      // 直接使用 DataURL 作为首帧显示，避免 Blob URL 在移动端的解码与撤销问题
       diag('dataurl-start');
       const baseDataUrl = await blobToDataUrl(blob);
       diag('dataurl-success', { length: baseDataUrl.length });
       baseResultRef.current = baseDataUrl;
+      setResultImgLoading(true);
+      setIsResultPending(true);
+      emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
+      setResultUrl(baseDataUrl);
+      setShowResult(true);
       // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
       try {
         const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -434,7 +432,7 @@ const SlugTryOnPage: React.FC = () => {
         console.warn('[slug tryon] pose warp failed', e);
         diag('posewarp-error', String(e));
       }
-      URL.revokeObjectURL(objUrl);
+      // 不再使用 Blob URL，无需 revoke
       if (!isMobile) {
         setResultImgLoading(true);
         setIsResultPending(true);

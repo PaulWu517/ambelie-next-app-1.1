@@ -348,19 +348,17 @@ const VirtualTryOnPage: React.FC = () => {
       const blob = await imgResp.blob();
       diag('api-blob-success', { size: blob.size, type: blob.type });
       console.log('[tryon] success', { size: blob.size });
-      // 先用 Blob URL 即显，提升体感速度
-      const objUrl = URL.createObjectURL(blob);
-      setResultImgLoading(true);
-      emitUI('before-set-url', { urlKind: 'blob', objUrl });
-      setUploadedResult(objUrl);
-      setShowResult(true);
-      // 后台转换 DataURL 供姿态变形使用
+      // 直接使用 DataURL 作为首帧显示，避免 Blob URL 在移动端/桌面端的撤销与跨源问题
       const baseDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = (e) => reject(e);
         reader.readAsDataURL(blob);
       });
+      setResultImgLoading(true);
+      emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
+      setUploadedResult(baseDataUrl);
+      setShowResult(true);
       diag('dataurl-success', { length: baseDataUrl.length });
       // MIME 由浏览器 Blob 类型决定，此处按 DataURL 推断
       const dataUrlMime = baseDataUrl.substring(baseDataUrl.indexOf(':') + 1, baseDataUrl.indexOf(';')) || 'image/png';
@@ -417,8 +415,7 @@ const VirtualTryOnPage: React.FC = () => {
         console.warn('[tryon] pose warp failed', e);
         diag('posewarp-error', String(e));
       }
-      // 替换为变形后的结果，释放临时 Blob URL
-      URL.revokeObjectURL(objUrl);
+      // 不再使用 Blob URL，无需 revoke
       if (!isMobile) {
         setResultImgLoading(true);
         setUploadedResult(adjustedUrl);
