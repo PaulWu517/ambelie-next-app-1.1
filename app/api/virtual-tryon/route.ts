@@ -242,7 +242,9 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
+    // Build original buffer
     const origBuf = Buffer.from(outBase64, 'base64');
+    // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
     try {
@@ -262,10 +264,16 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    const originalExt = (outMime || 'image/png').includes('png') ? 'png' : 'jpg';
-    const key = buildTryonKey(traceId, outMime || 'image/png');
-    const { url: cosUrl } = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl, originalExt };
+    let cosUrl: string | undefined;
+    try {
+      const key = buildTryonKey(traceId, outMime);
+      const uploaded = await uploadBufferToCOS(origBuf, key, outMime);
+      cosUrl = uploaded.url;
+      await emitServer(traceId, 'cos-put-success-inline', { key, url: cosUrl });
+    } catch (e: any) {
+      await emitServer(traceId, 'cos-put-error-inline', { message: e?.message || String(e) });
+    }
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -292,26 +300,20 @@ export async function POST(req: NextRequest) {
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
-      return new NextResponse(arrayBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': result.mime || 'image/png',
-          'Cache-Control': 'no-store',
-          'X-TraceId': result.traceId,
-          'X-Mime': result.mime || 'image/png',
-          'X-Original-Url': `/api/virtual-tryon/result/${result.traceId}?ext=${result.originalExt}`,
-          ...(result.cosUrl ? { 'X-Cos-Url': result.cosUrl } : {})
-        }
-      });
+      const headers: Record<string, string> = {
+        'Content-Type': result.mime || 'image/png',
+        'Cache-Control': 'no-store',
+        'X-TraceId': result.traceId,
+        'X-Mime': result.mime || 'image/png'
+      };
+      if ((result as any).cosUrl) headers['X-Original-Url'] = (result as any).cosUrl as string;
+      return new NextResponse(arrayBuffer, { status: 200, headers });
     }
     // 默认返回 JSON，用于兼容旧客户端
     return NextResponse.json(result, {
       status: 200,
       headers: {
-        'Cache-Control': 'no-store',
-        'X-TraceId': result.traceId,
-        'X-Original-Url': `/api/virtual-tryon/result/${result.traceId}?ext=${result.originalExt}`,
-        ...(result.cosUrl ? { 'X-Cos-Url': result.cosUrl } : {})
+        'Cache-Control': 'no-store'
       }
     });
   } catch (error: any) {

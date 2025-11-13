@@ -352,6 +352,7 @@ const SlugTryOnPage: React.FC = () => {
           return;
         }
         diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
+        // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
         const objUrl = URL.createObjectURL(blob);
         setResultImgLoading(true);
         setIsResultPending(true);
@@ -375,28 +376,42 @@ const SlugTryOnPage: React.FC = () => {
             // 保留 ObjectURL，不进行 revoke，确保图片可见
           }
         })();
-        const originalUrlHeader = genResp.headers.get('X-Original-Url') || genResp.headers.get('x-original-url');
-        if (originalUrlHeader) {
-          (async () => {
-            try {
-              const ok = await fetch(originalUrlHeader, { method: 'HEAD', cache: 'no-store' }).then(r => r.ok).catch(() => false);
-              if (ok) {
-                setResultImgLoading(true);
-                setIsResultPending(true);
-                emitUI('before-set-url', { urlKind: 'server-original' });
-                setResultUrl(originalUrlHeader);
-              }
-            } catch {}
-          })();
-        }
+        (async () => {
+          try {
+            const traceIdHeader = genResp.headers.get('X-TraceId') || genResp.headers.get('x-traceid') || traceId;
+            const origHeader = genResp.headers.get('X-Original-Url') || genResp.headers.get('x-original-url') || '';
+            let origFetchUrl = origHeader;
+            if (!origFetchUrl && traceIdHeader) {
+              origFetchUrl = `/api/virtual-tryon/result/${encodeURIComponent(traceIdHeader)}`;
+            }
+            if (!origFetchUrl) return;
+            diag('original-fetch-start', { url: origFetchUrl });
+            const res = await fetch(origFetchUrl, { cache: 'no-store' });
+            if (!res.ok) { diag('original-fetch-failed', { status: res.status }); return; }
+            const origBlob = await res.blob();
+            const origObjUrl = URL.createObjectURL(origBlob);
+            setResultImgLoading(true);
+            setIsResultPending(true);
+            emitUI('before-set-url', { urlKind: 'server-original-objecturl' });
+            setResultUrl(origObjUrl);
+            const reader = new FileReader();
+            const origDataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(origBlob); });
+            baseResultRef.current = origDataUrl;
+            setResultUrl(origDataUrl);
+            try { URL.revokeObjectURL(origObjUrl); } catch {}
+            diag('original-fetch-success', { size: origBlob.size, mime: origBlob.type });
+          } catch (e: any) {
+            diag('original-fetch-error', e?.message || String(e));
+          }
+        })();
         // 轻量姿态检测（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
           const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
-      } else {
-        // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
+        } else {
+          // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
         try {
           const txt = await genResp.text();
           const head = txt.slice(0, 200);
