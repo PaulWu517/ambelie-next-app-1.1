@@ -80,6 +80,7 @@ const SlugTryOnPage: React.FC = () => {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const baseResultRef = useRef<string | null>(null);
+  const cdnDomainRef = useRef<string>('https://media.ambelie.com');
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
   const finalPollTimerRef = useRef<number | null>(null);
@@ -386,6 +387,8 @@ const SlugTryOnPage: React.FC = () => {
         setShowResult(true);
         try {
           const tid = genResp.headers.get('X-TraceId') || genResp.headers.get('x-traceid') || '';
+          const cdnDomain = genResp.headers.get('X-Cdn-Domain') || genResp.headers.get('x-cdn-domain') || '';
+          if (cdnDomain) cdnDomainRef.current = cdnDomain;
           if (tid) startFinalPolling(tid);
         } catch {}
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
@@ -587,7 +590,7 @@ const SlugTryOnPage: React.FC = () => {
     const poll = async () => {
       if (!tid) return;
       try {
-        const tryOnce = async (ext: 'png' | 'jpg') => {
+        const tryOnceApi = async (ext: 'png' | 'jpg') => {
           const resp = await fetch(`/api/virtual-tryon/result/${tid}?ext=${ext}`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
           if (!resp.ok) return false;
           try {
@@ -602,8 +605,19 @@ const SlugTryOnPage: React.FC = () => {
             return false;
           }
         };
-        if (await tryOnce('png')) return;
-        if (await tryOnce('jpg')) return;
+        if (await tryOnceApi('png')) return;
+        if (await tryOnceApi('jpg')) return;
+        const tryOnceCdn = (ext: 'png' | 'jpg') => {
+          const cdn = cdnDomainRef.current || 'https://media.ambelie.com';
+          const url = `${cdn.replace(/\/$/, '')}/tryon-results/${tid}.${ext}`;
+          setResultImgLoading(true);
+          setIsResultPending(true);
+          setResultUrl(url);
+          try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
+          return true;
+        };
+        if (tryOnceCdn('png')) return;
+        if (tryOnceCdn('jpg')) return;
       } catch {}
       if (Date.now() - startTs > 180000) {
         try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}

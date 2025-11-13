@@ -312,7 +312,8 @@ export async function POST(req: NextRequest) {
           'Content-Length': String(buf.length),
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
-          'X-Mime': result.mime || 'image/png'
+          'X-Mime': result.mime || 'image/png',
+          'X-Cdn-Domain': process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
         }
       });
     }
@@ -320,7 +321,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result, {
       status: 200,
       headers: {
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        'X-Cdn-Domain': process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
       }
     });
   } catch (error: any) {
