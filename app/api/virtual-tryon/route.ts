@@ -242,8 +242,17 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
-    // Build original buffer
     const origBuf = Buffer.from(outBase64, 'base64');
+    let cosUrl: string | undefined;
+    try {
+      const key = buildTryonKey(traceId, outMime || 'image/png');
+      const uploaded = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
+      cosUrl = uploaded.url;
+      await emitServer(traceId, 'cos-upload-success', { key, url: cosUrl });
+    } catch (e: any) {
+      await emitServer(traceId, 'cos-upload-error', { message: e?.message || String(e) });
+    }
+    
     // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
@@ -264,15 +273,6 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    let cosUrl: string | undefined;
-    try {
-      const key = buildTryonKey(traceId, outMime);
-      const uploaded = await uploadBufferToCOS(origBuf, key, outMime);
-      cosUrl = uploaded.url;
-      await emitServer(traceId, 'cos-put-success-inline', { key, url: cosUrl });
-    } catch (e: any) {
-      await emitServer(traceId, 'cos-put-error-inline', { message: e?.message || String(e) });
-    }
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl };
 
   } catch (err: any) {
@@ -301,13 +301,15 @@ export async function POST(req: NextRequest) {
       view.set(buf);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       const headers: Record<string, string> = {
-        'Content-Type': result.mime || 'image/png',
-        'Cache-Control': 'no-store',
-        'X-TraceId': result.traceId,
-        'X-Mime': result.mime || 'image/png'
-      };
-      if ((result as any).cosUrl) headers['X-Original-Url'] = (result as any).cosUrl as string;
-      return new NextResponse(arrayBuffer, { status: 200, headers });
+        status: 200,
+        headers: {} as any
+      } as any;
+      (headers as any).headers['Content-Type'] = result.mime || 'image/png';
+      (headers as any).headers['Cache-Control'] = 'no-store';
+      (headers as any).headers['X-TraceId'] = result.traceId;
+      (headers as any).headers['X-Mime'] = result.mime || 'image/png';
+      if ((result as any).cosUrl) (headers as any).headers['X-Original-Url'] = (result as any).cosUrl;
+      return new NextResponse(arrayBuffer, headers as any);
     }
     // 默认返回 JSON，用于兼容旧客户端
     return NextResponse.json(result, {
