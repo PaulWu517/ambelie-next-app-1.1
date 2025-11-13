@@ -330,14 +330,82 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
-      // 记录响应元信息
-      const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
-      diag('server-response-meta', { status: genResp.status, contentType });
       let genData: any = null;
-      // 二进制首帧：当返回的是图片时，直接读取 blob 并转换为 DataURL
-      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
-      if (genResp.ok && isImage) {
+      let usedBinary = false;
+      const jsonResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' }, cache: 'no-store' });
+      const contentType = jsonResp.headers.get('Content-Type') || jsonResp.headers.get('content-type');
+      diag('server-response-meta', { status: jsonResp.status, contentType });
+      genData = await jsonResp.json().catch(() => null);
+      if (!jsonResp.ok || !genData?.dataUrl) {
+        const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' }, cache: 'no-store' });
+        const bct = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
+        diag('server-response-meta', { status: genResp.status, contentType: bct });
+        const isImage = !!bct && bct.toLowerCase().startsWith('image/');
+        if (genResp.ok && isImage) {
+          usedBinary = true;
+          const readStart = Date.now();
+          diag('server-body-read-start');
+          let blob: Blob;
+          try {
+            blob = await genResp.blob();
+          } catch (e: any) {
+            try {
+              const ab = await genResp.arrayBuffer();
+              const ct = bct || 'image/png';
+              blob = new Blob([ab], { type: ct });
+              diag('server-body-read-fallback-arraybuffer');
+            } catch (e2: any) {
+              diag('server-body-read-error', e2?.message || String(e2));
+              if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+              setProcessingProgress(100);
+              setIsProcessing(false);
+              return;
+            }
+          }
+          diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
+          const objUrl = URL.createObjectURL(blob);
+          setResultImgLoading(true);
+          setIsResultPending(true);
+          emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
+          setResultUrl(objUrl);
+          setShowResult(true);
+          try {
+            const tid = genResp.headers.get('X-TraceId') || genResp.headers.get('x-traceid') || '';
+            const cdnDomain = genResp.headers.get('X-Cdn-Domain') || genResp.headers.get('x-cdn-domain') || '';
+            if (cdnDomain) cdnDomainRef.current = cdnDomain;
+            if (tid) startFinalPolling(tid);
+          } catch {}
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsProcessing(false);
+          (async () => {
+            try {
+              const reader = new FileReader();
+              const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+              emitUI('after-objecturl-converted', { length: dataUrl.length });
+              baseResultRef.current = dataUrl;
+              setResultUrl(dataUrl);
+              try { URL.revokeObjectURL(objUrl); } catch {}
+            } catch (e: any) {
+              diag('blob-to-dataurl-error', e?.message || String(e));
+            }
+          })();
+          try {
+            const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+            const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
+            if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
+          } catch {}
+        } else {
+          try {
+            const txt = await genResp.text();
+            const head = txt.slice(0, 200);
+            const tail = txt.slice(Math.max(0, txt.length - 200));
+            diag('server-non-image-response', { length: txt.length, head, tail, status: genResp.status });
+          } catch (e: any) {
+            diag('server-response-text-error', e?.message || String(e));
+          }
+        }
+      }
         const readStart = Date.now();
         diag('server-body-read-start');
         let blob: Blob;
@@ -414,41 +482,8 @@ const SlugTryOnPage: React.FC = () => {
           const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
-      } else {
-        // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
-        try {
-          const txt = await genResp.text();
-          const head = txt.slice(0, 200);
-          const tail = txt.slice(Math.max(0, txt.length - 200));
-          diag('server-non-image-response', { length: txt.length, head, tail, status: genResp.status });
-        } catch (e: any) {
-          diag('server-response-text-error', e?.message || String(e));
-        }
-        // 兜底一次：改走 JSON 接口获取 dataUrl
-        try {
-          const jsonResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' }, cache: 'no-store' });
-          const data = await jsonResp.json().catch(() => null);
-          if (jsonResp.ok && data?.dataUrl) {
-            setResultImgLoading(true);
-            setIsResultPending(true);
-            setResultUrl(data.dataUrl);
-            setShowResult(true);
-            baseResultRef.current = data.dataUrl;
-            const tid = data?.traceId || '';
-            if (tid) startFinalPolling(tid);
-            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-            setProcessingProgress(100);
-            setIsProcessing(false);
-            return;
-          }
-        } catch {}
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-        setProcessingProgress(100);
-        setIsProcessing(false);
-        // 保留上一张图片，不回到占位
-        return;
-      }
-      if (genResp.ok && genData?.dataUrl) {
+      
+      if (!usedBinary && genData?.dataUrl) {
         setResultImgLoading(true);
         setIsResultPending(true);
         emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
