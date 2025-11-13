@@ -38,7 +38,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ traceId: string
     const arrayBuffer = new ArrayBuffer(buf.length);
     const view = new Uint8Array(arrayBuffer);
     view.set(buf);
-    return new NextResponse(arrayBuffer, { headers: { 'Content-Type': mime || (ext === 'png' ? 'image/png' : 'image/jpeg'), 'Cache-Control': 'no-store' } });
+    return new NextResponse(arrayBuffer, { headers: { 'Content-Type': mime || (ext === 'png' ? 'image/png' : 'image/jpeg'), 'Content-Length': String(buf.length), 'Cache-Control': 'no-store' } });
   } catch (e: any) {
     // 回退尝试另一种扩展名，避免客户端不确定最终格式时读取失败
     const altExt = ext === 'png' ? 'jpg' : 'png';
@@ -49,7 +49,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ traceId: string
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
-      return new NextResponse(arrayBuffer, { headers: { 'Content-Type': mime || (altExt === 'png' ? 'image/png' : 'image/jpeg'), 'Cache-Control': 'no-store', 'X-Used-Ext': altExt } });
+      return new NextResponse(arrayBuffer, { headers: { 'Content-Type': mime || (altExt === 'png' ? 'image/png' : 'image/jpeg'), 'Content-Length': String(buf.length), 'Cache-Control': 'no-store', 'X-Used-Ext': altExt } });
     } catch (e2: any) {
       const msg = e2?.message || String(e2);
       console.error('[virtual-tryon-result] fetch from COS failed', { key, altKey, msg });
