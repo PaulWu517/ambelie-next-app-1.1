@@ -587,17 +587,23 @@ const SlugTryOnPage: React.FC = () => {
     const poll = async () => {
       if (!tid) return;
       try {
-        const resp = await fetch(`/api/virtual-tryon/result/${tid}?ext=png`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
-        const ct = resp.headers.get('Content-Type') || resp.headers.get('content-type') || '';
-        if (resp.ok && ct.toLowerCase().startsWith('image/')) {
-          const blob = await resp.blob();
-          const url = URL.createObjectURL(blob);
-          setResultImgLoading(true);
-          setIsResultPending(true);
-          setResultUrl(url);
-          try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
-          return;
-        }
+        const tryOnce = async (ext: 'png' | 'jpg') => {
+          const resp = await fetch(`/api/virtual-tryon/result/${tid}?ext=${ext}`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
+          if (!resp.ok) return false;
+          try {
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            setResultImgLoading(true);
+            setIsResultPending(true);
+            setResultUrl(url);
+            try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
+            return true;
+          } catch {
+            return false;
+          }
+        };
+        if (await tryOnce('png')) return;
+        if (await tryOnce('jpg')) return;
       } catch {}
       if (Date.now() - startTs > 180000) {
         try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
