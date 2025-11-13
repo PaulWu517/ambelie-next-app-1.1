@@ -268,7 +268,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
     // 2. 异步上传原始 AI 结果到 COS（不阻塞前端）
     //    使用原始 outBase64（未压缩）保证云端存的是最高质量
-    (async () => {
+    const uploadPromise = (async () => {
       try {
         const aiBuf = Buffer.from(outBase64, 'base64');
         const aiKey = buildTryonKey(traceId, outMime);
@@ -279,6 +279,10 @@ async function handleVirtualTryon(req: NextRequest) {
         await emitServer(traceId, 'cos-upload-error', { message: uploadErr?.message || String(uploadErr) });
       }
     })();
+
+    // 3. 后台等待上传完成（依旧不阻塞预览返回）
+    //    把 Promise 挂在响应里，让 Vercel/Node 在返回后继续调度
+    (req as any).uploadPromise = uploadPromise;
 
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
