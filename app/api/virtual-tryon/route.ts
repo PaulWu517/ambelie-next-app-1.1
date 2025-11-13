@@ -262,19 +262,9 @@ async function handleVirtualTryon(req: NextRequest) {
       await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
     }
 
-    let cosUrl: string | undefined;
-    try {
-      const key = buildTryonKey(traceId, outMime || 'image/png');
-      const uploaded = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
-      cosUrl = uploaded.url;
-      await emitServer(traceId, 'cos-upload-success', { key, url: cosUrl });
-    } catch (e: any) {
-      await emitServer(traceId, 'cos-upload-error', { message: e?.message || String(e) });
-    }
-
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -301,16 +291,14 @@ export async function POST(req: NextRequest) {
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
-      const headers: Record<string, string> = {
-        'Content-Type': result.mime || 'image/png',
-        'Cache-Control': 'no-store',
-        'X-TraceId': result.traceId,
-        'X-Mime': result.mime || 'image/png'
-      };
-      if (result.cosUrl) headers['X-Original-Url'] = result.cosUrl;
       return new NextResponse(arrayBuffer, {
         status: 200,
-        headers
+        headers: {
+          'Content-Type': result.mime || 'image/png',
+          'Cache-Control': 'no-store',
+          'X-TraceId': result.traceId,
+          'X-Mime': result.mime || 'image/png'
+        }
       });
     }
     // 默认返回 JSON，用于兼容旧客户端

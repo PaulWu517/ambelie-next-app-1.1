@@ -117,45 +117,6 @@ const SlugTryOnPage: React.FC = () => {
     });
   };
 
-  const upgradeToOriginalFromUrl = async (origUrl?: string | null) => {
-    if (!origUrl) return;
-    try {
-      emitUI('cos-original-fetch-start', { url: origUrl });
-      const res = await fetch(origUrl, { cache: 'no-store' });
-      if (!res.ok) return;
-      const blob = await res.blob();
-      const dataUrl = await blobToDataUrl(blob);
-      baseResultRef.current = dataUrl;
-      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-      if (isMobile) {
-        const schedule = (fn: () => void) => {
-          try { const ric = (window as any).requestIdleCallback; if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 500); }
-          catch { setTimeout(fn, 500); }
-        };
-        schedule(async () => {
-          try {
-            const preview = await applyPoseWarpToDataUrl(dataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-            setResultImgLoading(true);
-            setIsResultPending(true);
-            emitUI('before-set-url', { urlKind: 'cos-preview', length: preview?.length });
-            setResultUrl(preview);
-          } catch {}
-        });
-      } else {
-        try {
-          const hd = await applyPoseWarpToDataUrl(dataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
-          setResultImgLoading(true);
-          setIsResultPending(true);
-          emitUI('before-set-url', { urlKind: 'cos-hd', length: hd?.length });
-          setResultUrl(hd);
-        } catch {}
-      }
-      emitUI('cos-original-fetch-success');
-    } catch (e: any) {
-      emitUI('cos-original-fetch-error', e?.message || String(e));
-    }
-  };
-
   const handleDownloadResult = async () => {
     if (!resultUrl) return;
     setIsDownloading(true);
@@ -398,7 +359,6 @@ const SlugTryOnPage: React.FC = () => {
         emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
         setResultUrl(objUrl);
         setShowResult(true);
-        const cosHeaderUrl = genResp.headers.get('X-Original-Url');
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsProcessing(false);
@@ -416,7 +376,6 @@ const SlugTryOnPage: React.FC = () => {
             // 保留 ObjectURL，不进行 revoke，确保图片可见
           }
         })();
-        (async () => { await upgradeToOriginalFromUrl(cosHeaderUrl); })();
         // 轻量姿态检测（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -472,7 +431,7 @@ const SlugTryOnPage: React.FC = () => {
             await runDetect();
           }
         } catch {}
-        if (genData.cosUrl) { (async () => { await upgradeToOriginalFromUrl(genData.cosUrl); })(); }
+        // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
       } else {
         // 未获取到 DataURL，结束处理态，避免停留在 Preparing
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
