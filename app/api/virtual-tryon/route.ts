@@ -247,14 +247,21 @@ async function handleVirtualTryon(req: NextRequest) {
     // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
+    const reqAccept = (req.headers.get('accept') || '').toLowerCase();
+    const ua = (req.headers.get('user-agent') || '').toLowerCase();
+    const acceptsWebp = reqAccept.includes('image/webp');
     try {
       const t0 = Date.now();
       const sharpMod = await import('sharp');
       const sharpFn: any = (sharpMod as any).default || sharpMod;
-      previewBuf = await sharpFn(origBuf)
-        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
+      const baseSharp = sharpFn(origBuf).resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true });
+      if (acceptsWebp) {
+        previewBuf = await baseSharp.webp({ quality: 80 }).toBuffer();
+        previewMime = 'image/webp';
+      } else {
+        previewBuf = await baseSharp.png({ compressionLevel: 9 }).toBuffer();
+        previewMime = 'image/png';
+      }
       await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
     } catch (e: any) {
       previewBuf = origBuf;
@@ -302,6 +309,7 @@ export async function POST(req: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': result.mime || 'image/png',
+          'Content-Length': String(buf.length),
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
           'X-Mime': result.mime || 'image/png'

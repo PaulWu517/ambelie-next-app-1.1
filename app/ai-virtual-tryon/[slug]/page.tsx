@@ -343,14 +343,38 @@ const SlugTryOnPage: React.FC = () => {
         try {
           blob = await genResp.blob();
         } catch (e: any) {
-          diag('server-body-read-error', e?.message || String(e));
-          // 读取失败：结束处理态，避免卡住
-          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-          setProcessingProgress(100);
-          setIsResultPending(false);
-          setResultImgLoading(false);
-          setIsProcessing(false);
-          return;
+          // 兜底一次：尝试使用 arrayBuffer 构造 Blob
+          try {
+            const ab = await genResp.arrayBuffer();
+            const ct = contentType || 'image/png';
+            blob = new Blob([ab], { type: ct });
+            diag('server-body-read-fallback-arraybuffer');
+          } catch (e2: any) {
+            diag('server-body-read-error', e2?.message || String(e2));
+            // 二次兜底：降级为 JSON 路径以获取 dataUrl
+            try {
+              const jsonResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' }, cache: 'no-store' });
+              const data = await jsonResp.json().catch(() => null);
+              if (jsonResp.ok && data?.dataUrl) {
+                setResultImgLoading(true);
+                setIsResultPending(true);
+                setResultUrl(data.dataUrl);
+                setShowResult(true);
+                baseResultRef.current = data.dataUrl;
+                const tid = data?.traceId || '';
+                if (tid) startFinalPolling(tid);
+                if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+                setProcessingProgress(100);
+                setIsProcessing(false);
+                return;
+              }
+            } catch {}
+            // 失败则保留现状，不回占位
+            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+            setProcessingProgress(100);
+            setIsProcessing(false);
+            return;
+          }
         }
         diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
         // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
@@ -393,14 +417,30 @@ const SlugTryOnPage: React.FC = () => {
           const txt = await genResp.text();
           const head = txt.slice(0, 200);
           const tail = txt.slice(Math.max(0, txt.length - 200));
-          diag('server-non-image-response', { length: txt.length, head, tail });
+          diag('server-non-image-response', { length: txt.length, head, tail, status: genResp.status });
         } catch (e: any) {
           diag('server-response-text-error', e?.message || String(e));
         }
+        // 兜底一次：改走 JSON 接口获取 dataUrl
+        try {
+          const jsonResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' }, cache: 'no-store' });
+          const data = await jsonResp.json().catch(() => null);
+          if (jsonResp.ok && data?.dataUrl) {
+            setResultImgLoading(true);
+            setIsResultPending(true);
+            setResultUrl(data.dataUrl);
+            setShowResult(true);
+            baseResultRef.current = data.dataUrl;
+            const tid = data?.traceId || '';
+            if (tid) startFinalPolling(tid);
+            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+            setProcessingProgress(100);
+            setIsProcessing(false);
+            return;
+          }
+        } catch {}
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
-        setIsResultPending(false);
-        setResultImgLoading(false);
         setIsProcessing(false);
         // 保留上一张图片，不回到占位
         return;
@@ -582,7 +622,8 @@ const SlugTryOnPage: React.FC = () => {
       (async () => {
         try {
           emitUI('predecode-start');
-          if (typeof createImageBitmap === 'function') {
+          const isBlobScheme = typeof resultUrl === 'string' && resultUrl.startsWith('blob:');
+          if (!isBlobScheme && typeof createImageBitmap === 'function') {
             const res = await fetch(resultUrl);
             const blob = await res.blob();
             await createImageBitmap(blob);
