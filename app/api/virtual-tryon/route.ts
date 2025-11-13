@@ -264,11 +264,25 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    const urlObj = new URL(req.url);
-    const includeOriginal = ['1', 'true', 'yes'].includes((urlObj.searchParams.get('includeOriginal') || '').toLowerCase());
-    if (includeOriginal) {
-      const originalBase64 = origBuf.toString('base64');
-      return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, originalBase64, originalMime: outMime };
+    {
+      const key = buildTryonKey(traceId, outMime || 'image/png');
+      Promise.resolve().then(async () => {
+        try {
+          await emitServer(traceId, 'cos-put-start', {
+            key,
+            mime: outMime,
+            size: origBuf.length,
+            env: {
+              hasSecretId: !!process.env.TENCENT_COS_SECRET_ID,
+              hasSecretKey: !!process.env.TENCENT_COS_SECRET_KEY
+            }
+          });
+          const uploaded = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
+          await emitServer(traceId, 'cos-put-success', { key, url: uploaded.url });
+        } catch (e: any) {
+          await emitServer(traceId, 'cos-put-error', { key, error: e?.message || String(e) });
+        }
+      });
     }
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
