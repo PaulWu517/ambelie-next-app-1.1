@@ -82,6 +82,7 @@ const SlugTryOnPage: React.FC = () => {
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
+  const finalPollTimerRef = useRef<number | null>(null);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -359,6 +360,10 @@ const SlugTryOnPage: React.FC = () => {
         emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
         setResultUrl(objUrl);
         setShowResult(true);
+        try {
+          const tid = genResp.headers.get('X-TraceId') || genResp.headers.get('x-traceid') || '';
+          if (tid) startFinalPolling(tid);
+        } catch {}
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsProcessing(false);
@@ -535,6 +540,35 @@ const SlugTryOnPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
+  const startFinalPolling = (tid: string) => {
+    try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
+    const startTs = Date.now();
+    const poll = async () => {
+      if (!tid) return;
+      try {
+        const resp = await fetch(`/api/virtual-tryon/result/${tid}?ext=png`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
+        const ct = resp.headers.get('Content-Type') || resp.headers.get('content-type') || '';
+        if (resp.ok && ct.toLowerCase().startsWith('image/')) {
+          const blob = await resp.blob();
+          const url = URL.createObjectURL(blob);
+          setResultImgLoading(true);
+          setIsResultPending(true);
+          setResultUrl(url);
+          try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
+          return;
+        }
+      } catch {}
+      if (Date.now() - startTs > 180000) {
+        try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
+      }
+    };
+    finalPollTimerRef.current = window.setInterval(poll, 2000);
+  };
+
+  useEffect(() => {
+    return () => { try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {} };
+  }, []);
 
   // 控制结果图加载占位：避免 iOS Safari 在图片未解码时显示问号图标
   const [resultImgLoading, setResultImgLoading] = useState(false);

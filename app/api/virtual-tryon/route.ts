@@ -264,6 +264,13 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
+    try {
+      const key = buildTryonKey(traceId, outMime);
+      await uploadBufferToCOS(origBuf, key, outMime);
+      await emitServer(traceId, 'cos-put-success', { key });
+    } catch (e: any) {
+      await emitServer(traceId, 'cos-put-error', { message: e?.message || String(e) });
+    }
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
