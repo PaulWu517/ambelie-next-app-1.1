@@ -243,19 +243,15 @@ async function handleVirtualTryon(req: NextRequest) {
     };
 
     const origBuf = Buffer.from(outBase64, 'base64');
-    let cosUrl: string | undefined;
-    try {
-      const key = buildTryonKey(traceId, outMime || 'image/png');
-      const uploaded = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
-      cosUrl = uploaded.url;
-      await emitServer(traceId, 'cos-upload-success', { key, url: cosUrl });
-    } catch (e: any) {
-      await emitServer(traceId, 'cos-upload-error', { message: e?.message || String(e) });
-    }
-    
-    // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
+    const cosKey = buildTryonKey(traceId, outMime || 'image/png');
+    let cosUploadPromise: Promise<any> | null = null;
+    try {
+      cosUploadPromise = uploadBufferToCOS(origBuf, cosKey, outMime || 'image/png')
+        .then(async (res) => { await emitServer(traceId, 'cos-upload-success', { key: cosKey, url: res?.url }); })
+        .catch(async (e) => { await emitServer(traceId, 'cos-upload-error', { key: cosKey, message: e?.message || String(e) }); });
+    } catch {}
     try {
       const t0 = Date.now();
       const sharpMod = await import('sharp');
@@ -270,10 +266,11 @@ async function handleVirtualTryon(req: NextRequest) {
       previewMime = outMime || 'image/png';
       await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
     }
+    try { if (cosUploadPromise) { await cosUploadPromise; } } catch {}
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -300,16 +297,15 @@ export async function POST(req: NextRequest) {
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
-      const headers: Record<string, string> = {
+      return new NextResponse(arrayBuffer, {
         status: 200,
-        headers: {} as any
-      } as any;
-      (headers as any).headers['Content-Type'] = result.mime || 'image/png';
-      (headers as any).headers['Cache-Control'] = 'no-store';
-      (headers as any).headers['X-TraceId'] = result.traceId;
-      (headers as any).headers['X-Mime'] = result.mime || 'image/png';
-      if ((result as any).cosUrl) (headers as any).headers['X-Original-Url'] = (result as any).cosUrl;
-      return new NextResponse(arrayBuffer, headers as any);
+        headers: {
+          'Content-Type': result.mime || 'image/png',
+          'Cache-Control': 'no-store',
+          'X-TraceId': result.traceId,
+          'X-Mime': result.mime || 'image/png'
+        }
+      });
     }
     // 默认返回 JSON，用于兼容旧客户端
     return NextResponse.json(result, {

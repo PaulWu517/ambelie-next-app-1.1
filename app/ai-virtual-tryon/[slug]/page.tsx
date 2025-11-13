@@ -80,7 +80,6 @@ const SlugTryOnPage: React.FC = () => {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const baseResultRef = useRef<string | null>(null);
-  const originalArrivedRef = useRef<boolean>(false);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -363,7 +362,7 @@ const SlugTryOnPage: React.FC = () => {
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsProcessing(false);
-        
+        // 后台转换为 DataURL 并替换，确保后续处理一致
         (async () => {
           try {
             const reader = new FileReader();
@@ -376,33 +375,6 @@ const SlugTryOnPage: React.FC = () => {
             diag('blob-to-dataurl-error', e?.message || String(e));
             // 保留 ObjectURL，不进行 revoke，确保图片可见
           }
-        })();
-        
-        (async () => {
-          try {
-            const origUrl = genResp.headers.get('X-Original-Url') || genResp.headers.get('x-original-url');
-            if (origUrl) {
-              const res = await fetch(origUrl, { cache: 'no-store' });
-              if (res.ok) {
-                const origBlob = await res.blob();
-                const origDataUrl = await blobToDataUrl(origBlob);
-                originalArrivedRef.current = true;
-                baseResultRef.current = origDataUrl;
-                setResultImgLoading(true);
-                setIsResultPending(true);
-                setResultUrl(origDataUrl);
-                const isDesktop = typeof window !== 'undefined' && window.innerWidth > 768;
-                if (isDesktop) {
-                  try {
-                    const hd = await applyPoseWarpToDataUrl(origDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
-                    setResultImgLoading(true);
-                    setIsResultPending(true);
-                    setResultUrl(hd);
-                  } catch {}
-                }
-              }
-            }
-          } catch {}
         })();
         // 轻量姿态检测（移动端后台）
         try {
@@ -514,10 +486,8 @@ const SlugTryOnPage: React.FC = () => {
               // 预览也先置 loading，防止低端设备切换时短暂闪烁
               setResultImgLoading(true);
               setIsResultPending(true);
-              if (!originalArrivedRef.current) {
-                emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
-                setResultUrl(preview);
-              }
+              emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
+              setResultUrl(preview);
               diag('posewarp-success');
             } catch (e) {
               console.warn('[slug tryon] mobile preview warp failed', e);
@@ -537,10 +507,8 @@ const SlugTryOnPage: React.FC = () => {
       if (!isMobile) {
         setResultImgLoading(true);
         setIsResultPending(true);
-        if (!originalArrivedRef.current) {
-          emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
-          setResultUrl(adjustedUrl);
-        }
+        emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
+        setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
         (async () => {
           try {
