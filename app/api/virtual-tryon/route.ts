@@ -242,25 +242,9 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
+    // Build original buffer
     const origBuf = Buffer.from(outBase64, 'base64');
-    const key = buildTryonKey(traceId, outMime || 'image/png');
-    try {
-      await emitServer(traceId, 'cos-put-start', {
-        key,
-        mime: outMime,
-        size: origBuf.length,
-        env: {
-          hasSecretId: !!process.env.TENCENT_COS_SECRET_ID,
-          hasSecretKey: !!process.env.TENCENT_COS_SECRET_KEY,
-          bucket: process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639',
-          region: process.env.TENCENT_COS_REGION || 'ap-guangzhou',
-          basePath: process.env.TRYON_COS_BASE_PATH || 'tryon-results/'
-        }
-      });
-    } catch {}
-    const uploadPromise = uploadBufferToCOS(origBuf, key, outMime || 'image/png')
-      .then((uploaded) => emitServer(traceId, 'cos-put-success', { key, url: uploaded.url }))
-      .catch((err: any) => emitServer(traceId, 'cos-put-error', { message: err?.message || String(err) }));
+    // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
     try {
@@ -278,7 +262,6 @@ async function handleVirtualTryon(req: NextRequest) {
       await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
     }
 
-    await uploadPromise;
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
