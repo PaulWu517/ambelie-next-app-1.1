@@ -80,10 +80,8 @@ const SlugTryOnPage: React.FC = () => {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const baseResultRef = useRef<string | null>(null);
-  const cdnDomainRef = useRef<string>('https://media.ambelie.com');
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
-  const finalPollTimerRef = useRef<number | null>(null);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -117,6 +115,45 @@ const SlugTryOnPage: React.FC = () => {
       reader.onerror = (e) => reject(e);
       reader.readAsDataURL(blob);
     });
+  };
+
+  const upgradeToOriginalFromUrl = async (origUrl?: string | null) => {
+    if (!origUrl) return;
+    try {
+      emitUI('cos-original-fetch-start', { url: origUrl });
+      const res = await fetch(origUrl, { cache: 'no-store' });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const dataUrl = await blobToDataUrl(blob);
+      baseResultRef.current = dataUrl;
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+      if (isMobile) {
+        const schedule = (fn: () => void) => {
+          try { const ric = (window as any).requestIdleCallback; if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 500); }
+          catch { setTimeout(fn, 500); }
+        };
+        schedule(async () => {
+          try {
+            const preview = await applyPoseWarpToDataUrl(dataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+            setResultImgLoading(true);
+            setIsResultPending(true);
+            emitUI('before-set-url', { urlKind: 'cos-preview', length: preview?.length });
+            setResultUrl(preview);
+          } catch {}
+        });
+      } else {
+        try {
+          const hd = await applyPoseWarpToDataUrl(dataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
+          setResultImgLoading(true);
+          setIsResultPending(true);
+          emitUI('before-set-url', { urlKind: 'cos-hd', length: hd?.length });
+          setResultUrl(hd);
+        } catch {}
+      }
+      emitUI('cos-original-fetch-success');
+    } catch (e: any) {
+      emitUI('cos-original-fetch-error', e?.message || String(e));
+    }
   };
 
   const handleDownloadResult = async () => {
@@ -330,120 +367,28 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
+      const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
+      // 记录响应元信息
+      const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
+      diag('server-response-meta', { status: genResp.status, contentType });
       let genData: any = null;
-      let usedBinary = false;
-      const jsonResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' }, cache: 'no-store' });
-      const contentType = jsonResp.headers.get('Content-Type') || jsonResp.headers.get('content-type');
-      diag('server-response-meta', { status: jsonResp.status, contentType });
-      genData = await jsonResp.json().catch(() => null);
-      if (!jsonResp.ok || !genData?.dataUrl) {
-        const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' }, cache: 'no-store' });
-        const bct = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
-        diag('server-response-meta', { status: genResp.status, contentType: bct });
-        const isImage = !!bct && bct.toLowerCase().startsWith('image/');
-        if (genResp.ok && isImage) {
-          usedBinary = true;
-          const readStart = Date.now();
-          diag('server-body-read-start');
-          let blob: Blob;
-          try {
-            blob = await genResp.blob();
-          } catch (e: any) {
-            try {
-              const ab = await genResp.arrayBuffer();
-              const ct = bct || 'image/png';
-              blob = new Blob([ab], { type: ct });
-              diag('server-body-read-fallback-arraybuffer');
-            } catch (e2: any) {
-              diag('server-body-read-error', e2?.message || String(e2));
-              if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-              setProcessingProgress(100);
-              setIsProcessing(false);
-              return;
-            }
-          }
-          diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
-          const objUrl = URL.createObjectURL(blob);
-          setResultImgLoading(true);
-          setIsResultPending(true);
-          emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
-          setResultUrl(objUrl);
-          setShowResult(true);
-          try {
-            const tid = genResp.headers.get('X-TraceId') || genResp.headers.get('x-traceid') || '';
-            const cdnDomain = genResp.headers.get('X-Cdn-Domain') || genResp.headers.get('x-cdn-domain') || '';
-            if (cdnDomain) cdnDomainRef.current = cdnDomain;
-            if (tid) startFinalPolling(tid);
-          } catch {}
-          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-          setProcessingProgress(100);
-          setIsProcessing(false);
-          (async () => {
-            try {
-              const reader = new FileReader();
-              const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-              emitUI('after-objecturl-converted', { length: dataUrl.length });
-              baseResultRef.current = dataUrl;
-              setResultUrl(dataUrl);
-              try { URL.revokeObjectURL(objUrl); } catch {}
-            } catch (e: any) {
-              diag('blob-to-dataurl-error', e?.message || String(e));
-            }
-          })();
-          try {
-            const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-            const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
-            if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
-          } catch {}
-        } else {
-          try {
-            const txt = await genResp.text();
-            const head = txt.slice(0, 200);
-            const tail = txt.slice(Math.max(0, txt.length - 200));
-            diag('server-non-image-response', { length: txt.length, head, tail, status: genResp.status });
-          } catch (e: any) {
-            diag('server-response-text-error', e?.message || String(e));
-          }
-        }
-      }
+      // 二进制首帧：当返回的是图片时，直接读取 blob 并转换为 DataURL
+      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
+      if (genResp.ok && isImage) {
         const readStart = Date.now();
         diag('server-body-read-start');
         let blob: Blob;
         try {
           blob = await genResp.blob();
         } catch (e: any) {
-          // 兜底一次：尝试使用 arrayBuffer 构造 Blob
-          try {
-            const ab = await genResp.arrayBuffer();
-            const ct = contentType || 'image/png';
-            blob = new Blob([ab], { type: ct });
-            diag('server-body-read-fallback-arraybuffer');
-          } catch (e2: any) {
-            diag('server-body-read-error', e2?.message || String(e2));
-            // 二次兜底：降级为 JSON 路径以获取 dataUrl
-            try {
-              const jsonResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' }, cache: 'no-store' });
-              const data = await jsonResp.json().catch(() => null);
-              if (jsonResp.ok && data?.dataUrl) {
-                setResultImgLoading(true);
-                setIsResultPending(true);
-                setResultUrl(data.dataUrl);
-                setShowResult(true);
-                baseResultRef.current = data.dataUrl;
-                const tid = data?.traceId || '';
-                if (tid) startFinalPolling(tid);
-                if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-                setProcessingProgress(100);
-                setIsProcessing(false);
-                return;
-              }
-            } catch {}
-            // 失败则保留现状，不回占位
-            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-            setProcessingProgress(100);
-            setIsProcessing(false);
-            return;
-          }
+          diag('server-body-read-error', e?.message || String(e));
+          // 读取失败：结束处理态，避免卡住
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsResultPending(false);
+          setResultImgLoading(false);
+          setIsProcessing(false);
+          return;
         }
         diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
         // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
@@ -453,12 +398,7 @@ const SlugTryOnPage: React.FC = () => {
         emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
         setResultUrl(objUrl);
         setShowResult(true);
-        try {
-          const tid = genResp.headers.get('X-TraceId') || genResp.headers.get('x-traceid') || '';
-          const cdnDomain = genResp.headers.get('X-Cdn-Domain') || genResp.headers.get('x-cdn-domain') || '';
-          if (cdnDomain) cdnDomainRef.current = cdnDomain;
-          if (tid) startFinalPolling(tid);
-        } catch {}
+        const cosHeaderUrl = genResp.headers.get('X-Original-Url');
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsProcessing(false);
@@ -476,14 +416,32 @@ const SlugTryOnPage: React.FC = () => {
             // 保留 ObjectURL，不进行 revoke，确保图片可见
           }
         })();
+        (async () => { await upgradeToOriginalFromUrl(cosHeaderUrl); })();
         // 轻量姿态检测（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
           const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
-      
-      if (!usedBinary && genData?.dataUrl) {
+      } else {
+        // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
+        try {
+          const txt = await genResp.text();
+          const head = txt.slice(0, 200);
+          const tail = txt.slice(Math.max(0, txt.length - 200));
+          diag('server-non-image-response', { length: txt.length, head, tail });
+        } catch (e: any) {
+          diag('server-response-text-error', e?.message || String(e));
+        }
+        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        setProcessingProgress(100);
+        setIsResultPending(false);
+        setResultImgLoading(false);
+        setIsProcessing(false);
+        // 保留上一张图片，不回到占位
+        return;
+      }
+      if (genResp.ok && genData?.dataUrl) {
         setResultImgLoading(true);
         setIsResultPending(true);
         emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
@@ -514,7 +472,7 @@ const SlugTryOnPage: React.FC = () => {
             await runDetect();
           }
         } catch {}
-        // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
+        if (genData.cosUrl) { (async () => { await upgradeToOriginalFromUrl(genData.cosUrl); })(); }
       } else {
         // 未获取到 DataURL，结束处理态，避免停留在 Preparing
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
@@ -619,52 +577,6 @@ const SlugTryOnPage: React.FC = () => {
     }
   };
 
-  const startFinalPolling = (tid: string) => {
-    try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
-    const startTs = Date.now();
-    const poll = async () => {
-      if (!tid) return;
-      try {
-        const tryOnceApi = async (ext: 'png' | 'jpg') => {
-          const resp = await fetch(`/api/virtual-tryon/result/${tid}?ext=${ext}`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
-          if (!resp.ok) return false;
-          try {
-            const blob = await resp.blob();
-            const url = URL.createObjectURL(blob);
-            setResultImgLoading(true);
-            setIsResultPending(true);
-            setResultUrl(url);
-            try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
-            return true;
-          } catch {
-            return false;
-          }
-        };
-        if (await tryOnceApi('png')) return;
-        if (await tryOnceApi('jpg')) return;
-        const tryOnceCdn = (ext: 'png' | 'jpg') => {
-          const cdn = cdnDomainRef.current || 'https://media.ambelie.com';
-          const url = `${cdn.replace(/\/$/, '')}/tryon-results/${tid}.${ext}`;
-          setResultImgLoading(true);
-          setIsResultPending(true);
-          setResultUrl(url);
-          try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
-          return true;
-        };
-        if (tryOnceCdn('png')) return;
-        if (tryOnceCdn('jpg')) return;
-      } catch {}
-      if (Date.now() - startTs > 180000) {
-        try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {}
-      }
-    };
-    finalPollTimerRef.current = window.setInterval(poll, 2000);
-  };
-
-  useEffect(() => {
-    return () => { try { if (finalPollTimerRef.current) { window.clearInterval(finalPollTimerRef.current); finalPollTimerRef.current = null; } } catch {} };
-  }, []);
-
   // 控制结果图加载占位：避免 iOS Safari 在图片未解码时显示问号图标
   const [resultImgLoading, setResultImgLoading] = useState(false);
   useEffect(() => {
@@ -677,8 +589,7 @@ const SlugTryOnPage: React.FC = () => {
       (async () => {
         try {
           emitUI('predecode-start');
-          const isBlobScheme = typeof resultUrl === 'string' && resultUrl.startsWith('blob:');
-          if (!isBlobScheme && typeof createImageBitmap === 'function') {
+          if (typeof createImageBitmap === 'function') {
             const res = await fetch(resultUrl);
             const blob = await res.blob();
             await createImageBitmap(blob);

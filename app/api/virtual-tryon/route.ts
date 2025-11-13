@@ -247,21 +247,14 @@ async function handleVirtualTryon(req: NextRequest) {
     // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
-    const reqAccept = (req.headers.get('accept') || '').toLowerCase();
-    const ua = (req.headers.get('user-agent') || '').toLowerCase();
-    const acceptsWebp = reqAccept.includes('image/webp');
     try {
       const t0 = Date.now();
       const sharpMod = await import('sharp');
       const sharpFn: any = (sharpMod as any).default || sharpMod;
-      const baseSharp = sharpFn(origBuf).resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true });
-      if (acceptsWebp) {
-        previewBuf = await baseSharp.webp({ quality: 80 }).toBuffer();
-        previewMime = 'image/webp';
-      } else {
-        previewBuf = await baseSharp.png({ compressionLevel: 9 }).toBuffer();
-        previewMime = 'image/png';
-      }
+      previewBuf = await sharpFn(origBuf)
+        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
       await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
     } catch (e: any) {
       previewBuf = origBuf;
@@ -269,16 +262,19 @@ async function handleVirtualTryon(req: NextRequest) {
       await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
     }
 
+    let cosUrl: string | undefined;
+    try {
+      const key = buildTryonKey(traceId, outMime || 'image/png');
+      const uploaded = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
+      cosUrl = uploaded.url;
+      await emitServer(traceId, 'cos-upload-success', { key, url: cosUrl });
+    } catch (e: any) {
+      await emitServer(traceId, 'cos-upload-error', { message: e?.message || String(e) });
+    }
+
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    try {
-      const key = buildTryonKey(traceId, outMime);
-      await uploadBufferToCOS(origBuf, key, outMime);
-      await emitServer(traceId, 'cos-put-success', { key });
-    } catch (e: any) {
-      await emitServer(traceId, 'cos-put-error', { message: e?.message || String(e) });
-    }
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -305,24 +301,23 @@ export async function POST(req: NextRequest) {
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
+      const headers: Record<string, string> = {
+        'Content-Type': result.mime || 'image/png',
+        'Cache-Control': 'no-store',
+        'X-TraceId': result.traceId,
+        'X-Mime': result.mime || 'image/png'
+      };
+      if (result.cosUrl) headers['X-Original-Url'] = result.cosUrl;
       return new NextResponse(arrayBuffer, {
         status: 200,
-        headers: {
-          'Content-Type': result.mime || 'image/png',
-          'Content-Length': String(buf.length),
-          'Cache-Control': 'no-store',
-          'X-TraceId': result.traceId,
-          'X-Mime': result.mime || 'image/png',
-          'X-Cdn-Domain': process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
-        }
+        headers
       });
     }
     // 默认返回 JSON，用于兼容旧客户端
     return NextResponse.json(result, {
       status: 200,
       headers: {
-        'Cache-Control': 'no-store',
-        'X-Cdn-Domain': process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
+        'Cache-Control': 'no-store'
       }
     });
   } catch (error: any) {
