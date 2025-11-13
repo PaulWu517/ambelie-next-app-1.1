@@ -328,7 +328,7 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
+      const genResp = await fetch('/api/virtual-tryon?includeOriginal=1', { method: 'POST', body: formData });
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType });
@@ -383,22 +383,25 @@ const SlugTryOnPage: React.FC = () => {
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
       } else {
-        // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
-        try {
-          const txt = await genResp.text();
-          const head = txt.slice(0, 200);
-          const tail = txt.slice(Math.max(0, txt.length - 200));
-          diag('server-non-image-response', { length: txt.length, head, tail });
-        } catch (e: any) {
-          diag('server-response-text-error', e?.message || String(e));
+        const ct = contentType ? contentType.toLowerCase() : '';
+        if (ct.startsWith('application/json')) {
+          try { genData = await genResp.json(); } catch (e: any) { diag('server-response-text-error', e?.message || String(e)); }
+        } else {
+          try {
+            const txt = await genResp.text();
+            const head = txt.slice(0, 200);
+            const tail = txt.slice(Math.max(0, txt.length - 200));
+            diag('server-non-image-response', { length: txt.length, head, tail });
+          } catch (e: any) {
+            diag('server-response-text-error', e?.message || String(e));
+          }
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsResultPending(false);
+          setResultImgLoading(false);
+          setIsProcessing(false);
+          return;
         }
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-        setProcessingProgress(100);
-        setIsResultPending(false);
-        setResultImgLoading(false);
-        setIsProcessing(false);
-        // 保留上一张图片，不回到占位
-        return;
       }
       if (genResp.ok && genData?.dataUrl) {
         setResultImgLoading(true);
@@ -431,7 +434,27 @@ const SlugTryOnPage: React.FC = () => {
             await runDetect();
           }
         } catch {}
-        // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
+        try {
+          if (genData.originalBase64) {
+            diag('upload-start');
+            const upResp = await fetch('/api/virtual-tryon/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ traceId, mime: genData.originalMime || 'image/png', base64: genData.originalBase64 })
+            });
+            if (upResp.ok) {
+              diag('upload-success');
+            } else {
+              let errDetail: any = null;
+              try { errDetail = await upResp.json(); } catch { errDetail = await upResp.text(); }
+              diag('upload-error', typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail));
+            }
+          } else {
+            diag('upload-skip', { reason: 'no-original-base64' });
+          }
+        } catch (e: any) {
+          diag('upload-error', e?.message || String(e));
+        }
       } else {
         // 未获取到 DataURL，结束处理态，避免停留在 Preparing
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
