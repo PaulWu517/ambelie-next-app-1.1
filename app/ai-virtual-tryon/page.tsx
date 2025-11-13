@@ -308,7 +308,7 @@ const VirtualTryOnPage: React.FC = () => {
       formData.append('traceId', traceId);
   
       diag('api-call');
-      const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      const postRespPromise = fetch('/api/virtual-tryon?includeOriginal=1', { method: 'POST', body: formData });
       // 并行：解析服务器返回的即时 DataURL（首帧显示），同时后台发起COS上传
       postRespPromise.then(async (resp) => {
         try {
@@ -320,6 +320,27 @@ const VirtualTryOnPage: React.FC = () => {
           setUploadedResult(data.dataUrl);
           setShowResult(true);
           baseResultRef.current = data.dataUrl;
+          try {
+            if (data.originalBase64) {
+              emitUI('upload-start', { traceId: data.traceId });
+              const upResp = await fetch('/api/virtual-tryon/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ traceId: data.traceId, mime: data.originalMime || 'image/png', base64: data.originalBase64 })
+              });
+              if (upResp.ok) {
+                emitUI('upload-success', { traceId: data.traceId });
+              } else {
+                let errDetail: any = null;
+                try { errDetail = await upResp.json(); } catch { errDetail = await upResp.text(); }
+                emitUI('upload-error', { traceId: data.traceId, error: typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail) });
+              }
+            } else {
+              emitUI('upload-skip', { reason: 'no-original-base64' });
+            }
+          } catch (e: any) {
+            emitUI('upload-error', { error: e?.message || String(e) });
+          }
           // 预检测关键点（移动端后台）
           try {
             const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
