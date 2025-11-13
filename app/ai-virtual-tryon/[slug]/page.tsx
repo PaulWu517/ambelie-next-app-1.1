@@ -352,7 +352,6 @@ const SlugTryOnPage: React.FC = () => {
           return;
         }
         diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
-        // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
         const objUrl = URL.createObjectURL(blob);
         setResultImgLoading(true);
         setIsResultPending(true);
@@ -376,6 +375,20 @@ const SlugTryOnPage: React.FC = () => {
             // 保留 ObjectURL，不进行 revoke，确保图片可见
           }
         })();
+        const originalUrlHeader = genResp.headers.get('X-Original-Url') || genResp.headers.get('x-original-url');
+        if (originalUrlHeader) {
+          (async () => {
+            try {
+              const ok = await fetch(originalUrlHeader, { method: 'HEAD', cache: 'no-store' }).then(r => r.ok).catch(() => false);
+              if (ok) {
+                setResultImgLoading(true);
+                setIsResultPending(true);
+                emitUI('before-set-url', { urlKind: 'server-original' });
+                setResultUrl(originalUrlHeader);
+              }
+            } catch {}
+          })();
+        }
         // 轻量姿态检测（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;

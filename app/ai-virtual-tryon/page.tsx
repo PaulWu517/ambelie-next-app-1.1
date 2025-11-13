@@ -320,6 +320,19 @@ const VirtualTryOnPage: React.FC = () => {
           setUploadedResult(data.dataUrl);
           setShowResult(true);
           baseResultRef.current = data.dataUrl;
+          const originalUrlHeader = resp.headers.get('X-Original-Url') || resp.headers.get('x-original-url');
+          if (originalUrlHeader) {
+            (async () => {
+              try {
+                const ok = await fetch(originalUrlHeader, { method: 'HEAD', cache: 'no-store' }).then(r => r.ok).catch(() => false);
+                if (ok) {
+                  setResultImgLoading(true);
+                  emitUI('before-set-url', { urlKind: 'server-original' });
+                  setUploadedResult(originalUrlHeader);
+                }
+              } catch {}
+            })();
+          }
           // 预检测关键点（移动端后台）
           try {
             const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
@@ -337,7 +350,7 @@ const VirtualTryOnPage: React.FC = () => {
               await runDetect();
             }
           } catch {}
-          // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
+          
         } catch {}
       }).catch(() => {});
       // 取消轮询与 CDN 下载，直接使用服务端 DataURL 作为基准

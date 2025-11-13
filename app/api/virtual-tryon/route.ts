@@ -242,9 +242,7 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
-    // Build original buffer
     const origBuf = Buffer.from(outBase64, 'base64');
-    // Create a compressed preview (webp 640px) to reduce first-frame size
     let previewBuf = origBuf;
     let previewMime = 'image/webp';
     try {
@@ -264,7 +262,10 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
+    const originalExt = (outMime || 'image/png').includes('png') ? 'png' : 'jpg';
+    const key = buildTryonKey(traceId, outMime || 'image/png');
+    const { url: cosUrl } = await uploadBufferToCOS(origBuf, key, outMime || 'image/png');
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, cosUrl, originalExt };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -297,7 +298,9 @@ export async function POST(req: NextRequest) {
           'Content-Type': result.mime || 'image/png',
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
-          'X-Mime': result.mime || 'image/png'
+          'X-Mime': result.mime || 'image/png',
+          'X-Original-Url': `/api/virtual-tryon/result/${result.traceId}?ext=${result.originalExt}`,
+          ...(result.cosUrl ? { 'X-Cos-Url': result.cosUrl } : {})
         }
       });
     }
@@ -305,7 +308,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result, {
       status: 200,
       headers: {
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'no-store',
+        'X-TraceId': result.traceId,
+        'X-Original-Url': `/api/virtual-tryon/result/${result.traceId}?ext=${result.originalExt}`,
+        ...(result.cosUrl ? { 'X-Cos-Url': result.cosUrl } : {})
       }
     });
   } catch (error: any) {
