@@ -42,7 +42,8 @@ export async function POST(req: NextRequest) {
         bucket: process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639',
         region: process.env.TENCENT_COS_REGION || 'ap-guangzhou',
         basePath: process.env.TRYON_COS_BASE_PATH || 'tryon-results/',
-        cdnDomain: process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
+        cdnDomain: process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com',
+        domainMode: (process.env.TENCENT_COS_DOMAIN ? 'custom' : ((process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === 'true') ? 'internal-accelerate' : ((process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === 'true') ? 'accelerate' : 'region-default')
       }
     });
     const uploaded = await uploadBufferToCOS(buf, key, mime);

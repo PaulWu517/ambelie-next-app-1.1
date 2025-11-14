@@ -157,18 +157,24 @@ const SlugTryOnPage: React.FC = () => {
           emitUI('cos-poll-timeout');
           return;
         }
-        const resp = await fetch(`/api/virtual-tryon/result/${encodeURIComponent(trace)}?ext=png`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
-        const ct = (resp.headers.get('content-type') || '').toLowerCase();
-        if (resp.ok && ct.startsWith('image/')) {
-          const blob = await resp.blob();
-          const reader = new FileReader();
-          const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-          baseResultRef.current = dataUrl;
-          setResultUrl(dataUrl);
-          stopCosPolling();
-          emitUI('cos-poll-success', { ct, size: blob.size });
+        const head = await fetch(`/api/virtual-tryon/result/${encodeURIComponent(trace)}`, { method: 'HEAD', cache: 'no-store' });
+        if (head.ok) {
+          const usedExt = head.headers.get('X-Found-Ext') || 'png';
+          const resp = await fetch(`/api/virtual-tryon/result/${encodeURIComponent(trace)}?ext=${encodeURIComponent(usedExt)}`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
+          const ct = (resp.headers.get('content-type') || '').toLowerCase();
+          if (resp.ok && ct.startsWith('image/')) {
+            const blob = await resp.blob();
+            const reader = new FileReader();
+            const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+            baseResultRef.current = dataUrl;
+            setResultUrl(dataUrl);
+            stopCosPolling();
+            emitUI('cos-poll-success', { ct, size: blob.size, usedExt });
+          } else {
+            emitUI('cos-poll-step', { status: resp.status, ct, usedExt });
+          }
         } else {
-          emitUI('cos-poll-step', { status: resp.status, ct });
+          emitUI('cos-poll-step', { status: head.status });
         }
       } catch (e: any) {
         emitUI('cos-poll-error', e?.message || String(e));
