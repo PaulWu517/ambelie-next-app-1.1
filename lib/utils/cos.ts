@@ -14,7 +14,18 @@ function getCosEnv() {
 
 function getCosClient() {
   const { secretId, secretKey } = getCosEnv();
-  const cos = new COS({ SecretId: secretId, SecretKey: secretKey });
+  const useAccel = (process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === 'true';
+  const useInternalAccel = (process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === 'true';
+  const customDomain = process.env.TENCENT_COS_DOMAIN || process.env.TENCENT_COS_CUSTOM_DOMAIN;
+  const options: any = { SecretId: secretId, SecretKey: secretKey };
+  if (customDomain) {
+    options.Domain = customDomain;
+  } else if (useInternalAccel) {
+    options.Domain = '{Bucket}.cos-internal.accelerate.tencentcos.cn';
+  } else if (useAccel) {
+    options.Domain = '{Bucket}.cos.accelerate.myqcloud.com';
+  }
+  const cos = new COS(options);
   return cos;
 }
 
