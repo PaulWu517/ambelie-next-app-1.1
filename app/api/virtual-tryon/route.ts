@@ -265,15 +265,12 @@ async function handleVirtualTryon(req: NextRequest) {
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
     const key = buildTryonKey(traceId, outMime);
-    const domainMode = process.env.TENCENT_COS_DOMAIN ? 'custom' : ((process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === 'true') ? 'internal-accelerate' : ((process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === 'true') ? 'accelerate' : 'region-default';
     setTimeout(async () => {
-      const t0 = Date.now();
       try {
-        await emitServer(traceId, 'cos-upload-start', { key, size: origBuf.length, mime: outMime, domainMode });
-        const uploaded = await uploadBufferToCOS(origBuf, key, outMime);
-        await emitServer(traceId, 'cos-upload-success', { key, url: uploaded.url, durationMs: Date.now() - t0, domainMode });
+        await uploadBufferToCOS(origBuf, key, outMime);
+        await emitServer(traceId, 'cos-upload-success', { key });
       } catch (e: any) {
-        await emitServer(traceId, 'cos-upload-error', { key, message: e?.message || String(e), durationMs: Date.now() - t0, code: e?.code, statusCode: e?.statusCode, domainMode });
+        await emitServer(traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
       }
     }, 0);
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };

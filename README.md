@@ -87,17 +87,3 @@ ambelie-next-app/
 ## 许可证
 
 此项目为私有项目。
-
-## 全球加速与调试
-
-- 开启全球加速
-  - 在部署环境设置 `TENCENT_COS_USE_ACCELERATE=1` 或显式设置 `TENCENT_COS_DOMAIN=ambelie-1368352639.cos.accelerate.myqcloud.com`
-  - 若运行在腾讯云同地域内网，设置 `TENCENT_COS_USE_INTERNAL_ACCELERATE=1` 使用内网加速域名
-- 诊断事件
-  - 服务端上传：`cos-upload-start`、`cos-upload-success`、`cos-upload-error`
-  - 读取结果：`result-get-start`、`result-get-fallback`、`result-get-error`
-  - 前端轮询：`ui-cos-poll-step`、`ui-cos-poll-timeout`、`ui-upload-success`、`ui-upload-error`
-- 推荐区域
-  - 试穿相关接口优先在亚洲区域运行：`preferredRegion=['hkg1','sin1','nrt1']`
-- 前端并发上传
-  - 预览出现后并发调用 `POST /api/virtual-tryon/upload`，不影响预览展示；服务端与前端任一成功，轮询即可在 30 秒内命中原图或失败后保留预览图

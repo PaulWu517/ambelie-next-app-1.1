@@ -3,7 +3,6 @@ import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
 
 async function emitServer(traceId: string, stage: string, message?: any) {
   try {
@@ -42,8 +41,7 @@ export async function POST(req: NextRequest) {
         bucket: process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639',
         region: process.env.TENCENT_COS_REGION || 'ap-guangzhou',
         basePath: process.env.TRYON_COS_BASE_PATH || 'tryon-results/',
-        cdnDomain: process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com',
-        domainMode: (process.env.TENCENT_COS_DOMAIN ? 'custom' : ((process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_INTERNAL_ACCELERATE || '').toLowerCase() === 'true') ? 'internal-accelerate' : ((process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === '1' || (process.env.TENCENT_COS_USE_ACCELERATE || '').toLowerCase() === 'true') ? 'accelerate' : 'region-default')
+        cdnDomain: process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'
       }
     });
     const uploaded = await uploadBufferToCOS(buf, key, mime);
