@@ -266,11 +266,13 @@ async function handleVirtualTryon(req: NextRequest) {
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
     const key = buildTryonKey(traceId, outMime);
     setTimeout(async () => {
+      const t0 = Date.now();
       try {
-        await uploadBufferToCOS(origBuf, key, outMime);
-        await emitServer(traceId, 'cos-upload-success', { key });
+        await emitServer(traceId, 'cos-upload-start', { key, size: origBuf.length, mime: outMime });
+        const uploaded = await uploadBufferToCOS(origBuf, key, outMime);
+        await emitServer(traceId, 'cos-upload-success', { key, url: uploaded.url, durationMs: Date.now() - t0 });
       } catch (e: any) {
-        await emitServer(traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+        await emitServer(traceId, 'cos-upload-error', { key, message: e?.message || String(e), durationMs: Date.now() - t0, code: e?.code, statusCode: e?.statusCode });
       }
     }, 0);
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };

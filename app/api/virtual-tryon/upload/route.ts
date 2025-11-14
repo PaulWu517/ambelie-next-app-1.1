@@ -3,6 +3,7 @@ import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
 
 async function emitServer(traceId: string, stage: string, message?: any) {
   try {

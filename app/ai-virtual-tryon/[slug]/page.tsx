@@ -120,6 +120,21 @@ const SlugTryOnPage: React.FC = () => {
     });
   };
 
+  const scheduleUploadFromDataUrl = async (dataUrl: string, trace: string) => {
+    try {
+      const parts = dataUrl.split(',');
+      const head = parts[0] || '';
+      const base64 = parts[1] || '';
+      const mimeMatch = head.match(/^data:(.*?);base64$/i);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const payload = { traceId: trace, mime, base64 } as any;
+      await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      emitUI('ui-upload-success', { trace, mime, len: base64.length });
+    } catch (e: any) {
+      emitUI('ui-upload-error', e?.message || String(e));
+    }
+  };
+
   const stopCosPolling = () => {
     if (cosPollIntervalRef.current) {
       try { window.clearInterval(cosPollIntervalRef.current); } catch {}
@@ -427,6 +442,7 @@ const SlugTryOnPage: React.FC = () => {
             baseResultRef.current = dataUrl;
             setResultUrl(dataUrl);
             try { URL.revokeObjectURL(objUrl); } catch {}
+            try { await scheduleUploadFromDataUrl(dataUrl, traceHeader); } catch {}
           } catch (e: any) {
             diag('blob-to-dataurl-error', e?.message || String(e));
             // 保留 ObjectURL，不进行 revoke，确保图片可见

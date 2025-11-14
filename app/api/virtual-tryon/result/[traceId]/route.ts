@@ -22,6 +22,7 @@ async function emitServer(traceId: string, stage: string, message?: any) {
 }
 
 export const runtime = 'nodejs';
+export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
 
 export async function GET(req: Request, ctx: { params: Promise<{ traceId: string }> }) {
   const { traceId } = await ctx.params;
