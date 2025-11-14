@@ -262,28 +262,17 @@ async function handleVirtualTryon(req: NextRequest) {
       await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
     }
 
-    // 1. 生成预览图（前端立即返回）
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-
-    // 2. 异步上传原始 AI 结果到 COS（不阻塞前端）
-    //    使用原始 outBase64（未压缩）保证云端存的是最高质量
-    const uploadPromise = (async () => {
+    const key = buildTryonKey(traceId, outMime);
+    setTimeout(async () => {
       try {
-        const aiBuf = Buffer.from(outBase64, 'base64');
-        const aiKey = buildTryonKey(traceId, outMime);
-        const { url } = await uploadBufferToCOS(aiBuf, aiKey, outMime);
-        await emitServer(traceId, 'cos-upload-success', { key: aiKey, url, size: aiBuf.length });
-      } catch (uploadErr: any) {
-        // 仅记录，不影响主流程
-        await emitServer(traceId, 'cos-upload-error', { message: uploadErr?.message || String(uploadErr) });
+        await uploadBufferToCOS(origBuf, key, outMime);
+        await emitServer(traceId, 'cos-upload-success', { key });
+      } catch (e: any) {
+        await emitServer(traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
       }
-    })();
-
-    // 3. 后台等待上传完成（依旧不阻塞预览返回）
-    //    把 Promise 挂在响应里，让 Vercel/Node 在返回后继续调度
-    (req as any).uploadPromise = uploadPromise;
-
+    }, 0);
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
