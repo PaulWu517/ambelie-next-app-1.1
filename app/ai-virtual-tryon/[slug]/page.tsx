@@ -82,6 +82,9 @@ const SlugTryOnPage: React.FC = () => {
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
+  const resultTraceIdRef = useRef<string | null>(null);
+  const cosPollIntervalRef = useRef<number | null>(null);
+  const cosPollDeadlineRef = useRef<number | null>(null);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -116,6 +119,56 @@ const SlugTryOnPage: React.FC = () => {
       reader.readAsDataURL(blob);
     });
   };
+
+  const stopCosPolling = () => {
+    if (cosPollIntervalRef.current) {
+      try { window.clearInterval(cosPollIntervalRef.current); } catch {}
+      cosPollIntervalRef.current = null;
+    }
+    cosPollDeadlineRef.current = null;
+  };
+
+  const startCosPolling = (trace: string) => {
+    resultTraceIdRef.current = trace;
+    cosPollDeadlineRef.current = Date.now() + 30000;
+    if (cosPollIntervalRef.current) {
+      try { window.clearInterval(cosPollIntervalRef.current); } catch {}
+      cosPollIntervalRef.current = null;
+    }
+    cosPollIntervalRef.current = window.setInterval(async () => {
+      try {
+        if ((cosPollDeadlineRef.current || 0) <= Date.now()) {
+          stopCosPolling();
+          emitUI('cos-poll-timeout');
+          return;
+        }
+        const resp = await fetch(`/api/virtual-tryon/result/${encodeURIComponent(trace)}?ext=png`, { headers: { Accept: 'image/*' }, cache: 'no-store' });
+        const ct = (resp.headers.get('content-type') || '').toLowerCase();
+        if (resp.ok && ct.startsWith('image/')) {
+          const blob = await resp.blob();
+          const reader = new FileReader();
+          const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+          baseResultRef.current = dataUrl;
+          setResultUrl(dataUrl);
+          stopCosPolling();
+          emitUI('cos-poll-success', { ct, size: blob.size });
+        } else {
+          emitUI('cos-poll-step', { status: resp.status, ct });
+        }
+      } catch (e: any) {
+        emitUI('cos-poll-error', e?.message || String(e));
+      }
+    }, 2500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (cosPollIntervalRef.current) {
+        try { window.clearInterval(cosPollIntervalRef.current); } catch {}
+        cosPollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const handleDownloadResult = async () => {
     if (!resultUrl) return;
@@ -249,6 +302,7 @@ const SlugTryOnPage: React.FC = () => {
     setIsResultPending(true);
     emitUI('tryon-start', { pending: true, resultUrl });
     setIsProcessing(true);
+    stopCosPolling();
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const diag = (stage: string, message?: any, extra?: any) => {
       try {
@@ -358,6 +412,8 @@ const SlugTryOnPage: React.FC = () => {
         setIsResultPending(true);
         emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
         setResultUrl(objUrl);
+        const traceHeader = genResp.headers.get('X-TraceId') || traceId;
+        startCosPolling(traceHeader);
         setShowResult(true);
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
