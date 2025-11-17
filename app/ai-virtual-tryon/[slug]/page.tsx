@@ -373,15 +373,15 @@ const SlugTryOnPage: React.FC = () => {
             try { URL.revokeObjectURL(objUrl); } catch {}
             try {
               const m = /^data:(.*?);base64,(.*)$/.exec(dataUrl);
-              if (m) {
-                const mime = m[1];
-                const base64 = m[2];
+              if (!m) {
+                diag('ui-cos-upload-skip', 'no-base64-match');
+              } else {
+                const mime = m![1];
+                const base64 = m![2];
                 const payload = { traceId, mime, base64 };
                 const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
                 try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
                 try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
-              } else {
-                diag('ui-cos-upload-skip', 'no-base64-match');
               }
             } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
           } catch (e: any) {
@@ -395,6 +395,7 @@ const SlugTryOnPage: React.FC = () => {
           const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
+        return;
       } else {
         // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
         try {
@@ -405,7 +406,7 @@ const SlugTryOnPage: React.FC = () => {
         } catch (e: any) {
           diag('server-response-text-error', e?.message || String(e));
         }
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        if (progressIntervalRef.current !== null) { try { window.clearInterval(progressIntervalRef.current!); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsResultPending(false);
         setResultImgLoading(false);
@@ -422,20 +423,20 @@ const SlugTryOnPage: React.FC = () => {
         baseResultRef.current = genData.dataUrl;
         try {
           const m = /^data:(.*?);base64,(.*)$/.exec(genData.dataUrl);
-          if (m) {
-            const mime = m[1];
-            const base64 = m[2];
+          if (!m) {
+            diag('ui-cos-upload-skip', 'no-base64-match');
+          } else {
+            const mime = m![1];
+            const base64 = m![2];
             const payload = { traceId, mime, base64 };
             const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
             try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
             try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
-          } else {
-            diag('ui-cos-upload-skip', 'no-base64-match');
           }
         } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
         // 生成响应已拿到首帧，提前结束处理态与进度，避免卡在99%
-        if (progressIntervalRef.current) {
-          try { window.clearInterval(progressIntervalRef.current); } catch {}
+        if (progressIntervalRef.current !== null) {
+          try { window.clearInterval(progressIntervalRef.current!); } catch {}
           progressIntervalRef.current = null;
         }
         setProcessingProgress(100);
@@ -460,7 +461,7 @@ const SlugTryOnPage: React.FC = () => {
         // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
       } else {
         // 未获取到 DataURL，结束处理态，避免停留在 Preparing
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        if (progressIntervalRef.current !== null) { try { window.clearInterval(progressIntervalRef.current!); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsResultPending(false);
         setResultImgLoading(false);
