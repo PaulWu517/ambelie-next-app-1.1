@@ -328,7 +328,7 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const genResp = await fetch('/api/virtual-tryon?format=blob', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
+      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' } });
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType });
@@ -396,22 +396,7 @@ const SlugTryOnPage: React.FC = () => {
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
       } else {
-        // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
-        try {
-          const txt = await genResp.text();
-          const head = txt.slice(0, 200);
-          const tail = txt.slice(Math.max(0, txt.length - 200));
-          diag('server-non-image-response', { length: txt.length, head, tail });
-        } catch (e: any) {
-          diag('server-response-text-error', e?.message || String(e));
-        }
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-        setProcessingProgress(100);
-        setIsResultPending(false);
-        setResultImgLoading(false);
-        setIsProcessing(false);
-        // 保留上一张图片，不回到占位
-        return;
+        try { genData = await genResp.json(); } catch (e: any) { diag('server-response-json-error', e?.message || String(e)); if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; } setProcessingProgress(100); setIsResultPending(false); setResultImgLoading(false); setIsProcessing(false); return; }
       }
       if (genResp.ok && genData?.dataUrl) {
         setResultImgLoading(true);
@@ -421,16 +406,18 @@ const SlugTryOnPage: React.FC = () => {
         setShowResult(true);
         baseResultRef.current = genData.dataUrl;
         try {
-          const m = /^data:(.*?);base64,(.*)$/.exec(genData.dataUrl);
-          if (m) {
-            const mime = m[1];
-            const base64 = m[2];
-            const payload = { traceId, mime, base64 };
+          const omime = genData.origMime;
+          const obase64 = genData.origBase64;
+          if (omime && obase64) {
+            const payload = { traceId, mime: omime, base64: obase64 };
             const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-            try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
-            try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
+            try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime: omime }); } catch { }
+            try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime: omime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
+            const ext = omime.includes('png') ? 'png' : 'jpg';
+            const url2 = `/api/virtual-tryon/result/${traceId}?ext=${ext}`;
+            (async () => { let tries = 0; const maxTries = 20; const wait = (ms: number) => new Promise(r => setTimeout(r, ms)); while (tries < maxTries) { try { const r = await fetch(url2, { method: 'GET', headers: { Accept: 'image/*' } }); if (r.ok) { const ct = r.headers.get('Content-Type') || r.headers.get('content-type') || ''; if (ct && ct.toLowerCase().startsWith('image/')) { const finalUrl = `${url2}&t=${Date.now()}`; setResultUrl(finalUrl); setShowResult(true); setIsResultPending(false); setResultImgLoading(false); diag('ui-original-loaded'); break; } } } catch {} tries++; await wait(Math.min(2000, 400 + tries * 100)); } })();
           } else {
-            diag('ui-cos-upload-skip', 'no-base64-match');
+            diag('ui-cos-upload-skip', 'no-orig');
           }
         } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
         // 生成响应已拿到首帧，提前结束处理态与进度，避免卡在99%
