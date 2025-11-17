@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProxyAgent } from 'undici';
-import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
+import { uploadBufferToCOS, buildTryonKey, objectExistsInCOS } from '@/lib/utils/cos';
 
 // Vercel 配置优化
 export const runtime = 'nodejs';
@@ -301,17 +301,18 @@ export async function POST(req: NextRequest) {
       view.set(buf);
       // 先立即返回预览，再后台上传原图
       const key = buildTryonKey(result.traceId, result.origMime);
-      // 异步上传原图，不阻塞预览返回
-      setTimeout(async () => {
-        try {
-          // 使用 handleVirtualTryon 返回的原始 buffer
+      try {
+        const exists = await objectExistsInCOS(key);
+        if (!exists.exists) {
           await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
           await uploadBufferToCOS(result.origBuf, key, result.origMime);
           await emitServer(result.traceId, 'cos-upload-success', { key });
-        } catch (e: any) {
-          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+        } else {
+          await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
         }
-      }, 0);
+      } catch (e: any) {
+        await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+      }
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       return new NextResponse(arrayBuffer, {
         status: 200,
