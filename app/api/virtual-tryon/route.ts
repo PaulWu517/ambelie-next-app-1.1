@@ -325,6 +325,25 @@ export async function POST(req: NextRequest) {
       });
     }
     // 默认返回 JSON，用于兼容旧客户端
+    try {
+      const payload = { traceId: result.traceId, mime: result.origMime, base64: (result as any).origBase64 };
+      if (payload.traceId && payload.mime && payload.base64) {
+        await emitServer(result.traceId, 'server-auto-upload-start', { mime: payload.mime });
+        try {
+          const base = process.env.DIAG_POST_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'));
+          const endpoint = `${String(base).replace(/\/$/, '')}/api/virtual-tryon/upload`;
+          const fetchMod = await import('undici');
+          const f: any = (fetchMod as any).fetch || (global as any).fetch;
+          if (typeof f === 'function') {
+            void f(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+          }
+        } catch (e: any) {
+          await emitServer(result.traceId, 'server-auto-upload-error', e?.message || String(e));
+        }
+      } else {
+        await emitServer(result.traceId, 'server-auto-upload-skip', { hasOrigBase64: !!(result as any).origBase64 });
+      }
+    } catch {}
     return NextResponse.json(result, {
       status: 200,
       headers: {

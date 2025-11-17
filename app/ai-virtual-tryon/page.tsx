@@ -28,7 +28,7 @@ const VirtualTryOnPage: React.FC = () => {
         const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
         (navigator as any).sendBeacon('/api/diagnostic', blob);
       } else {
-        void fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+        void fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
       }
     } catch {}
   };
@@ -309,33 +309,22 @@ const VirtualTryOnPage: React.FC = () => {
   
       diag('api-call');
       const postRespPromise = fetch('/api/virtual-tryon', { method: 'POST', body: formData });
+      // 并行：解析服务器返回的即时 DataURL（首帧显示），同时后台发起COS上传
       postRespPromise.then(async (resp) => {
         try {
           if (!resp.ok) return;
           const data = await resp.json().catch(() => null);
-          if (!data || !data.traceId) return;
-          const cosBase = 'https://ambelie-1368352639.cos.accelerate.myqcloud.com';
-          const keyPng = `tryon-results/${data.traceId}.png`;
-          const keyJpg = `tryon-results/${data.traceId}.jpg`;
-          const urlPng = `${cosBase}/${keyPng}`;
-          const urlJpg = `${cosBase}/${keyJpg}`;
-          let finalUrl = data.dataUrl || '';
-          try {
-            const chk = await fetch(urlPng, { method: 'HEAD' });
-            if (chk.ok) { finalUrl = urlPng; } else {
-              const chk2 = await fetch(urlJpg, { method: 'HEAD' });
-              if (chk2.ok) { finalUrl = urlJpg; }
-            }
-          } catch {}
+          if (!data || !data.dataUrl) return;
           setResultImgLoading(true);
-          emitUI('before-set-url', { urlKind: 'cos-original', url: finalUrl });
-          setUploadedResult(finalUrl);
+          emitUI('before-set-url', { urlKind: 'server-dataurl', length: data.dataUrl.length });
+          setUploadedResult(data.dataUrl);
           setShowResult(true);
-          baseResultRef.current = finalUrl;
+          baseResultRef.current = data.dataUrl;
+          // 预检测关键点（移动端后台）
           try {
             const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
             const runDetect = async () => {
-              const lms = await detectPoseLandmarksNormalized(finalUrl);
+              const lms = await detectPoseLandmarksNormalized(data.dataUrl);
               if (lms) poseLmsRef.current = lms;
             };
             if (isMobileDetect) {
@@ -348,9 +337,20 @@ const VirtualTryOnPage: React.FC = () => {
               await runDetect();
             }
           } catch {}
+          // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
         } catch {}
       }).catch(() => {});
+      // 取消轮询与 CDN 下载，直接使用服务端 DataURL 作为基准
       const baseDataUrl = baseResultRef.current || (uploadedResult || null);
+      if (!baseDataUrl) {
+        diag('dataurl-missing');
+      } else {
+        setResultImgLoading(true);
+        emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
+        setUploadedResult(baseDataUrl);
+        setShowResult(true);
+      }
+      // Narrow type after presence check to satisfy TypeScript
       const baseDataUrlStr: string = baseDataUrl || '';
       // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
       try {
