@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProxyAgent } from 'undici';
-import { uploadBufferToCOS, buildTryonKey, objectExistsInCOS } from '@/lib/utils/cos';
+import { uploadBufferToCOS, buildTryonKey } from '@/lib/utils/cos';
 
 // Vercel 配置优化
 export const runtime = 'nodejs';
@@ -273,20 +273,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    try {
-      const key = buildTryonKey(traceId, outMime);
-      const exists = await objectExistsInCOS(key);
-      if (!exists.exists) {
-        await emitServer(traceId, 'cos-upload-start', { key, mime: outMime, size: origBuf.length });
-        await uploadBufferToCOS(origBuf, key, outMime);
-        await emitServer(traceId, 'cos-upload-success', { key });
-      } else {
-        await emitServer(traceId, 'cos-upload-skip-exists', { key, contentType: exists.contentType, contentLength: exists.contentLength });
-      }
-    } catch (e: any) {
-      await emitServer(traceId, 'cos-upload-error', { message: e?.message || String(e) });
-    }
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBuf, origMime: outMime };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -312,6 +299,19 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
+      // 先立即返回预览，再后台上传原图
+      const key = buildTryonKey(result.traceId, result.origMime);
+      // 异步上传原图，不阻塞预览返回
+      setTimeout(async () => {
+        try {
+          // 使用 handleVirtualTryon 返回的原始 buffer
+          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
+          await uploadBufferToCOS(result.origBuf, key, result.origMime);
+          await emitServer(result.traceId, 'cos-upload-success', { key });
+        } catch (e: any) {
+          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+        }
+      }, 0);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       return new NextResponse(arrayBuffer, {
         status: 200,

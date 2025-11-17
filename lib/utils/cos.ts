@@ -20,7 +20,8 @@ function getCosClient() {
 }
 
 export function buildTryonKey(traceId: string, mime: string) {
-  const ext = mime.includes('png') ? 'png' : 'jpg';
+  const m = (mime || '').toLowerCase();
+  const ext = m.includes('png') ? 'png' : (m.includes('webp') ? 'webp' : 'jpg');
   const basePath = process.env.TRYON_COS_BASE_PATH || 'tryon-results/';
   return `${basePath}${traceId}.${ext}`;
 }
