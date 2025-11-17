@@ -328,26 +328,18 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' } });
+      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData });
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType });
       let genData: any = null;
-      const isJson = !!contentType && contentType.toLowerCase().startsWith('application/json');
-      if (genResp.ok && isJson) {
-        try { genData = await genResp.json(); } catch (e: any) { diag('server-json-parse-error', e?.message || String(e)); }
-      }
-      // 二进制首帧：当返回的是图片时，直接读取 blob 并转换为 DataURL
-      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
-      if (genResp.ok && isImage) {
-        const readStart = Date.now();
-        diag('server-body-read-start');
-        let blob: Blob;
+      // 默认 JSON 响应：直接取 traceId 拼接 COS 原图 URL 展示
+      if (genResp.ok) {
         try {
-          blob = await genResp.blob();
+          genData = await genResp.json();
         } catch (e: any) {
-          diag('server-body-read-error', e?.message || String(e));
-          // 读取失败：结束处理态，避免卡住
+          diag('server-json-error', e?.message || String(e));
+          // JSON 解析失败：结束处理态
           if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
           setProcessingProgress(100);
           setIsResultPending(false);
@@ -355,51 +347,48 @@ const SlugTryOnPage: React.FC = () => {
           setIsProcessing(false);
           return;
         }
-        diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
-        // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
-        const objUrl = URL.createObjectURL(blob);
+        if (!genData?.traceId) {
+          diag('server-traceId-missing');
+          // 缺少 traceId：结束处理态
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsResultPending(false);
+          setResultImgLoading(false);
+          setIsProcessing(false);
+          return;
+        }
+        // 拼接 COS 原图 URL（优先 png，失败时回退 jpg）
+        const cosBase = 'https://ambelie-1368352639.cos.accelerate.myqcloud.com';
+        const keyPng = `tryon-results/${genData.traceId}.png`;
+        const keyJpg = `tryon-results/${genData.traceId}.jpg`;
+        const urlPng = `${cosBase}/${keyPng}`;
+        const urlJpg = `${cosBase}/${keyJpg}`;
+        // 先尝试 png，若 404 则回退 jpg，若仍失败则使用返回的 dataUrl
+        let finalUrl = genData.dataUrl || '';
+        try {
+          const chk = await fetch(urlPng, { method: 'HEAD' });
+          if (chk.ok) { finalUrl = urlPng; } else {
+            const chk2 = await fetch(urlJpg, { method: 'HEAD' });
+            if (chk2.ok) { finalUrl = urlJpg; }
+          }
+        } catch {}
+        // 立即展示最终 URL
         setResultImgLoading(true);
         setIsResultPending(true);
-        emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
-        setResultUrl(objUrl);
+        emitUI('before-set-url', { urlKind: 'cos-original', url: finalUrl });
+        setResultUrl(finalUrl);
         setShowResult(true);
+        baseResultRef.current = finalUrl;
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
         setProcessingProgress(100);
         setIsProcessing(false);
-        // 后台转换为 DataURL 并替换，确保后续处理一致
-        (async () => {
-          try {
-            const reader = new FileReader();
-            const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-            emitUI('after-objecturl-converted', { length: dataUrl.length });
-            baseResultRef.current = dataUrl;
-            setResultUrl(dataUrl);
-            try { URL.revokeObjectURL(objUrl); } catch {}
-            try {
-              const m = /^data:(.*?);base64,(.*)$/.exec(dataUrl);
-              if (m) {
-                const mime = m[1];
-                const base64 = m[2];
-                const payload = { traceId, mime, base64 };
-                const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-                try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
-                try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
-              } else {
-                diag('ui-cos-upload-skip', 'no-base64-match');
-              }
-            } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
-          } catch (e: any) {
-            diag('blob-to-dataurl-error', e?.message || String(e));
-            // 保留 ObjectURL，不进行 revoke，确保图片可见
-          }
-        })();
-        // 轻量姿态检测（移动端后台）
+        // 姿态检测（移动端后台）
         try {
           const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-          const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrl); if (lms) poseLmsRef.current = lms; };
+          const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(finalUrl); if (lms) poseLmsRef.current = lms; };
           if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
         } catch {}
-      } else if (!isJson) {
+      } else {
         // 非图片：读取文本一次并输出片段用于诊断，然后结束处理（保留上一张结果）
         try {
           const txt = await genResp.text();
@@ -425,15 +414,16 @@ const SlugTryOnPage: React.FC = () => {
         setShowResult(true);
         baseResultRef.current = genData.dataUrl;
         try {
-          const mime = genData.origMime;
-          const base64 = genData.origBase64;
-          if (mime && base64) {
+          const m = /^data:(.*?);base64,(.*)$/.exec(genData.dataUrl);
+          if (m) {
+            const mime = m[1];
+            const base64 = m[2];
             const payload = { traceId, mime, base64 };
             const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
             try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
             try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
           } else {
-            diag('ui-cos-upload-skip', 'missing-orig');
+            diag('ui-cos-upload-skip', 'no-base64-match');
           }
         } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
         // 生成响应已拿到首帧，提前结束处理态与进度，避免卡在99%
