@@ -273,7 +273,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBuf, origMime: outMime };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -304,8 +304,9 @@ export async function POST(req: NextRequest) {
       // 异步上传原图，不阻塞预览返回
       setTimeout(async () => {
         try {
-          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.mime, size: Buffer.from(result.base64, 'base64').length });
-          await uploadBufferToCOS(Buffer.from(result.base64, 'base64'), key, result.mime);
+          // 使用 handleVirtualTryon 返回的原始 buffer
+          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
+          await uploadBufferToCOS(result.origBuf, key, result.origMime);
           await emitServer(result.traceId, 'cos-upload-success', { key });
         } catch (e: any) {
           await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
