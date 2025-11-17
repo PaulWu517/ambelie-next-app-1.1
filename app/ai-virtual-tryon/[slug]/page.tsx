@@ -78,7 +78,6 @@ const SlugTryOnPage: React.FC = () => {
   const [isApplying, setIsApplying] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const hasFirstShownRef = useRef(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
@@ -427,7 +426,7 @@ const SlugTryOnPage: React.FC = () => {
       }
       if (genResp.ok && genData?.dataUrl) {
         setResultImgLoading(true);
-        setIsResultPending(true);
+        setIsResultPending(false);
         emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
         setResultUrl(genData.dataUrl);
         setShowResult(true);
@@ -520,9 +519,8 @@ const SlugTryOnPage: React.FC = () => {
           schedule(async () => {
             try {
               const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-              // 预览也先置 loading，防止低端设备切换时短暂闪烁
+              // 预览置 loading，等待图片解码完成后自动关闭
               setResultImgLoading(true);
-              setIsResultPending(true);
               emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
               setResultUrl(preview);
               diag('posewarp-success');
@@ -543,7 +541,6 @@ const SlugTryOnPage: React.FC = () => {
       // 不再使用 Blob URL，无需 revoke
       if (!isMobile) {
         setResultImgLoading(true);
-        setIsResultPending(true);
         emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
         setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
@@ -551,7 +548,6 @@ const SlugTryOnPage: React.FC = () => {
           try {
             const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
             setResultImgLoading(true);
-            setIsResultPending(true);
             emitUI('before-set-url', { urlKind: 'desktop-hd', length: hd?.length });
             setResultUrl(hd);
           } catch {}
@@ -577,37 +573,38 @@ const SlugTryOnPage: React.FC = () => {
   const [resultImgLoading, setResultImgLoading] = useState(false);
   useEffect(() => {
     if (resultUrl) {
-      if (!hasFirstShownRef.current) {
-        setResultImgLoading(true);
-        setIsResultPending(true);
-        emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
-        (async () => {
-          try {
-            emitUI('predecode-start');
-            if (typeof createImageBitmap === 'function') {
-              const res = await fetch(resultUrl);
-              const blob = await res.blob();
-              await createImageBitmap(blob);
-            } else {
-              await new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(true);
-                img.onerror = reject;
-                img.src = resultUrl;
-              });
-            }
-            setResultImgLoading(false);
-            setIsResultPending(false);
-            emitUI('predecode-success');
-          } catch (e: any) {
-            emitUI('predecode-error', e?.message || String(e));
+      // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
+      setResultImgLoading(true);
+      setIsResultPending(true);
+      emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
+      // 预解码兜底：即使 onLoad 未触发，也尝试主动解码后清除 loading
+      (async () => {
+        try {
+          emitUI('predecode-start');
+          if (typeof createImageBitmap === 'function') {
+            const res = await fetch(resultUrl);
+            const blob = await res.blob();
+            await createImageBitmap(blob);
+          } else {
+            await new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(true);
+              img.onerror = reject;
+              img.src = resultUrl;
+            });
           }
-        })();
-      } else {
-        emitUI('resultUrl-update', { resultUrl });
-      }
+          setResultImgLoading(false);
+          setIsResultPending(false);
+          emitUI('predecode-success');
+        } catch (e: any) {
+          emitUI('predecode-error', e?.message || String(e));
+          // 失败时不改变现有 loading 状态，交由 onError/onLoad 处理
+        }
+      })();
     } else {
       setResultImgLoading(false);
+      // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
+      // 保持现状：不强制设置 isResultPending=false，这里交由 Try-On 按钮触发时开启
     }
   }, [resultUrl]);
 
@@ -777,7 +774,7 @@ const SlugTryOnPage: React.FC = () => {
               </div>
             ) : resultUrl ? (
               <div className={styles.result}>
-                {(resultImgLoading || isResultPending) && (
+                {resultImgLoading && (
                   <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div>
                       <div className={styles.spinner}></div>
@@ -790,9 +787,9 @@ const SlugTryOnPage: React.FC = () => {
                   alt="Try-on result" 
                   className={styles.resultImage} 
                   onClick={handleImageClick}
-                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); if (!hasFirstShownRef.current) hasFirstShownRef.current = true; emitUI('img-onload'); }}
+                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
                   onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                  style={{ cursor: 'pointer', opacity: (resultImgLoading || isResultPending) ? 0.35 : 1, transition: 'opacity 200ms ease' }}
+                  style={{ cursor: 'pointer', opacity: resultImgLoading ? 0.35 : 1, transition: 'opacity 200ms ease' }}
                   title="点击放大查看"
                 />
               </div>

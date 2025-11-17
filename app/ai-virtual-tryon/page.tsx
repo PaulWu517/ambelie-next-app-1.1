@@ -52,7 +52,6 @@ const VirtualTryOnPage: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedClothing, setUploadedClothing] = useState<string | null>(null);
   const [uploadedResult, setUploadedResult] = useState<string | null>(null);
-  const hasFirstShownRef = useRef(false);
   const [aiGeneratedResult, setAiGeneratedResult] = useState<{ base64: string; mimeType: string } | null>(null);
 
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurements>({
@@ -198,7 +197,7 @@ const VirtualTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
-        if (!hasFirstShownRef.current) setResultImgLoading(true);
+        setResultImgLoading(true);
         setUploadedResult(adjusted);
       }
     } catch (e) {
@@ -213,7 +212,7 @@ const VirtualTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
-        if (!hasFirstShownRef.current) setResultImgLoading(true);
+        setResultImgLoading(true);
         setUploadedResult(adjusted);
       }
     } catch (e) {
@@ -228,7 +227,7 @@ const VirtualTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
-        if (!hasFirstShownRef.current) setResultImgLoading(true);
+        setResultImgLoading(true);
         setUploadedResult(adjusted);
       }
     } catch (e) {
@@ -316,7 +315,7 @@ const VirtualTryOnPage: React.FC = () => {
           if (!resp.ok) return;
           const data = await resp.json().catch(() => null);
           if (!data || !data.dataUrl) return;
-          if (!hasFirstShownRef.current) setResultImgLoading(true);
+          setResultImgLoading(true);
           emitUI('before-set-url', { urlKind: 'server-dataurl', length: data.dataUrl.length });
           setUploadedResult(data.dataUrl);
           setShowResult(true);
@@ -346,7 +345,7 @@ const VirtualTryOnPage: React.FC = () => {
       if (!baseDataUrl) {
         diag('dataurl-missing');
       } else {
-        if (!hasFirstShownRef.current) setResultImgLoading(true);
+        setResultImgLoading(true);
         emitUI('before-set-url', { urlKind: 'dataurl-base', length: baseDataUrl.length });
         setUploadedResult(baseDataUrl);
         setShowResult(true);
@@ -405,12 +404,12 @@ const VirtualTryOnPage: React.FC = () => {
       }
       // 不再使用 Blob URL，无需 revoke
       if (!isMobile) {
-        if (!hasFirstShownRef.current) setResultImgLoading(true);
+        setResultImgLoading(true);
         setUploadedResult(adjustedUrl);
         (async () => {
           try {
             const hd = await applyPoseWarpToDataUrl(baseDataUrlStr, warpControlsRef.current, { landmarksNormalized: poseLmsRef.current || undefined });
-            if (!hasFirstShownRef.current) setResultImgLoading(true);
+            setResultImgLoading(true);
             setUploadedResult(hd);
           } catch {}
         })();
@@ -586,7 +585,7 @@ const VirtualTryOnPage: React.FC = () => {
                       src={uploadedResult} 
                       alt="Try-on result" 
                       className={styles.resultImage}
-                      onLoad={() => { setResultImgLoading(false); if (!hasFirstShownRef.current) hasFirstShownRef.current = true; emitUI('img-onload'); }}
+                      onLoad={() => { setResultImgLoading(false); emitUI('img-onload'); }}
                       onError={() => { setResultImgLoading(false); emitUI('img-onerror'); }}
                       style={{ display: resultImgLoading ? 'none' : 'block' }}
                     />
