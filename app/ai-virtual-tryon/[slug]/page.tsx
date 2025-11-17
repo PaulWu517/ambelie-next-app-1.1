@@ -759,20 +759,7 @@ const SlugTryOnPage: React.FC = () => {
         <div className={styles.centerPanel} ref={centerPanelRef}>
           <h2 className={styles.sectionTitle}>Ai Try-On Result</h2>
           <div className={styles.resultArea} ref={resultAreaRef}>
-            {isProcessing ? (
-              <div className={styles.processing}>
-                <div className={styles.progressContainer}>
-                  <div className={styles.progressBar}>
-                    <div className={styles.progressFill} style={{ width: `${processingProgress}%` }} />
-                  </div>
-                  <div className={styles.progressText}>
-                    <span className={styles.progressPercent}>{processingProgress}%</span>
-                    <span className={styles.progressEta}>{processingProgress >= 99 ? 'Finalizing...' : `~${Math.max(0, 20 - Math.round((processingProgress / 100) * 20))}s remaining`}</span>
-                  </div>
-                  <p className={styles.processingHint}>Generating high-fidelity try-on image...</p>
-                </div>
-              </div>
-            ) : resultUrl ? (
+            {resultUrl ? (
               <div className={styles.result}>
                 {resultImgLoading && (
                   <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -794,6 +781,20 @@ const SlugTryOnPage: React.FC = () => {
                 />
               </div>
             ) : (
+              isProcessing ? (
+                <div className={styles.processing}>
+                  <div className={styles.progressContainer}>
+                    <div className={styles.progressBar}>
+                      <div className={styles.progressFill} style={{ width: `${processingProgress}%` }} />
+                    </div>
+                    <div className={styles.progressText}>
+                      <span className={styles.progressPercent}>{processingProgress}%</span>
+                      <span className={styles.progressEta}>{processingProgress >= 99 ? 'Finalizing...' : `~${Math.max(0, 20 - Math.round((processingProgress / 100) * 20))}s remaining`}</span>
+                    </div>
+                    <p className={styles.processingHint}>Generating high-fidelity try-on image...</p>
+                  </div>
+                </div>
+              ) : (
               isResultPending ? (
                 <div className={styles.processing} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column' }}>
                   <div className={styles.spinner}></div>
@@ -804,6 +805,7 @@ const SlugTryOnPage: React.FC = () => {
                   <p>Your result will appear here after generation.</p>
                   <span className={styles.uploadHint}>Click "Try On Now" to generate</span>
                 </div>
+              )
               )
             )}
           </div>

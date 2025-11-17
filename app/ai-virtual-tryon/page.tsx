@@ -564,12 +564,7 @@ const VirtualTryOnPage: React.FC = () => {
         <div className={styles.rightPanel}>
           <h2 className={styles.sectionTitle}>Try-On Result</h2>
           <div className={styles.resultArea}>
-            {isProcessing ? (
-              <div className={styles.processing}>
-                <div className={styles.spinner}></div>
-                <p>AI is processing your virtual try-on...</p>
-              </div>
-            ) : showResult || uploadedResult ? (
+            {uploadedResult || showResult ? (
               <div className={styles.resultArea}>
                 {uploadedResult ? (
                   <div className={styles.result}>
@@ -615,11 +610,18 @@ const VirtualTryOnPage: React.FC = () => {
                 />
               </div>
             ) : (
+              isProcessing ? (
+                <div className={styles.processing}>
+                  <div className={styles.spinner}></div>
+                  <p>AI is processing your virtual try-on...</p>
+                </div>
+              ) : (
               <div className={styles.resultPlaceholder} onClick={() => resultInputRef.current?.click()}>
                 <div className={styles.uploadIcon}>🖼️</div>
                 <p>Upload result image or try on to see the magic happen!</p>
                 <span className={styles.uploadHint}>Click to upload your own result image</span>
               </div>
+              )
             )}
           </div>
           <input
