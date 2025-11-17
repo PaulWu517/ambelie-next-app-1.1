@@ -260,11 +260,17 @@ async function handleVirtualTryon(req: NextRequest) {
       const t0 = Date.now();
       const sharpMod = await import('sharp');
       const sharpFn: any = (sharpMod as any).default || sharpMod;
-      previewBuf = await sharpFn(origBuf)
-        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
-      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
+      const clientAccept = (req.headers.get('accept') || '').toLowerCase();
+      const wantsWebp = clientAccept.includes('image/webp');
+      const img = sharpFn(origBuf).resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true });
+      if (wantsWebp) {
+        previewBuf = await img.webp({ quality: 80 }).toBuffer();
+        previewMime = 'image/webp';
+      } else {
+        previewBuf = await img.jpeg({ quality: 82 }).toBuffer();
+        previewMime = 'image/jpeg';
+      }
+      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0, previewMime, clientAccept });
     } catch (e: any) {
       previewBuf = origBuf;
       previewMime = outMime || 'image/png';
