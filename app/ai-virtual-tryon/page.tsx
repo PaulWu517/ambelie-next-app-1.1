@@ -246,6 +246,10 @@ const VirtualTryOnPage: React.FC = () => {
   const handleTryOn = async () => {
     if (!uploadedImage || !uploadedClothing) return;
     setIsProcessing(true);
+    setUploadedResult(null);
+    setShowResult(false);
+    baseResultRef.current = null;
+    setResultImgLoading(false);
     const traceId = `page-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const diag = (stage: string, message?: any, extra?: any) => {
       try {
@@ -320,6 +324,28 @@ const VirtualTryOnPage: React.FC = () => {
           setUploadedResult(data.dataUrl);
           setShowResult(true);
           baseResultRef.current = data.dataUrl;
+          try {
+            const ext = (data.origMime || '').includes('png') ? 'png' : 'jpg';
+            let attempts = 0;
+            const timer = window.setInterval(async () => {
+              try {
+                attempts += 1;
+                if (attempts > 15) { try { window.clearInterval(timer); } catch {} return; }
+                const resp2 = await fetch(`/api/virtual-tryon/result/${traceId}?ext=${ext}`);
+                const ct2 = resp2.headers.get('Content-Type') || resp2.headers.get('content-type') || '';
+                if (resp2.ok && ct2.toLowerCase().startsWith('image/')) {
+                  const blob2 = await resp2.blob();
+                  const reader2 = new FileReader();
+                  const hdDataUrl: string = await new Promise((resolve, reject) => { reader2.onloadend = () => resolve(reader2.result as string); reader2.onerror = (e) => reject(e); reader2.readAsDataURL(blob2); });
+                  setResultImgLoading(true);
+                  setUploadedResult(hdDataUrl);
+                  setShowResult(true);
+                  baseResultRef.current = hdDataUrl;
+                  try { window.clearInterval(timer); } catch {}
+                }
+              } catch {}
+            }, 2000);
+          } catch {}
           // 预检测关键点（移动端后台）
           try {
             const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;

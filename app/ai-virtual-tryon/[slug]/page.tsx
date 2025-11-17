@@ -82,6 +82,9 @@ const SlugTryOnPage: React.FC = () => {
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
+  const cosPollTimerRef = useRef<number | null>(null);
+  const cosPollAttemptsRef = useRef<number>(0);
+  const lastTraceIdRef = useRef<string | null>(null);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -245,11 +248,15 @@ const SlugTryOnPage: React.FC = () => {
       alert('Missing product reference image for this mode.');
       return;
     }
-    // 开始新一轮生成，进入“待呈现”状态；保留上一张结果，避免失败时回到占位图
     setIsResultPending(true);
     emitUI('tryon-start', { pending: true, resultUrl });
     setIsProcessing(true);
+    setResultUrl(null);
+    setShowResult(false);
+    baseResultRef.current = null;
+    setResultImgLoading(false);
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    lastTraceIdRef.current = traceId;
     const diag = (stage: string, message?: any, extra?: any) => {
       try {
         const payload = { traceId, stage, message, ts: new Date().toISOString(), extra };
@@ -431,6 +438,31 @@ const SlugTryOnPage: React.FC = () => {
         setResultUrl(genData.dataUrl);
         setShowResult(true);
         baseResultRef.current = genData.dataUrl;
+        try {
+          const ext = (genData.origMime || '').includes('png') ? 'png' : 'jpg';
+          if (lastTraceIdRef.current) {
+            if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; }
+            cosPollAttemptsRef.current = 0;
+            cosPollTimerRef.current = window.setInterval(async () => {
+              try {
+                cosPollAttemptsRef.current += 1;
+                if (cosPollAttemptsRef.current > 15) { if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; } return; }
+                const resp = await fetch(`/api/virtual-tryon/result/${lastTraceIdRef.current}?ext=${ext}`);
+                const ct = resp.headers.get('Content-Type') || resp.headers.get('content-type') || '';
+                if (resp.ok && ct.toLowerCase().startsWith('image/')) {
+                  const blob = await resp.blob();
+                  const reader = new FileReader();
+                  const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
+                  setResultImgLoading(true);
+                  setResultUrl(dataUrl);
+                  setShowResult(true);
+                  baseResultRef.current = dataUrl;
+                  if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; }
+                }
+              } catch {}
+            }, 2000);
+          }
+        } catch {}
         try {
           const mime = genData?.origMime || undefined;
           const base64 = genData?.origBase64 || undefined;
