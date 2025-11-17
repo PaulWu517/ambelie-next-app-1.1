@@ -628,8 +628,6 @@ const SlugTryOnPage: React.FC = () => {
               img.src = resultUrl;
             });
           }
-          setResultImgLoading(false);
-          setIsResultPending(false);
           emitUI('predecode-success');
         } catch (e: any) {
           emitUI('predecode-error', e?.message || String(e));
@@ -796,19 +794,21 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                {resultImgLoading && (
-                  <div style={{ position: 'absolute', top: 8, right: 16, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>Loading image...</div>
-                )}
-                <img 
-                  src={resultUrl} 
-                  alt="Try-on result" 
-                  className={styles.resultImage} 
-                  onClick={handleImageClick}
-                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
-                  onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                  style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
-                  title="点击放大查看"
-                />
+                <div className={styles.imageWrap}>
+                  {resultImgLoading && (
+                    <div className={styles.loadingBadge}>Loading image...</div>
+                  )}
+                  <img 
+                    src={resultUrl} 
+                    alt="Try-on result" 
+                    className={styles.resultImage} 
+                    onClick={handleImageClick}
+                    onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
+                    onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
+                    style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
+                    title="点击放大查看"
+                  />
+                </div>
               </div>
             ) : (
               isProcessing ? (
