@@ -273,7 +273,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBuf, origMime: outMime };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBase64: outBase64, origMime: outMime };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -304,8 +304,9 @@ export async function POST(req: NextRequest) {
       try {
         const exists = await objectExistsInCOS(key);
         if (!exists.exists) {
-          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
-          await uploadBufferToCOS(result.origBuf, key, result.origMime);
+          const orig = Buffer.from(result.origBase64, 'base64');
+          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: orig.length });
+          await uploadBufferToCOS(orig, key, result.origMime);
           await emitServer(result.traceId, 'cos-upload-success', { key });
         } else {
           await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
