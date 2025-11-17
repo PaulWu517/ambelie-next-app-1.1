@@ -595,12 +595,7 @@ const VirtualTryOnPage: React.FC = () => {
                 {uploadedResult ? (
                   <div className={styles.result}>
                     {resultImgLoading && (
-                      <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div>
-                          <div className={styles.spinner}></div>
-                          <p>Loading image...</p>
-                        </div>
-                      </div>
+                      <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>Loading image...</div>
                     )}
                     <img 
                       src={uploadedResult} 

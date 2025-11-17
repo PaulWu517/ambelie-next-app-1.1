@@ -85,6 +85,7 @@ const SlugTryOnPage: React.FC = () => {
   const cosPollTimerRef = useRef<number | null>(null);
   const cosPollAttemptsRef = useRef<number>(0);
   const lastTraceIdRef = useRef<string | null>(null);
+  const [isCosPolling, setIsCosPolling] = useState(false);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -443,10 +444,11 @@ const SlugTryOnPage: React.FC = () => {
           if (lastTraceIdRef.current) {
             if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; }
             cosPollAttemptsRef.current = 0;
+            setIsCosPolling(true);
             cosPollTimerRef.current = window.setInterval(async () => {
               try {
                 cosPollAttemptsRef.current += 1;
-                if (cosPollAttemptsRef.current > 15) { if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; } return; }
+                if (cosPollAttemptsRef.current > 15) { if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; } setIsCosPolling(false); return; }
                 const resp = await fetch(`/api/virtual-tryon/result/${lastTraceIdRef.current}?ext=${ext}`);
                 const ct = resp.headers.get('Content-Type') || resp.headers.get('content-type') || '';
                 if (resp.ok && ct.toLowerCase().startsWith('image/')) {
@@ -458,6 +460,7 @@ const SlugTryOnPage: React.FC = () => {
                   setShowResult(true);
                   baseResultRef.current = dataUrl;
                   if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; }
+                  setIsCosPolling(false);
                 }
               } catch {}
             }, 2000);
@@ -793,13 +796,8 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                {resultImgLoading && (
-                  <div className={styles.processing} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div>
-                      <div className={styles.spinner}></div>
-                      <p>Loading image...</p>
-                    </div>
-                  </div>
+                {(resultImgLoading || isCosPolling) && (
+                  <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>Loading image...</div>
                 )}
                 <img 
                   src={resultUrl} 
@@ -808,7 +806,7 @@ const SlugTryOnPage: React.FC = () => {
                   onClick={handleImageClick}
                   onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
                   onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                  style={{ cursor: 'pointer', opacity: resultImgLoading ? 0.35 : 1, transition: 'opacity 200ms ease' }}
+                  style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
                   title="点击放大查看"
                 />
               </div>
