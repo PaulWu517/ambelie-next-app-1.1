@@ -371,6 +371,19 @@ const SlugTryOnPage: React.FC = () => {
             baseResultRef.current = dataUrl;
             setResultUrl(dataUrl);
             try { URL.revokeObjectURL(objUrl); } catch {}
+            try {
+              const m = /^data:(.*?);base64,(.*)$/.exec(dataUrl);
+              if (m) {
+                const mime = m[1];
+                const base64 = m[2];
+                const payload = { traceId, mime, base64 };
+                const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
+                try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
+              } else {
+                diag('ui-cos-upload-skip', 'no-base64-match');
+              }
+            } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
           } catch (e: any) {
             diag('blob-to-dataurl-error', e?.message || String(e));
             // 保留 ObjectURL，不进行 revoke，确保图片可见
@@ -407,6 +420,19 @@ const SlugTryOnPage: React.FC = () => {
         setResultUrl(genData.dataUrl);
         setShowResult(true);
         baseResultRef.current = genData.dataUrl;
+        try {
+          const m = /^data:(.*?);base64,(.*)$/.exec(genData.dataUrl);
+          if (m) {
+            const mime = m[1];
+            const base64 = m[2];
+            const payload = { traceId, mime, base64 };
+            const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+            try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
+            try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
+          } else {
+            diag('ui-cos-upload-skip', 'no-base64-match');
+          }
+        } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
         // 生成响应已拿到首帧，提前结束处理态与进度，避免卡在99%
         if (progressIntervalRef.current) {
           try { window.clearInterval(progressIntervalRef.current); } catch {}

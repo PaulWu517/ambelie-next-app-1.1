@@ -34,6 +34,15 @@ async function emitServer(traceId: string, stage: string, message?: any) {
     } else {
       console.log('[diagnostic]', payload);
     }
+    try {
+      const base = process.env.DIAG_POST_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'));
+      const endpoint = `${String(base).replace(/\/$/, '')}/api/diagnostic`;
+      const fetchMod = await import('undici');
+      const f: any = (fetchMod as any).fetch || (global as any).fetch;
+      if (typeof f === 'function') {
+        void f(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+      }
+    } catch {}
   } catch {}
 }
 
