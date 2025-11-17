@@ -6,10 +6,11 @@ function getCosEnv() {
   // 默认 bucket/region/CDN 域名，减少环境变量依赖
   const bucket = process.env.TENCENT_COS_BUCKET || 'ambelie-1368352639';
   const region = process.env.TENCENT_COS_REGION || 'ap-guangzhou';
+  const domain = process.env.TENCENT_COS_DOMAIN;
   if (!secretId || !secretKey) {
     throw new Error('Missing COS credentials: TENCENT_COS_SECRET_ID/TENCENT_COS_SECRET_KEY');
   }
-  return { secretId, secretKey, bucket, region } as const;
+  return { secretId, secretKey, bucket, region, domain } as const;
 }
 
 function getCosClient() {
@@ -25,7 +26,7 @@ export function buildTryonKey(traceId: string, mime: string) {
 }
 
 export async function uploadBufferToCOS(buf: Buffer, key: string, mime: string): Promise<{ url: string }> {
-  const { bucket, region } = getCosEnv();
+  const { bucket, region, domain } = getCosEnv();
   const cos = getCosClient();
   return new Promise((resolve, reject) => {
     cos.putObject({
@@ -37,8 +38,10 @@ export async function uploadBufferToCOS(buf: Buffer, key: string, mime: string):
       ACL: 'public-read'
     }, (err: any, data: any) => {
       if (err) return reject(err);
-      const cdnDomain = process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com';
-      const base = cdnDomain ? cdnDomain.replace(/\/$/, '') : `https://${bucket}.cos.${region}.myqcloud.com`;
+      // 优先使用国际域名，其次 CDN 域名，最后拼接默认域名
+      const base = domain
+        ? `https://${domain}`
+        : (process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com').replace(/\/$/, '');
       const url = `${base}/${key}`;
       resolve({ url });
     });
@@ -46,7 +49,7 @@ export async function uploadBufferToCOS(buf: Buffer, key: string, mime: string):
 }
 
 export async function getBufferFromCOS(key: string): Promise<{ buf: Buffer, mime: string }> {
-  const { bucket, region } = getCosEnv();
+  const { bucket, region, domain } = getCosEnv();
   const cos = getCosClient();
   return new Promise((resolve, reject) => {
     cos.getObject({ Bucket: bucket, Region: region, Key: key }, (err: any, data: any) => {

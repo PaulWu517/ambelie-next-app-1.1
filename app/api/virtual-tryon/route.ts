@@ -260,17 +260,11 @@ async function handleVirtualTryon(req: NextRequest) {
       const t0 = Date.now();
       const sharpMod = await import('sharp');
       const sharpFn: any = (sharpMod as any).default || sharpMod;
-      const clientAccept = (req.headers.get('accept') || '').toLowerCase();
-      const wantsWebp = clientAccept.includes('image/webp');
-      const img = sharpFn(origBuf).resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true });
-      if (wantsWebp) {
-        previewBuf = await img.webp({ quality: 80 }).toBuffer();
-        previewMime = 'image/webp';
-      } else {
-        previewBuf = await img.jpeg({ quality: 82 }).toBuffer();
-        previewMime = 'image/jpeg';
-      }
-      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0, previewMime, clientAccept });
+      previewBuf = await sharpFn(origBuf)
+        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
     } catch (e: any) {
       previewBuf = origBuf;
       previewMime = outMime || 'image/png';
@@ -279,14 +273,6 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    const key = buildTryonKey(traceId, outMime);
-    try {
-      await emitServer(traceId, 'cos-upload-start', { key, mime: outMime, size: origBuf.length });
-      await uploadBufferToCOS(origBuf, key, outMime);
-      await emitServer(traceId, 'cos-upload-success', { key });
-    } catch (e: any) {
-      await emitServer(traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
-    }
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData };
 
   } catch (err: any) {
@@ -313,6 +299,18 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
+      // 先立即返回预览，再后台上传原图
+      const key = buildTryonKey(result.traceId, result.mime);
+      // 异步上传原图，不阻塞预览返回
+      setTimeout(async () => {
+        try {
+          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.mime, size: Buffer.from(result.base64, 'base64').length });
+          await uploadBufferToCOS(Buffer.from(result.base64, 'base64'), key, result.mime);
+          await emitServer(result.traceId, 'cos-upload-success', { key });
+        } catch (e: any) {
+          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+        }
+      }, 0);
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       return new NextResponse(arrayBuffer, {
         status: 200,
