@@ -251,29 +251,29 @@ async function handleVirtualTryon(req: NextRequest) {
       total: totalDuration
     };
 
-    // Build original base64
-    const origBase64 = outBase64;
+    // Build original buffer
+    const origBuf = Buffer.from(outBase64, 'base64');
     // Create a compressed preview (webp 640px) to reduce first-frame size
-    let previewBuf = Buffer.from(origBase64, 'base64');
+    let previewBuf = origBuf;
     let previewMime = 'image/webp';
     try {
       const t0 = Date.now();
       const sharpMod = await import('sharp');
       const sharpFn: any = (sharpMod as any).default || sharpMod;
-      previewBuf = await sharpFn(Buffer.from(origBase64, 'base64'))
+      previewBuf = await sharpFn(origBuf)
         .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 80 })
         .toBuffer();
-      await emitServer(traceId, 'sharp-preview-success', { inSize: Buffer.from(origBase64, 'base64').length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
+      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
     } catch (e: any) {
-      previewBuf = Buffer.from(origBase64, 'base64');
+      previewBuf = origBuf;
       previewMime = outMime || 'image/png';
       await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
     }
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBase64, origMime: outMime };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBuf, origMime: outMime };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -304,9 +304,8 @@ export async function POST(req: NextRequest) {
       try {
         const exists = await objectExistsInCOS(key);
         if (!exists.exists) {
-          const obuf = Buffer.from(result.origBase64, 'base64');
-          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: obuf.length });
-          await uploadBufferToCOS(obuf, key, result.origMime);
+          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
+          await uploadBufferToCOS(result.origBuf, key, result.origMime);
           await emitServer(result.traceId, 'cos-upload-success', { key });
         } else {
           await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
