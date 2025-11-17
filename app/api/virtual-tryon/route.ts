@@ -273,7 +273,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBase64: outBase64, origMime: outMime };
+    return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBuf, origMime: outMime };
 
   } catch (err: any) {
     const duration = Date.now() - startedAt;
@@ -289,6 +289,19 @@ async function handleVirtualTryon(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const result = await handleVirtualTryon(req);
+    const uploadKey = buildTryonKey(result.traceId, result.origMime);
+    try {
+      const existsAll = await objectExistsInCOS(uploadKey);
+      if (!existsAll.exists) {
+        await emitServer(result.traceId, 'cos-upload-start', { key: uploadKey, mime: result.origMime, size: result.origBuf.length });
+        await uploadBufferToCOS(result.origBuf, uploadKey, result.origMime);
+        await emitServer(result.traceId, 'cos-upload-success', { key: uploadKey });
+      } else {
+        await emitServer(result.traceId, 'cos-upload-skip-exists', { key: uploadKey, contentLength: existsAll.contentLength, contentType: existsAll.contentType });
+      }
+    } catch (e: any) {
+      await emitServer(result.traceId, 'cos-upload-error', { key: uploadKey, message: e?.message || String(e) });
+    }
     // 支持首帧二进制预览：通过 query 参数 format=blob 或 Accept:image/*
     const url = new URL(req.url);
     const format = (url.searchParams.get('format') || '').toLowerCase();
@@ -299,21 +312,6 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
-      // 先立即返回预览，再后台上传原图
-      const key = buildTryonKey(result.traceId, result.origMime);
-      try {
-        const exists = await objectExistsInCOS(key);
-        if (!exists.exists) {
-          const orig = Buffer.from(result.origBase64, 'base64');
-          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: orig.length });
-          await uploadBufferToCOS(orig, key, result.origMime);
-          await emitServer(result.traceId, 'cos-upload-success', { key });
-        } else {
-          await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
-        }
-      } catch (e: any) {
-        await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
-      }
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       return new NextResponse(arrayBuffer, {
         status: 200,
