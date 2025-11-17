@@ -620,8 +620,6 @@ const SlugTryOnPage: React.FC = () => {
       try {
         const el = imgRef.current;
         if (el && el.src === resultUrl && el.complete && el.naturalWidth > 0) {
-          setResultImgLoading(false);
-          setIsResultPending(false);
           emitUI('img-complete-detected');
         }
       } catch {}
