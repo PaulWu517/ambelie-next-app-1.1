@@ -382,39 +382,42 @@
   position: relative; /* allow absolute spinner overlay to center within */
 }
 
-/* 右上角加载提示徽章 */
-.loadingBadge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none; /* 不影响图片点击 */
-  z-index: 2;
-}
-
-.loadingBadgeSpinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
 .resultImage {
   margin-bottom: 0; /* avoid extra vertical space in fixed area */
   height: 100%; /* fill container height while keeping aspect */
   max-width: 100%;
   width: auto;
   object-fit: contain; /* scale inside fixed box without cropping */
-  position: relative; /* anchor for corner loading badge */
+}
+
+.imageFrame {
+  position: relative;
+  display: inline-block;
+  height: 100%;
+}
+
+.imageLoadingHint {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.spinnerSmall {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 .resultPlaceholder {

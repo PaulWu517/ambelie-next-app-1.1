@@ -796,22 +796,24 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                {(resultImgLoading || isCosPolling) && (
-                  <div className={styles.loadingBadge}>
-                    <div className={styles.loadingBadgeSpinner} />
-                    Loading image...
-                  </div>
-                )}
-                <img 
-                  src={resultUrl} 
-                  alt="Try-on result" 
-                  className={styles.resultImage} 
-                  onClick={handleImageClick}
-                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
-                  onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                  style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
-                  title="点击放大查看"
-                />
+                <div className={styles.imageFrame}>
+                  {(resultImgLoading || isCosPolling) && (
+                    <div className={styles.imageLoadingHint}>
+                      <div className={styles.spinnerSmall}></div>
+                      <span>Loading image...</span>
+                    </div>
+                  )}
+                  <img 
+                    src={resultUrl} 
+                    alt="Try-on result" 
+                    className={styles.resultImage} 
+                    onClick={handleImageClick}
+                    onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
+                    onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
+                    style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
+                    title="点击放大查看"
+                  />
+                </div>
               </div>
             ) : (
               isProcessing ? (
