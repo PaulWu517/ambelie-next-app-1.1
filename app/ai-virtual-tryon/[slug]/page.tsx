@@ -82,8 +82,6 @@ const SlugTryOnPage: React.FC = () => {
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const loadingUrlRef = useRef<string | null>(null);
   const cosPollTimerRef = useRef<number | null>(null);
   const cosPollAttemptsRef = useRef<number>(0);
   const lastTraceIdRef = useRef<string | null>(null);
@@ -610,21 +608,11 @@ const SlugTryOnPage: React.FC = () => {
   const [resultImgLoading, setResultImgLoading] = useState(false);
   useEffect(() => {
     if (resultUrl) {
-      loadingUrlRef.current = resultUrl;
-      // 先标记加载中
+      // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
       setResultImgLoading(true);
       setIsResultPending(true);
       emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
-
-      // 如果图片已经在缓存中并且已完成，立即关闭 loading
-      try {
-        const el = imgRef.current;
-        if (el && el.src === resultUrl && el.complete && el.naturalWidth > 0) {
-          emitUI('img-complete-detected');
-        }
-      } catch {}
-
-      // 预解码兜底（不直接关闭 loading，交由 onLoad 统一关闭）
+      // 预解码兜底：即使 onLoad 未触发，也尝试主动解码后清除 loading
       (async () => {
         try {
           emitUI('predecode-start');
@@ -643,11 +631,13 @@ const SlugTryOnPage: React.FC = () => {
           emitUI('predecode-success');
         } catch (e: any) {
           emitUI('predecode-error', e?.message || String(e));
+          // 失败时不改变现有 loading 状态，交由 onError/onLoad 处理
         }
       })();
     } else {
       setResultImgLoading(false);
-      // 不强制设置 isResultPending=false，交由 Try-On 按钮流程管理
+      // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
+      // 保持现状：不强制设置 isResultPending=false，这里交由 Try-On 按钮触发时开启
     }
   }, [resultUrl]);
 
@@ -813,9 +803,8 @@ const SlugTryOnPage: React.FC = () => {
                     alt="Try-on result" 
                     className={styles.resultImage} 
                     onClick={handleImageClick}
-                    ref={imgRef}
-                    onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); } emitUI('img-onload'); }}
-                    onError={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); } emitUI('img-onerror'); }}
+                    onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
+                    onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
                     style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
                     title="点击放大查看"
                   />
