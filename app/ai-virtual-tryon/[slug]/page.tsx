@@ -620,10 +620,10 @@ const SlugTryOnPage: React.FC = () => {
       try {
         const el = imgRef.current;
         if (el && el.src === resultUrl && el.complete && el.naturalWidth > 0) {
+          emitUI('img-complete-detected');
+          // 立即关闭loading状态，避免onLoad事件遗漏导致的问题
           setResultImgLoading(false);
           setIsResultPending(false);
-          loadingUrlRef.current = null;
-          emitUI('img-complete-closed');
         }
       } catch {}
 
@@ -817,8 +817,8 @@ const SlugTryOnPage: React.FC = () => {
                     className={styles.resultImage} 
                     onClick={handleImageClick}
                     ref={imgRef}
-                    onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); loadingUrlRef.current = null; } emitUI('img-onload'); }}
-                    onError={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); loadingUrlRef.current = null; } emitUI('img-onerror'); }}
+                    onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); } emitUI('img-onload'); }}
+                    onError={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); } emitUI('img-onerror'); }}
                     style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
                     title="点击放大查看"
                   />
