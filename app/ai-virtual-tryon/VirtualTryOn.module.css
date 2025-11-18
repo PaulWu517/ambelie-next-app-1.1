@@ -382,28 +382,6 @@
   position: relative; /* allow absolute spinner overlay to center within */
 }
 
-.result {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-}
-
-.imageLoadingBadge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.65);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  pointer-events: none;
-  z-index: 2;
-}
-
 .resultImage {
   margin-bottom: 0; /* avoid extra vertical space in fixed area */
   height: 100%; /* fill container height while keeping aspect */

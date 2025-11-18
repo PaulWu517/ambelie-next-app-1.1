@@ -595,7 +595,7 @@ const VirtualTryOnPage: React.FC = () => {
                 {uploadedResult ? (
                   <div className={styles.result}>
                     {resultImgLoading && (
-                      <div className={styles.imageLoadingBadge}>Loading image...</div>
+                      <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>Loading image...</div>
                     )}
                     <img 
                       src={uploadedResult} 
