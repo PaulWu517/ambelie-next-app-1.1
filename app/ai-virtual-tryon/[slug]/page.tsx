@@ -86,6 +86,7 @@ const SlugTryOnPage: React.FC = () => {
   const cosPollAttemptsRef = useRef<number>(0);
   const lastTraceIdRef = useRef<string | null>(null);
   const [isCosPolling, setIsCosPolling] = useState(false);
+  const lastLoadedSrcRef = useRef<string | null>(null);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -363,7 +364,6 @@ const SlugTryOnPage: React.FC = () => {
         diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
         // 先用 ObjectURL 即显，后台再转换为 DataURL（不主动 revoke，除非转换成功）
         const objUrl = URL.createObjectURL(blob);
-        setResultImgLoading(true);
         setIsResultPending(true);
         emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
         setResultUrl(objUrl);
@@ -433,7 +433,6 @@ const SlugTryOnPage: React.FC = () => {
         return;
       }
       if (genResp.ok && genData?.dataUrl) {
-        setResultImgLoading(true);
         setIsResultPending(false);
         emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
         setResultUrl(genData.dataUrl);
@@ -455,7 +454,6 @@ const SlugTryOnPage: React.FC = () => {
                   const blob = await resp.blob();
                   const reader = new FileReader();
                   const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-                  setResultImgLoading(true);
                   setResultUrl(dataUrl);
                   setShowResult(true);
                   baseResultRef.current = dataUrl;
@@ -554,8 +552,6 @@ const SlugTryOnPage: React.FC = () => {
           schedule(async () => {
             try {
               const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-              // 预览置 loading，等待图片解码完成后自动关闭
-              setResultImgLoading(true);
               emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
               setResultUrl(preview);
               diag('posewarp-success');
@@ -575,14 +571,12 @@ const SlugTryOnPage: React.FC = () => {
       }
       // 不再使用 Blob URL，无需 revoke
       if (!isMobile) {
-        setResultImgLoading(true);
         emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
         setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
         (async () => {
           try {
             const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
-            setResultImgLoading(true);
             emitUI('before-set-url', { urlKind: 'desktop-hd', length: hd?.length });
             setResultUrl(hd);
           } catch {}
@@ -608,36 +602,37 @@ const SlugTryOnPage: React.FC = () => {
   const [resultImgLoading, setResultImgLoading] = useState(false);
   useEffect(() => {
     if (resultUrl) {
-      // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
-      setResultImgLoading(true);
-      setIsResultPending(true);
-      emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
-      // 预解码兜底：即使 onLoad 未触发，也尝试主动解码后清除 loading
-      (async () => {
-        try {
-          emitUI('predecode-start');
-          if (typeof createImageBitmap === 'function') {
-            const res = await fetch(resultUrl);
-            const blob = await res.blob();
-            await createImageBitmap(blob);
-          } else {
-            await new Promise((resolve, reject) => {
-              const img = new Image();
-              img.onload = () => resolve(true);
-              img.onerror = reject;
-              img.src = resultUrl;
-            });
+      const same = lastLoadedSrcRef.current === resultUrl;
+      if (!same) {
+        setResultImgLoading(true);
+        setIsResultPending(true);
+        emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
+        (async () => {
+          try {
+            emitUI('predecode-start');
+            if (typeof createImageBitmap === 'function') {
+              const res = await fetch(resultUrl);
+              const blob = await res.blob();
+              await createImageBitmap(blob);
+            } else {
+              await new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(true);
+                img.onerror = reject;
+                (img as any).src = resultUrl;
+              });
+            }
+            emitUI('predecode-success');
+          } catch (e: any) {
+            emitUI('predecode-error', e?.message || String(e));
           }
-          emitUI('predecode-success');
-        } catch (e: any) {
-          emitUI('predecode-error', e?.message || String(e));
-          // 失败时不改变现有 loading 状态，交由 onError/onLoad 处理
-        }
-      })();
+        })();
+      } else {
+        setResultImgLoading(false);
+        setIsResultPending(false);
+      }
     } else {
       setResultImgLoading(false);
-      // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
-      // 保持现状：不强制设置 isResultPending=false，这里交由 Try-On 按钮触发时开启
     }
   }, [resultUrl]);
 
@@ -803,7 +798,7 @@ const SlugTryOnPage: React.FC = () => {
                     alt="Try-on result" 
                     className={styles.resultImage} 
                     onClick={handleImageClick}
-                    onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
+                  onLoad={() => { lastLoadedSrcRef.current = resultUrl; setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
                     onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
                     style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
                     title="点击放大查看"
