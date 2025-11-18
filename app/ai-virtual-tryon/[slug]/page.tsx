@@ -796,9 +796,9 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                <div className={styles.imageFrame}>
+                <div className={styles.resultImageWrapper}>
                   {(resultImgLoading || isCosPolling) && (
-                    <div className={styles.imageLoadingHint}>
+                    <div className={styles.imageLoadingBadge}>
                       <div className={styles.spinnerSmall}></div>
                       <span>Loading image...</span>
                     </div>

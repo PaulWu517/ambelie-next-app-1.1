@@ -390,36 +390,6 @@
   object-fit: contain; /* scale inside fixed box without cropping */
 }
 
-.imageFrame {
-  position: relative;
-  display: inline-block;
-  height: 100%;
-}
-
-.imageLoadingHint {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  pointer-events: none;
-}
-
-.spinnerSmall {
-  width: 14px;
-  height: 14px;
-  border: 2px solid #f3f3f3;
-  border-top: 2px solid #fff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
 .resultPlaceholder {
   background: linear-gradient(180deg, #fcfcfc 0%, #f7f7f8 100%);
   border: 2px dashed #e3e3e3;
@@ -794,4 +764,38 @@
     top: -35px;
     font-size: 1.5rem;
   }
+}
+.resultImageWrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.imageLoadingBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.spinnerSmall {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

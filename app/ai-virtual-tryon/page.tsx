@@ -594,9 +594,12 @@ const VirtualTryOnPage: React.FC = () => {
               <div className={styles.resultArea}>
                 {uploadedResult ? (
                   <div className={styles.result}>
-                    <div className={styles.imageFrame}>
+                    <div className={styles.resultImageWrapper}>
                       {resultImgLoading && (
-                        <div className={styles.imageLoadingHint}><div className={styles.spinnerSmall}></div><span>Loading image...</span></div>
+                        <div className={styles.imageLoadingBadge}>
+                          <div className={styles.spinnerSmall}></div>
+                          <span>Loading image...</span>
+                        </div>
                       )}
                       <img 
                         src={uploadedResult} 
@@ -604,6 +607,7 @@ const VirtualTryOnPage: React.FC = () => {
                         className={styles.resultImage}
                         onLoad={() => { setResultImgLoading(false); emitUI('img-onload'); }}
                         onError={() => { setResultImgLoading(false); emitUI('img-onerror'); }}
+                        style={{ display: resultImgLoading ? 'none' : 'block' }}
                       />
                     </div>
                   </div>
