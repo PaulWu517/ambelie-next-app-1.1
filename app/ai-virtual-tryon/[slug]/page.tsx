@@ -86,7 +86,6 @@ const SlugTryOnPage: React.FC = () => {
   const cosPollAttemptsRef = useRef<number>(0);
   const lastTraceIdRef = useRef<string | null>(null);
   const [isCosPolling, setIsCosPolling] = useState(false);
-  const suppressNextLoadingRef = useRef(false);
   useEffect(() => {
     try {
       const el = resultAreaRef.current;
@@ -456,7 +455,7 @@ const SlugTryOnPage: React.FC = () => {
                   const blob = await resp.blob();
                   const reader = new FileReader();
                   const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-                  suppressNextLoadingRef.current = true;
+                  setResultImgLoading(true);
                   setResultUrl(dataUrl);
                   setShowResult(true);
                   baseResultRef.current = dataUrl;
@@ -609,14 +608,11 @@ const SlugTryOnPage: React.FC = () => {
   const [resultImgLoading, setResultImgLoading] = useState(false);
   useEffect(() => {
     if (resultUrl) {
-      if (suppressNextLoadingRef.current) {
-        suppressNextLoadingRef.current = false;
-        emitUI('resultUrl-set', { resultUrl, imgLoading: false, pending: false });
-        return;
-      }
+      // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
       setResultImgLoading(true);
       setIsResultPending(true);
       emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
+      // 预解码兜底：即使 onLoad 未触发，也尝试主动解码后清除 loading
       (async () => {
         try {
           emitUI('predecode-start');
@@ -632,13 +628,18 @@ const SlugTryOnPage: React.FC = () => {
               img.src = resultUrl;
             });
           }
+          setResultImgLoading(false);
+          setIsResultPending(false);
           emitUI('predecode-success');
         } catch (e: any) {
           emitUI('predecode-error', e?.message || String(e));
+          // 失败时不改变现有 loading 状态，交由 onError/onLoad 处理
         }
       })();
     } else {
       setResultImgLoading(false);
+      // 没有结果地址时，仅在一次生成流程中保持 pending，否则初始进入页面应为非 pending
+      // 保持现状：不强制设置 isResultPending=false，这里交由 Try-On 按钮触发时开启
     }
   }, [resultUrl]);
 
@@ -795,9 +796,9 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                <div className={styles.imageWrap}>
-                  {resultImgLoading && (
-                    <div className={styles.loadingBadge}>Loading image...</div>
+                <div className={styles.resultImageWrapper}>
+                  {(resultImgLoading || isCosPolling) && (
+                    <div className={styles.loadingTip}>Loading image...</div>
                   )}
                   <img 
                     src={resultUrl} 
