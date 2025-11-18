@@ -621,9 +621,6 @@ const SlugTryOnPage: React.FC = () => {
         const el = imgRef.current;
         if (el && el.src === resultUrl && el.complete && el.naturalWidth > 0) {
           emitUI('img-complete-detected');
-          // 立即关闭loading状态，避免onLoad事件遗漏导致的问题
-          setResultImgLoading(false);
-          setIsResultPending(false);
         }
       } catch {}
 
