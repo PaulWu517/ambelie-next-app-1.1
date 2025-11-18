@@ -594,22 +594,17 @@ const VirtualTryOnPage: React.FC = () => {
               <div className={styles.resultArea}>
                 {uploadedResult ? (
                   <div className={styles.result}>
-                    <div className={styles.resultImageWrapper}>
-                      {resultImgLoading && (
-                        <div className={styles.imageLoadingBadge}>
-                          <div className={styles.spinnerSmall}></div>
-                          <span>Loading image...</span>
-                        </div>
-                      )}
-                      <img 
-                        src={uploadedResult} 
-                        alt="Try-on result" 
-                        className={styles.resultImage}
-                        onLoad={() => { setResultImgLoading(false); emitUI('img-onload'); }}
-                        onError={() => { setResultImgLoading(false); emitUI('img-onerror'); }}
-                        style={{ display: resultImgLoading ? 'none' : 'block' }}
-                      />
-                    </div>
+                    {resultImgLoading && (
+                      <div className={styles.imageLoadingBadge}>Loading image...</div>
+                    )}
+                    <img 
+                      src={uploadedResult} 
+                      alt="Try-on result" 
+                      className={styles.resultImage}
+                      onLoad={() => { setResultImgLoading(false); emitUI('img-onload'); }}
+                      onError={() => { setResultImgLoading(false); emitUI('img-onerror'); }}
+                      style={{ display: resultImgLoading ? 'none' : 'block' }}
+                    />
                   </div>
                 ) : showResult ? (
                   <div className={styles.processing}>
