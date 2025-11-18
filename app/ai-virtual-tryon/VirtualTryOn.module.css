@@ -390,24 +390,6 @@
   object-fit: contain; /* scale inside fixed box without cropping */
 }
 
-.resultImageWrapper {
-  position: relative;
-  height: 100%;
-  display: inline-block;
-}
-
-.loadingTip {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  pointer-events: none;
-}
-
 .resultPlaceholder {
   background: linear-gradient(180deg, #fcfcfc 0%, #f7f7f8 100%);
   border: 2px dashed #e3e3e3;

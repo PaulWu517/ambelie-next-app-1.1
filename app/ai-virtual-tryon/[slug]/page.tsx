@@ -796,21 +796,19 @@ const SlugTryOnPage: React.FC = () => {
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                <div className={styles.resultImageWrapper}>
-                  {(resultImgLoading || isCosPolling) && (
-                    <div className={styles.loadingTip}>Loading image...</div>
-                  )}
-                  <img 
-                    src={resultUrl} 
-                    alt="Try-on result" 
-                    className={styles.resultImage} 
-                    onClick={handleImageClick}
-                    onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
-                    onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                    style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
-                    title="点击放大查看"
-                  />
-                </div>
+                {(resultImgLoading || isCosPolling) && (
+                  <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>Loading image...</div>
+                )}
+                <img 
+                  src={resultUrl} 
+                  alt="Try-on result" 
+                  className={styles.resultImage} 
+                  onClick={handleImageClick}
+                  onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
+                  onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
+                  style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
+                  title="点击放大查看"
+                />
               </div>
             ) : (
               isProcessing ? (
