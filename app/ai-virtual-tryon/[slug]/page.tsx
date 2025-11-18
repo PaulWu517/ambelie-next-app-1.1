@@ -368,7 +368,6 @@ const SlugTryOnPage: React.FC = () => {
         setResultImgLoading(true);
         setIsResultPending(true);
         emitUI('before-set-url', { urlKind: 'server-blob-objecturl' });
-        loadingUrlRef.current = objUrl;
         setResultUrl(objUrl);
         setShowResult(true);
         if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
@@ -381,7 +380,6 @@ const SlugTryOnPage: React.FC = () => {
             const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
             emitUI('after-objecturl-converted', { length: dataUrl.length });
             baseResultRef.current = dataUrl;
-            loadingUrlRef.current = dataUrl;
             setResultUrl(dataUrl);
             try { URL.revokeObjectURL(objUrl); } catch {}
             try {
@@ -440,7 +438,6 @@ const SlugTryOnPage: React.FC = () => {
         setResultImgLoading(true);
         setIsResultPending(false);
         emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
-        loadingUrlRef.current = genData.dataUrl;
         setResultUrl(genData.dataUrl);
         setShowResult(true);
         baseResultRef.current = genData.dataUrl;
@@ -461,7 +458,6 @@ const SlugTryOnPage: React.FC = () => {
                   const reader = new FileReader();
                   const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
                   setResultImgLoading(true);
-                  loadingUrlRef.current = dataUrl;
                   setResultUrl(dataUrl);
                   setShowResult(true);
                   baseResultRef.current = dataUrl;
@@ -563,7 +559,6 @@ const SlugTryOnPage: React.FC = () => {
               // 预览置 loading，等待图片解码完成后自动关闭
               setResultImgLoading(true);
               emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
-              loadingUrlRef.current = preview || null;
               setResultUrl(preview);
               diag('posewarp-success');
             } catch (e) {
@@ -584,7 +579,6 @@ const SlugTryOnPage: React.FC = () => {
       if (!isMobile) {
         setResultImgLoading(true);
         emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
-        loadingUrlRef.current = adjustedUrl || null;
         setResultUrl(adjustedUrl);
         // 桌面：安排高清渲染覆盖预览图
         (async () => {
@@ -592,7 +586,6 @@ const SlugTryOnPage: React.FC = () => {
             const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
             setResultImgLoading(true);
             emitUI('before-set-url', { urlKind: 'desktop-hd', length: hd?.length });
-            loadingUrlRef.current = hd || null;
             setResultUrl(hd);
           } catch {}
         })();
@@ -627,7 +620,10 @@ const SlugTryOnPage: React.FC = () => {
       try {
         const el = imgRef.current;
         if (el && el.src === resultUrl && el.complete && el.naturalWidth > 0) {
-          emitUI('img-complete-detected');
+          setResultImgLoading(false);
+          setIsResultPending(false);
+          loadingUrlRef.current = null;
+          emitUI('img-complete-closed');
         }
       } catch {}
 
@@ -665,7 +661,6 @@ const SlugTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
-        loadingUrlRef.current = adjusted;
         setResultUrl(adjusted);
       }
     } catch (e) {
@@ -680,7 +675,6 @@ const SlugTryOnPage: React.FC = () => {
       const controls = warpControlsRef.current;
       const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
-        loadingUrlRef.current = adjusted;
         setResultUrl(adjusted);
       }
     } catch (e) {
@@ -708,7 +702,6 @@ const SlugTryOnPage: React.FC = () => {
       setWarpControls(defaultWarp);
       if (baseResultRef.current) {
         const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, defaultWarp, { showKeypoints: false });
-        loadingUrlRef.current = adjusted;
         setResultUrl(adjusted);
       }
     } catch (e) {
@@ -824,8 +817,8 @@ const SlugTryOnPage: React.FC = () => {
                     className={styles.resultImage} 
                     onClick={handleImageClick}
                     ref={imgRef}
-                    onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); } emitUI('img-onload'); }}
-                    onError={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); } emitUI('img-onerror'); }}
+                    onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); loadingUrlRef.current = null; } emitUI('img-onload'); }}
+                    onError={(e) => { if ((e.currentTarget as HTMLImageElement).src === (loadingUrlRef.current || '')) { setResultImgLoading(false); setIsResultPending(false); loadingUrlRef.current = null; } emitUI('img-onerror'); }}
                     style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
                     title="点击放大查看"
                   />
