@@ -299,21 +299,25 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
-      // 先立即返回预览，再后台上传原图
-      const key = buildTryonKey(result.traceId, result.origMime);
-      try {
-        const exists = await objectExistsInCOS(key);
-        if (!exists.exists) {
-          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
-          await uploadBufferToCOS(result.origBuf, key, result.origMime);
-          await emitServer(result.traceId, 'cos-upload-success', { key });
-        } else {
-          await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
-        }
-      } catch (e: any) {
-        await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
-      }
+      // 🔥 关键修复：立即返回预览图，COS 上传改为纯后台异步（不阻塞响应）
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
+      
+      // 后台异步上传到 COS（不等待完成）
+      const key = buildTryonKey(result.traceId, result.origMime);
+      void (async () => {
+        try {
+          const exists = await objectExistsInCOS(key);
+          if (!exists.exists) {
+            await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
+            await uploadBufferToCOS(result.origBuf, key, result.origMime);
+            await emitServer(result.traceId, 'cos-upload-success', { key });
+          } else {
+            await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
+          }
+        } catch (e: any) {
+          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+        }
+      })();
       return new NextResponse(arrayBuffer, {
         status: 200,
         headers: {
