@@ -342,148 +342,10 @@ const SlugTryOnPage: React.FC = () => {
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType });
       let genData: any = null;
-      // 二进制首帧：当返回的是图片时，直接读取 blob 并转换为 DataURL
-      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
+      // 优先处理 JSON 响应（包含预览和原图）
       const isJson = !!contentType && contentType.toLowerCase().includes('application/json');
-      if (genResp.ok && isImage) {
-        const readStart = Date.now();
-        diag('server-body-read-start');
-        let blob: Blob;
-        try {
-          blob = await genResp.blob();
-        } catch (e: any) {
-          diag('server-body-read-error', e?.message || String(e));
-          // 读取失败：结束处理态，避免卡住
-          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-          setProcessingProgress(100);
-          setIsResultPending(false);
-          setResultImgLoading(false);
-          setIsProcessing(false);
-          return;
-        }
-        diag('server-body-read-end', { durationMs: Date.now() - readStart, size: blob.size });
-        
-        // 🔥 渐进式加载策略：先显示低分辨率预览，再替换为原图
-        const isLargeImage = blob.size > 500 * 1024; // >500KB 认为是原图
-        
-        if (isLargeImage) {
-          // 步骤1：生成低分辨率预览（使用 canvas 快速缩放）
-          diag('progressive-load-start', { originalSize: blob.size });
-          try {
-            const objUrl = URL.createObjectURL(blob);
-            const img = new Image();
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = objUrl;
-            });
-            
-            // 生成预览图（640px）
-            const canvas = document.createElement('canvas');
-            const maxDim = 640;
-            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-            canvas.width = Math.round(img.width * scale);
-            canvas.height = Math.round(img.height * scale);
-            const ctx = canvas.getContext('2d')!;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const previewDataUrl = canvas.toDataURL('image/webp', 0.8);
-            
-            URL.revokeObjectURL(objUrl);
-            
-            // 先显示预览图
-            setResultImgLoading(true);
-            setIsResultPending(true);
-            emitUI('before-set-url', { urlKind: 'client-generated-preview', length: previewDataUrl.length });
-            setResultUrl(previewDataUrl);
-            setShowResult(true);
-            diag('progressive-preview-shown', { previewSize: previewDataUrl.length });
-            
-            // 立即结束进度条
-            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-            setProcessingProgress(100);
-            setIsProcessing(false);
-            
-            // 步骤2：后台转换原图为 DataURL
-            (async () => {
-              try {
-                const reader = new FileReader();
-                const originalDataUrl: string = await new Promise((resolve, reject) => { 
-                  reader.onloadend = () => resolve(reader.result as string); 
-                  reader.onerror = (e) => reject(e); 
-                  reader.readAsDataURL(blob); 
-                });
-                diag('progressive-original-ready', { originalSize: originalDataUrl.length });
-                
-                // 替换为原图
-                baseResultRef.current = originalDataUrl;
-                setResultImgLoading(true);
-                emitUI('before-set-url', { urlKind: 'progressive-original', length: originalDataUrl.length });
-                setResultUrl(originalDataUrl);
-                
-                // 上传原图到 COS
-                try {
-                  const m = /^data:(.*?);base64,(.*)$/.exec(originalDataUrl);
-                  if (m) {
-                    const mime = m[1];
-                    const base64 = m[2];
-                    const payload = { traceId, mime, base64 };
-                    const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-                    try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
-                    try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
-                  }
-                } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
-              } catch (e: any) {
-                diag('progressive-original-error', e?.message || String(e));
-                // 预览图已显示，原图加载失败不影响用户体验
-              }
-            })();
-          } catch (previewErr: any) {
-            diag('progressive-preview-error', previewErr?.message || String(previewErr));
-            // 预览失败，直接加载原图
-            const objUrl = URL.createObjectURL(blob);
-            setResultImgLoading(true);
-            setIsResultPending(true);
-            emitUI('before-set-url', { urlKind: 'server-blob-objecturl-fallback' });
-            setResultUrl(objUrl);
-            setShowResult(true);
-            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-            setProcessingProgress(100);
-            setIsProcessing(false);
-          }
-        } else {
-          // 小图片（预览图）：直接转为 DataURL
-          const objUrl = URL.createObjectURL(blob);
-          setResultImgLoading(true);
-          setIsResultPending(true);
-          emitUI('before-set-url', { urlKind: 'server-small-image' });
-          setResultUrl(objUrl);
-          setShowResult(true);
-          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-          setProcessingProgress(100);
-          setIsProcessing(false);
-          
-          (async () => {
-            try {
-              const reader = new FileReader();
-              const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-              emitUI('after-objecturl-converted', { length: dataUrl.length });
-              baseResultRef.current = dataUrl;
-              setResultUrl(dataUrl);
-              try { URL.revokeObjectURL(objUrl); } catch {}
-            } catch (e: any) {
-              diag('blob-to-dataurl-error', e?.message || String(e));
-            }
-          })();
-        }
-        
-        // 轻量姿态检测（移动端后台）
-        try {
-          const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-          const objUrlForDetect = URL.createObjectURL(blob);
-          const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(objUrlForDetect); if (lms) poseLmsRef.current = lms; URL.revokeObjectURL(objUrlForDetect); };
-          if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { await runDetect(); }
-        } catch {}
-      } else if (isJson) {
+      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
+      if (genResp.ok && isJson) {
         try {
           genData = await genResp.json();
         } catch (e: any) {
@@ -495,6 +357,76 @@ const SlugTryOnPage: React.FC = () => {
           setIsProcessing(false);
           return;
         }
+        
+        // 🔥 渐进式加载：优先处理预览图和原图的 DataURL
+        if (genData.preview && genData.original) {
+          diag('dual-dataurl-received', { 
+            previewSize: genData.preview.length, 
+            originalSize: genData.original.length 
+          });
+          
+          // 步骤1：立即显示预览图
+          setResultImgLoading(true);
+          setIsResultPending(true);
+          emitUI('before-set-url', { urlKind: 'server-preview-dataurl', length: genData.preview.length });
+          setResultUrl(genData.preview);
+          setShowResult(true);
+          diag('preview-shown-immediately');
+          
+          // 立即结束进度条
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsProcessing(false);
+          
+          // 步骤2：延迟 200ms 后替换为原图（避免闪烁）
+          setTimeout(() => {
+            baseResultRef.current = genData.original;
+            setResultImgLoading(true);
+            emitUI('before-set-url', { urlKind: 'server-original-dataurl', length: genData.original.length });
+            setResultUrl(genData.original);
+            diag('original-replaced');
+            
+            // 上传原图到 COS（兜底）
+            (async () => {
+              try {
+                const m = /^data:(.*?);base64,(.*)$/.exec(genData.original);
+                if (m) {
+                  const mime = m[1];
+                  const base64 = m[2];
+                  const payload = { traceId, mime, base64 };
+                  const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                  try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
+                  try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
+                }
+              } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
+            })();
+          }, 200);
+          
+          // 轻量姿态检测（移动端后台）
+          try {
+            const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+            const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(genData.original); if (lms) poseLmsRef.current = lms; };
+            if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { setTimeout(() => { void runDetect(); }, 300); }
+          } catch {}
+          
+          // 直接跳到后续处理
+          genData.dataUrl = genData.original; // 兼容后续逻辑
+        }
+      } else if (genResp.ok && isImage) {
+        // 备用：处理二进制图片响应（兼容旧版本）
+        diag('legacy-image-response', { size: 'unknown' });
+        const blob = await genResp.blob();
+        const dataUrl = await blobToDataUrl(blob);
+        setResultImgLoading(true);
+        setIsResultPending(false);
+        emitUI('before-set-url', { urlKind: 'legacy-image', length: dataUrl.length });
+        setResultUrl(dataUrl);
+        setShowResult(true);
+        baseResultRef.current = dataUrl;
+        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        setProcessingProgress(100);
+        setIsProcessing(false);
+        genData = { dataUrl }; // 兼容后续逻辑
       } else {
         try {
           const txt = await genResp.text();
@@ -511,164 +443,6 @@ const SlugTryOnPage: React.FC = () => {
         setIsProcessing(false);
         return;
       }
-      if (genResp.ok && genData?.dataUrl) {
-        setResultImgLoading(true);
-        setIsResultPending(false);
-        emitUI('before-set-url', { urlKind: 'server-dataurl', length: genData.dataUrl.length });
-        setResultUrl(genData.dataUrl);
-        setShowResult(true);
-        baseResultRef.current = genData.dataUrl;
-        try {
-          const ext = (genData.origMime || '').includes('png') ? 'png' : 'jpg';
-          if (lastTraceIdRef.current) {
-            if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; }
-            cosPollAttemptsRef.current = 0;
-            setIsCosPolling(true);
-            cosPollTimerRef.current = window.setInterval(async () => {
-              try {
-                cosPollAttemptsRef.current += 1;
-                if (cosPollAttemptsRef.current > 15) { if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; } setIsCosPolling(false); return; }
-                const resp = await fetch(`/api/virtual-tryon/result/${lastTraceIdRef.current}?ext=${ext}`);
-                const ct = resp.headers.get('Content-Type') || resp.headers.get('content-type') || '';
-                if (resp.ok && ct.toLowerCase().startsWith('image/')) {
-                  const blob = await resp.blob();
-                  const reader = new FileReader();
-                  const dataUrl: string = await new Promise((resolve, reject) => { reader.onloadend = () => resolve(reader.result as string); reader.onerror = (e) => reject(e); reader.readAsDataURL(blob); });
-                  setResultImgLoading(true);
-                  setResultUrl(dataUrl);
-                  setShowResult(true);
-                  baseResultRef.current = dataUrl;
-                  if (cosPollTimerRef.current) { try { window.clearInterval(cosPollTimerRef.current); } catch {} cosPollTimerRef.current = null; }
-                  setIsCosPolling(false);
-                }
-              } catch {}
-            }, 2000);
-          }
-        } catch {}
-        try {
-          const mime = genData?.origMime || undefined;
-          const base64 = genData?.origBase64 || undefined;
-          if (mime && base64) {
-            const payload = { traceId, mime, base64 };
-            const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-            try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
-            try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
-          } else {
-            diag('ui-cos-upload-skip', 'no-orig');
-          }
-        } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
-        // 生成响应已拿到首帧，提前结束处理态与进度，避免卡在99%
-        if (progressIntervalRef.current) {
-          try { window.clearInterval(progressIntervalRef.current); } catch {}
-          progressIntervalRef.current = null;
-        }
-        setProcessingProgress(100);
-        setIsProcessing(false);
-        // 异步预检测关键点（移动端后台）
-        try {
-          const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-          const runDetect = async () => {
-            const lms = await detectPoseLandmarksNormalized(genData.dataUrl);
-            if (lms) poseLmsRef.current = lms;
-          };
-          if (isMobileDetect) {
-            const schedule = (fn: () => void) => {
-              try { const ric = (window as any).requestIdleCallback; if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400); }
-              catch { setTimeout(fn, 400); }
-            };
-            schedule(() => { void runDetect(); });
-          } else {
-            await runDetect();
-          }
-        } catch {}
-        // 暂不进行后台上传：仅显示服务端返回的 DataURL，保证用户体验
-      } else {
-        // 未获取到 DataURL，结束处理态，避免停留在 Preparing
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-        setProcessingProgress(100);
-        setIsResultPending(false);
-        setResultImgLoading(false);
-        setIsProcessing(false);
-        diag('ui-no-dataurl');
-        // 后续处理（姿态检测/预览/高清）依赖基准图，若无则直接返回，避免误触发预览设置导致再次进入 pending
-        return;
-      }
-      // 基准图：优先使用二进制首帧生成的 DataURL，其次回退 JSON dataUrl
-      const baseDataUrl = baseResultRef.current || genData?.dataUrl || '';
-      if (!baseDataUrl) {
-        diag('server-dataurl-missing');
-        return;
-      }
-      // 预检测一次关键点，避免后续每次滑动重复检测（移动端异步后台进行）
-      try {
-        const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-        const runDetect = async () => {
-          const lms = await detectPoseLandmarksNormalized(baseDataUrl);
-          if (lms) poseLmsRef.current = lms;
-        };
-        if (isMobileDetect) {
-          const schedule = (fn: () => void) => {
-            try {
-              const ric = (window as any).requestIdleCallback;
-              if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 400);
-            } catch { setTimeout(fn, 400); }
-          };
-          schedule(() => { void runDetect(); });
-        } else {
-          await runDetect();
-        }
-      } catch {}
-      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-      let adjustedUrl = baseDataUrl;
-      try {
-        diag('posewarp-start');
-        if (isMobile) {
-          // 移动端：优先显示原图，后台低分辨率预览，跳过自动高清
-          const schedule = (fn: () => void) => {
-            try {
-              const ric = (window as any).requestIdleCallback;
-              if (ric) ric(fn, { timeout: 2000 }); else setTimeout(fn, 500);
-            } catch { setTimeout(fn, 500); }
-          };
-          schedule(async () => {
-            try {
-              const preview = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-              // 预览置 loading，等待图片解码完成后自动关闭
-              setResultImgLoading(true);
-              emitUI('before-set-url', { urlKind: 'preview', length: preview?.length });
-              setResultUrl(preview);
-              diag('posewarp-success');
-            } catch (e) {
-              console.warn('[slug tryon] mobile preview warp failed', e);
-              diag('posewarp-error', String(e));
-            }
-          });
-        } else {
-          // 桌面：先预览后高清
-          adjustedUrl = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
-          diag('posewarp-success');
-        }
-      } catch (e) {
-        console.warn('[slug tryon] pose warp failed', e);
-        diag('posewarp-error', String(e));
-      }
-      // 不再使用 Blob URL，无需 revoke
-      if (!isMobile) {
-        setResultImgLoading(true);
-        emitUI('before-set-url', { urlKind: 'desktop-preview', length: adjustedUrl?.length });
-        setResultUrl(adjustedUrl);
-        // 桌面：安排高清渲染覆盖预览图
-        (async () => {
-          try {
-            const hd = await applyPoseWarpToDataUrl(baseDataUrl, warpControlsRef.current, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
-            setResultImgLoading(true);
-            emitUI('before-set-url', { urlKind: 'desktop-hd', length: hd?.length });
-            setResultUrl(hd);
-          } catch {}
-        })();
-      }
-      setShowResult(true);
-      diag('render-success');
     } catch (err) {
       console.error('[slug tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
