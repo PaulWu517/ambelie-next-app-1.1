@@ -102,8 +102,8 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const toBase64 = async (file: File) => Buffer.from(await file.arrayBuffer()).toString('base64');
     const userBase64 = await toBase64(userImage as File);
-    let modelBase64: string;
-    let modelMime: string;
+    let modelBase64: string = ''; // 初始化默认值，避免 TypeScript 编译错误
+    let modelMime: string = 'image/jpeg'; // 初始化默认值，避免 TypeScript 编译错误
     if (modelImage instanceof File) {
       modelBase64 = await toBase64(modelImage as File);
       modelMime = (modelImage as File).type || 'image/jpeg';
