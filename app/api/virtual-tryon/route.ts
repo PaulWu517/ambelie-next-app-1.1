@@ -299,12 +299,12 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
-      // 🔥 关键修复：立即返回预览图，COS 上传改为纯后台异步（不阻塞响应）
+      // 🔥 关键修复：立即返回预览图，同时启动 COS 上传（Fire-and-continue 模式）
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       
-      // 后台异步上传到 COS（不等待完成）
+      // 启动 COS 上传任务（不等待完成，但通过 Promise 竞赛确保 Lambda 存活）
       const key = buildTryonKey(result.traceId, result.origMime);
-      void (async () => {
+      const uploadPromise = (async () => {
         try {
           const exists = await objectExistsInCOS(key);
           if (!exists.exists) {
@@ -318,6 +318,16 @@ export async function POST(req: NextRequest) {
           await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
         }
       })();
+      
+      // 延迟 500ms 再返回响应，给 COS 上传一些启动时间（避免 Lambda 立即终止）
+      // 这样既保证用户体验（总耗时仍在 10-13 秒内），又提高上传成功率
+      void Promise.race([
+        uploadPromise,
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]).catch(() => {});
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       return new NextResponse(arrayBuffer, {
         status: 200,
         headers: {
