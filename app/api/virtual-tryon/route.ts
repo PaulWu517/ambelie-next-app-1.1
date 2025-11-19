@@ -294,51 +294,65 @@ export async function POST(req: NextRequest) {
     const format = (url.searchParams.get('format') || '').toLowerCase();
     const accept = (req.headers.get('accept') || '').toLowerCase();
     if (format === 'blob' || accept.includes('image/')) {
-      // 🔥 最终优化方案：返回预览图 + COS URL（避免传输大文件）
-      const previewDataUrl = result.dataUrl; // webp 预览图 DataURL (~20KB)
-      const key = buildTryonKey(result.traceId, result.origMime);
+      // 🔥 最优方案：预览图和原图都上传 COS，只返回 URL（传输最小）
+      const previewKey = `tryon-previews/${result.traceId}.webp`;
+      const originalKey = buildTryonKey(result.traceId, result.origMime);
       
-      await emitServer(result.traceId, 'fast-preview-return', { 
-        previewSize: previewDataUrl.length,
-        originalSize: result.origBuf.length,
-        mime: result.origMime
+      await emitServer(result.traceId, 'dual-cos-upload-start', { 
+        previewSize: result.base64.length,
+        originalSize: result.origBuf.length
       });
       
-      // 同步上传原图到 COS（最多等待 5 秒）
-      let cosUrl: string | null = null;
-      const uploadPromise = (async () => {
-        try {
-          const exists = await objectExistsInCOS(key);
-          if (!exists.exists) {
-            await emitServer(result.traceId, 'cos-upload-start', { key, size: result.origBuf.length });
-            const uploaded = await uploadBufferToCOS(result.origBuf, key, result.origMime);
-            cosUrl = uploaded.url;
-            await emitServer(result.traceId, 'cos-upload-success', { key, url: cosUrl });
-            return cosUrl;
-          } else {
-            cosUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${key}`;
-            await emitServer(result.traceId, 'cos-already-exists', { url: cosUrl });
-            return cosUrl;
+      // 并行上传预览图和原图到 COS（最多等待 8 秒）
+      const uploadBoth = Promise.all([
+        // 上传预览图
+        (async () => {
+          try {
+            const previewBuf = Buffer.from(result.base64, 'base64');
+            const uploaded = await uploadBufferToCOS(previewBuf, previewKey, result.mime);
+            await emitServer(result.traceId, 'preview-cos-success', { url: uploaded.url });
+            return uploaded.url;
+          } catch (e: any) {
+            await emitServer(result.traceId, 'preview-cos-error', { error: e?.message || String(e) });
+            return null;
           }
-        } catch (e: any) {
-          await emitServer(result.traceId, 'cos-upload-error', { error: e?.message || String(e) });
-          throw e;
-        }
-      })();
+        })(),
+        // 上传原图
+        (async () => {
+          try {
+            const exists = await objectExistsInCOS(originalKey);
+            if (!exists.exists) {
+              const uploaded = await uploadBufferToCOS(result.origBuf, originalKey, result.origMime);
+              await emitServer(result.traceId, 'original-cos-success', { url: uploaded.url });
+              return uploaded.url;
+            } else {
+              const url = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
+              await emitServer(result.traceId, 'original-cos-exists', { url });
+              return url;
+            }
+          } catch (e: any) {
+            await emitServer(result.traceId, 'original-cos-error', { error: e?.message || String(e) });
+            return null;
+          }
+        })()
+      ]);
       
-      await Promise.race([
-        uploadPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      const [previewUrl, originalUrl] = await Promise.race([
+        uploadBoth,
+        new Promise<[string | null, string | null]>((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), 8000)
+        )
       ]).catch(() => {
-        // 超时或失败：返回 Base64 兜底
-        emitServer(result.traceId, 'cos-upload-timeout-fallback', { waited: 5000 });
+        emitServer(result.traceId, 'cos-upload-timeout', { waited: 8000 });
+        return [null, null];
       });
       
       return NextResponse.json({
         traceId: result.traceId,
-        preview: previewDataUrl,           // 预览图 DataURL（立即显示）
-        originalUrl: cosUrl,                // 原图 COS URL（优先）
-        originalFallback: cosUrl ? null : `data:${result.origMime};base64,${result.origBase64}`, // Base64 兜底
+        previewUrl: previewUrl,                 // 预览图 COS URL（优先）
+        originalUrl: originalUrl,               // 原图 COS URL（优先）
+        previewFallback: previewUrl ? null : result.dataUrl,  // 预览图 Base64 兜底
+        originalFallback: originalUrl ? null : `data:${result.origMime};base64,${result.origBase64}`, // 原图 Base64 兜底
         mime: result.origMime,
         previewMime: result.mime
       }, {
@@ -346,7 +360,8 @@ export async function POST(req: NextRequest) {
         headers: {
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
-          'X-Has-COS-URL': cosUrl ? 'true' : 'false'
+          'X-Preview-COS': previewUrl ? 'true' : 'false',
+          'X-Original-COS': originalUrl ? 'true' : 'false'
         }
       });
     }
