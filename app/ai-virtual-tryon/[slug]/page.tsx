@@ -336,7 +336,8 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'application/json' } });
+      // 使用 Accept: image/* 获取二进制预览，加快响应速度
+      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType });
