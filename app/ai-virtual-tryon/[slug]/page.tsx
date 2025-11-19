@@ -418,30 +418,48 @@ const SlugTryOnPage: React.FC = () => {
             }
           })();
           
-          // 步骤2：延迟 1.5 秒后加载原图（让用户看到预览效果）
+          // 步骤2：延迟 2.5 秒后加载原图（让用户明显看到预览效果）
           setTimeout(async () => {
             try {
               let originalDataUrl: string | null = null;
+              let loadAttempts = 0;
+              const maxAttempts = 5; // 最多尝试 5 次（10 秒）
               
-              // 优先从 COS URL 加载原图
+              // 优先从 COS URL 加载原图（带重试）
               if (genData.originalUrl) {
                 diag('loading-original-from-cos', { url: genData.originalUrl });
-                try {
-                  const resp = await fetch(genData.originalUrl);
-                  if (resp.ok) {
-                    const blob = await resp.blob();
-                    const reader = new FileReader();
-                    originalDataUrl = await new Promise((resolve, reject) => {
-                      reader.onloadend = () => resolve(reader.result as string);
-                      reader.onerror = reject;
-                      reader.readAsDataURL(blob);
-                    });
-                    diag('original-cos-success', { size: blob.size });
-                  } else {
-                    diag('original-cos-failed', { status: resp.status });
+                
+                while (loadAttempts < maxAttempts && !originalDataUrl) {
+                  try {
+                    const resp = await fetch(genData.originalUrl);
+                    if (resp.ok) {
+                      const blob = await resp.blob();
+                      const reader = new FileReader();
+                      originalDataUrl = await new Promise((resolve, reject) => {
+                        reader.onloadend = () => resolve(reader.result as string);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                      });
+                      diag('original-cos-success', { size: blob.size, attempts: loadAttempts + 1 });
+                      break;
+                    } else if (resp.status === 404 && loadAttempts < maxAttempts - 1) {
+                      // 404 说明还在上传中，等待 2 秒后重试
+                      diag('original-cos-404-retry', { attempt: loadAttempts + 1 });
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      loadAttempts++;
+                    } else {
+                      diag('original-cos-failed', { status: resp.status, attempts: loadAttempts + 1 });
+                      break;
+                    }
+                  } catch (e: any) {
+                    diag('original-cos-error', { error: e?.message || String(e), attempts: loadAttempts + 1 });
+                    if (loadAttempts < maxAttempts - 1) {
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      loadAttempts++;
+                    } else {
+                      break;
+                    }
                   }
-                } catch (e: any) {
-                  diag('original-cos-error', e?.message || String(e));
                 }
               }
               
@@ -463,7 +481,7 @@ const SlugTryOnPage: React.FC = () => {
               diag('original-load-error', e?.message || String(e));
               // 保留预览图，原图加载失败不影响用户
             }
-          }, 1500); // 1.5秒延迟，让用户看到预览效果
+          }, 2500); // 2.5秒延迟，让用户明显看到预览效果
           
           // 轻量姿态检测（延迟到原图加载后）
           setTimeout(async () => {

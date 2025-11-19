@@ -303,56 +303,52 @@ export async function POST(req: NextRequest) {
         originalSize: result.origBuf.length
       });
       
-      // 并行上传预览图和原图到 COS（最多等待 8 秒）
-      const uploadBoth = Promise.all([
-        // 上传预览图
-        (async () => {
-          try {
-            const previewBuf = Buffer.from(result.base64, 'base64');
-            const uploaded = await uploadBufferToCOS(previewBuf, previewKey, result.mime);
-            await emitServer(result.traceId, 'preview-cos-success', { url: uploaded.url });
-            return uploaded.url;
-          } catch (e: any) {
-            await emitServer(result.traceId, 'preview-cos-error', { error: e?.message || String(e) });
-            return null;
-          }
-        })(),
-        // 上传原图
-        (async () => {
-          try {
-            const exists = await objectExistsInCOS(originalKey);
-            if (!exists.exists) {
-              const uploaded = await uploadBufferToCOS(result.origBuf, originalKey, result.origMime);
-              await emitServer(result.traceId, 'original-cos-success', { url: uploaded.url });
-              return uploaded.url;
-            } else {
-              const url = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
-              await emitServer(result.traceId, 'original-cos-exists', { url });
-              return url;
-            }
-          } catch (e: any) {
-            await emitServer(result.traceId, 'original-cos-error', { error: e?.message || String(e) });
-            return null;
-          }
-        })()
-      ]);
+      // 🔥 关键优化：只等待预览图上传（快速），原图异步上传（不阻塞）
+      let previewUrl: string | null = null;
+      let originalUrl: string | null = null;
       
-      const [previewUrl, originalUrl] = await Promise.race([
-        uploadBoth,
-        new Promise<[string | null, string | null]>((_, reject) => 
-          setTimeout(() => reject(new Error('timeout')), 8000)
-        )
-      ]).catch(() => {
-        emitServer(result.traceId, 'cos-upload-timeout', { waited: 8000 });
-        return [null, null];
-      });
+      // 步骤1：快速上传预览图（最多等待 3 秒）
+      try {
+        const previewBuf = Buffer.from(result.base64, 'base64');
+        const uploaded = await Promise.race([
+          uploadBufferToCOS(previewBuf, previewKey, result.mime),
+          new Promise<any>((_, reject) => setTimeout(() => reject(new Error('preview timeout')), 3000))
+        ]);
+        previewUrl = uploaded.url;
+        await emitServer(result.traceId, 'preview-cos-success', { url: previewUrl });
+      } catch (e: any) {
+        await emitServer(result.traceId, 'preview-cos-error', { error: e?.message || String(e) });
+      }
+      
+      // 步骤2：后台异步上传原图（不等待，不阻塞响应）
+      const originalUploadPromise = (async () => {
+        try {
+          const exists = await objectExistsInCOS(originalKey);
+          if (!exists.exists) {
+            const uploaded = await uploadBufferToCOS(result.origBuf, originalKey, result.origMime);
+            originalUrl = uploaded.url;
+            await emitServer(result.traceId, 'original-cos-success', { url: originalUrl });
+          } else {
+            originalUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
+            await emitServer(result.traceId, 'original-cos-exists', { url: originalUrl });
+          }
+        } catch (e: any) {
+          await emitServer(result.traceId, 'original-cos-error', { error: e?.message || String(e) });
+        }
+      })();
+      
+      // 不等待原图上传，让它在后台继续
+      void originalUploadPromise;
+      
+      // 生成原图的 COS URL（即使还没上传完成，前端可以轮询）
+      const originalCosUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
       
       return NextResponse.json({
         traceId: result.traceId,
-        previewUrl: previewUrl,                 // 预览图 COS URL（优先）
-        originalUrl: originalUrl,               // 原图 COS URL（优先）
+        previewUrl: previewUrl,                           // 预览图 COS URL（立即可用）
+        originalUrl: originalCosUrl,                      // 原图 COS URL（可能还在上传中）
         previewFallback: previewUrl ? null : result.dataUrl,  // 预览图 Base64 兜底
-        originalFallback: originalUrl ? null : `data:${result.origMime};base64,${result.origBase64}`, // 原图 Base64 兜底
+        originalFallback: `data:${result.origMime};base64,${result.origBase64}`, // 原图 Base64 兜底（始终提供）
         mime: result.origMime,
         previewMime: result.mime
       }, {
@@ -361,7 +357,7 @@ export async function POST(req: NextRequest) {
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
           'X-Preview-COS': previewUrl ? 'true' : 'false',
-          'X-Original-COS': originalUrl ? 'true' : 'false'
+          'X-Original-Uploading': 'true' // 原图可能还在上传
         }
       });
     }
