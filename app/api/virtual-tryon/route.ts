@@ -314,13 +314,32 @@ export async function POST(req: NextRequest) {
         await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
       }
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
+      // 确保 header 值只包含 ASCII 字符，避免 ByteString 转换错误
+      // 如果包含非ASCII字符，使用 Base64 编码；否则直接使用
+      const hasNonAscii = (str: string) => /[^\x00-\x7F]/.test(str);
+      const traceIdHasNonAscii = hasNonAscii(result.traceId);
+      const safeTraceId = traceIdHasNonAscii 
+        ? Buffer.from(result.traceId, 'utf8').toString('base64')
+        : result.traceId;
+      const mimeValue = result.mime || 'image/png';
+      const mimeHasNonAscii = hasNonAscii(mimeValue);
+      const safeMime = mimeHasNonAscii
+        ? Buffer.from(mimeValue, 'utf8').toString('base64')
+        : mimeValue;
+      // 记录非ASCII字符处理情况，便于调试
+      if (traceIdHasNonAscii || mimeHasNonAscii) {
+        await emitServer(result.traceId, 'header-nonascii-encoded', { 
+          traceIdEncoded: traceIdHasNonAscii, 
+          mimeEncoded: mimeHasNonAscii 
+        });
+      }
       return new NextResponse(arrayBuffer, {
         status: 200,
         headers: {
           'Content-Type': result.mime || 'image/png',
           'Cache-Control': 'no-store',
-          'X-TraceId': result.traceId,
-          'X-Mime': result.mime || 'image/png'
+          'X-TraceId': safeTraceId,
+          'X-Mime': safeMime
         }
       });
     }

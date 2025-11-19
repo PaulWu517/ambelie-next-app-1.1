@@ -23,7 +23,13 @@ export function buildTryonKey(traceId: string, mime: string) {
   const m = (mime || '').toLowerCase();
   const ext = m.includes('png') ? 'png' : (m.includes('webp') ? 'webp' : 'jpg');
   const basePath = process.env.TRYON_COS_BASE_PATH || 'tryon-results/';
-  return `${basePath}${traceId}.${ext}`;
+  // 确保 traceId 不包含非ASCII字符，避免 COS key 构建错误
+  // 如果包含非ASCII字符，使用 Base64 编码；否则直接使用
+  const hasNonAscii = /[^\x00-\x7F]/.test(traceId);
+  const safeTraceId = hasNonAscii 
+    ? Buffer.from(traceId, 'utf8').toString('base64').replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m] || m))
+    : traceId;
+  return `${basePath}${safeTraceId}.${ext}`;
 }
 
 export async function uploadBufferToCOS(buf: Buffer, key: string, mime: string): Promise<{ url: string }> {
