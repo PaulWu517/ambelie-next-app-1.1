@@ -294,47 +294,59 @@ export async function POST(req: NextRequest) {
     const format = (url.searchParams.get('format') || '').toLowerCase();
     const accept = (req.headers.get('accept') || '').toLowerCase();
     if (format === 'blob' || accept.includes('image/')) {
-      const buf = Buffer.from(result.base64, 'base64');
+      // 🔥 最佳方案：直接返回原图，前端自己生成预览（避免后端异步上传被终止）
+      const origBuf = result.origBuf;
+      const origMime = result.origMime;
+      
       // Convert Buffer to non-shared ArrayBuffer for NextResponse
-      const arrayBuffer = new ArrayBuffer(buf.length);
+      const arrayBuffer = new ArrayBuffer(origBuf.length);
       const view = new Uint8Array(arrayBuffer);
-      view.set(buf);
-      // 🔥 关键修复：立即返回预览图，同时启动 COS 上传（Fire-and-continue 模式）
-      await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
+      view.set(origBuf);
       
-      // 启动 COS 上传任务（不等待完成，但通过 Promise 竞赛确保 Lambda 存活）
-      const key = buildTryonKey(result.traceId, result.origMime);
-      const uploadPromise = (async () => {
-        try {
-          const exists = await objectExistsInCOS(key);
-          if (!exists.exists) {
-            await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
-            await uploadBufferToCOS(result.origBuf, key, result.origMime);
-            await emitServer(result.traceId, 'cos-upload-success', { key });
-          } else {
-            await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
+      await emitServer(result.traceId, 'original-binary-return', { 
+        size: origBuf.length, 
+        mime: origMime,
+        previewSize: result.base64.length,
+        previewMime: result.mime
+      });
+      
+      // 🔥 同步等待 COS 上传完成（最多 3 秒），确保原图能成功上传
+      const key = buildTryonKey(result.traceId, origMime);
+      const uploadWithTimeout = Promise.race([
+        (async () => {
+          try {
+            const exists = await objectExistsInCOS(key);
+            if (!exists.exists) {
+              await emitServer(result.traceId, 'cos-upload-start', { key, mime: origMime, size: origBuf.length });
+              await uploadBufferToCOS(origBuf, key, origMime);
+              await emitServer(result.traceId, 'cos-upload-success', { key });
+            } else {
+              await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
+            }
+          } catch (e: any) {
+            await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+            throw e; // 重新抛出，让外层 Promise.race 能捕获
           }
-        } catch (e: any) {
-          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
-        }
-      })();
+        })(),
+        new Promise((_, reject) => setTimeout(() => {
+          emitServer(result.traceId, 'cos-upload-timeout', { timeout: 3000 });
+          reject(new Error('COS upload timeout after 3s'));
+        }, 3000))
+      ]);
       
-      // 延迟 500ms 再返回响应，给 COS 上传一些启动时间（避免 Lambda 立即终止）
-      // 这样既保证用户体验（总耗时仍在 10-13 秒内），又提高上传成功率
-      void Promise.race([
-        uploadPromise,
-        new Promise(resolve => setTimeout(resolve, 500))
-      ]).catch(() => {});
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 等待上传完成或超时（不影响响应返回）
+      await uploadWithTimeout.catch(() => {
+        // 上传失败不影响返回原图，前端会重新上传
+      });
       
       return new NextResponse(arrayBuffer, {
         status: 200,
         headers: {
-          'Content-Type': result.mime || 'image/png',
+          'Content-Type': origMime,
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
-          'X-Mime': result.mime || 'image/png'
+          'X-Mime': origMime,
+          'X-Has-Preview': 'true'
         }
       });
     }
