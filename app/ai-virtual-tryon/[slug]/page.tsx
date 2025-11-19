@@ -358,11 +358,12 @@ const SlugTryOnPage: React.FC = () => {
           return;
         }
         
-        // 🔥 渐进式加载：优先处理预览图和原图的 DataURL
-        if (genData.preview && genData.original) {
-          diag('dual-dataurl-received', { 
+        // 🔥 渐进式加载：预览图 + COS URL（避免传输大 Base64）
+        if (genData.preview) {
+          diag('progressive-load-start', { 
             previewSize: genData.preview.length, 
-            originalSize: genData.original.length 
+            hasOriginalUrl: !!genData.originalUrl,
+            hasFallback: !!genData.originalFallback
           });
           
           // 步骤1：立即显示预览图
@@ -371,46 +372,70 @@ const SlugTryOnPage: React.FC = () => {
           emitUI('before-set-url', { urlKind: 'server-preview-dataurl', length: genData.preview.length });
           setResultUrl(genData.preview);
           setShowResult(true);
-          diag('preview-shown-immediately');
+          baseResultRef.current = genData.preview; // 先用预览图作为基准
+          diag('preview-shown');
           
           // 立即结束进度条
           if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
           setProcessingProgress(100);
           setIsProcessing(false);
           
-          // 步骤2：延迟 200ms 后替换为原图（避免闪烁）
-          setTimeout(() => {
-            baseResultRef.current = genData.original;
-            setResultImgLoading(true);
-            emitUI('before-set-url', { urlKind: 'server-original-dataurl', length: genData.original.length });
-            setResultUrl(genData.original);
-            diag('original-replaced');
-            
-            // 上传原图到 COS（兜底）
-            (async () => {
-              try {
-                const m = /^data:(.*?);base64,(.*)$/.exec(genData.original);
-                if (m) {
-                  const mime = m[1];
-                  const base64 = m[2];
-                  const payload = { traceId, mime, base64 };
-                  const b = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-                  try { (navigator as any).sendBeacon?.('/api/virtual-tryon/upload', b); diag('ui-cos-upload-start', { via: 'beacon', mime }); } catch { }
-                  try { await fetch('/api/virtual-tryon/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); diag('ui-cos-upload-success', { mime }); } catch (e: any) { diag('ui-cos-upload-error', e?.message || String(e)); }
+          // 步骤2：延迟 1.5 秒后加载原图（让用户看到预览效果）
+          setTimeout(async () => {
+            try {
+              let originalDataUrl: string | null = null;
+              
+              // 优先从 COS URL 加载
+              if (genData.originalUrl) {
+                diag('loading-from-cos', { url: genData.originalUrl });
+                try {
+                  const resp = await fetch(genData.originalUrl);
+                  if (resp.ok) {
+                    const blob = await resp.blob();
+                    const reader = new FileReader();
+                    originalDataUrl = await new Promise((resolve, reject) => {
+                      reader.onloadend = () => resolve(reader.result as string);
+                      reader.onerror = reject;
+                      reader.readAsDataURL(blob);
+                    });
+                    diag('cos-load-success', { size: blob.size });
+                  } else {
+                    diag('cos-load-failed', { status: resp.status });
+                  }
+                } catch (e: any) {
+                  diag('cos-load-error', e?.message || String(e));
                 }
-              } catch (e: any) { diag('ui-cos-upload-exception', e?.message || String(e)); }
-            })();
-          }, 200);
+              }
+              
+              // 兜底：使用 Base64
+              if (!originalDataUrl && genData.originalFallback) {
+                originalDataUrl = genData.originalFallback;
+                diag('using-fallback-base64', { size: originalDataUrl?.length || 0 });
+              }
+              
+              // 替换为原图
+              if (originalDataUrl) {
+                baseResultRef.current = originalDataUrl;
+                setResultImgLoading(true);
+                emitUI('before-set-url', { urlKind: 'original-hd', length: originalDataUrl?.length || 0 });
+                setResultUrl(originalDataUrl);
+                diag('original-replaced');
+              }
+            } catch (e: any) {
+              diag('original-load-error', e?.message || String(e));
+              // 保留预览图，原图加载失败不影响用户
+            }
+          }, 1500); // 1.5秒延迟，让用户看到预览效果
           
           // 轻量姿态检测（移动端后台）
           try {
             const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
-            const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(genData.original); if (lms) poseLmsRef.current = lms; };
-            if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { setTimeout(() => { void runDetect(); }, 300); }
+            const runDetect = async () => { const lms = await detectPoseLandmarksNormalized(genData.preview); if (lms) poseLmsRef.current = lms; };
+            if (isMobileDetect) { const ric = (window as any).requestIdleCallback; if (ric) ric(() => { void runDetect(); }, { timeout: 2000 }); else setTimeout(() => { void runDetect(); }, 400); } else { setTimeout(() => { void runDetect(); }, 1800); }
           } catch {}
           
-          // 直接跳到后续处理
-          genData.dataUrl = genData.original; // 兼容后续逻辑
+          // 已完成渐进式加载，跳过后续处理
+          return;
         }
       } else if (genResp.ok && isImage) {
         // 备用：处理二进制图片响应（兼容旧版本）

@@ -294,28 +294,59 @@ export async function POST(req: NextRequest) {
     const format = (url.searchParams.get('format') || '').toLowerCase();
     const accept = (req.headers.get('accept') || '').toLowerCase();
     if (format === 'blob' || accept.includes('image/')) {
-      // 🔥 优化方案：返回 JSON 而不是二进制，包含预览和原图的 DataURL
-      // 这样前端可以先显示预览，再替换原图，同时传输更可靠
-      const previewDataUrl = result.dataUrl; // webp 预览图 DataURL (~20KB base64)
-      const originalDataUrl = `data:${result.origMime};base64,${result.origBase64}`; // 原图 DataURL (~2.9MB base64)
+      // 🔥 最终优化方案：返回预览图 + COS URL（避免传输大文件）
+      const previewDataUrl = result.dataUrl; // webp 预览图 DataURL (~20KB)
+      const key = buildTryonKey(result.traceId, result.origMime);
       
-      await emitServer(result.traceId, 'dual-dataurl-return', { 
+      await emitServer(result.traceId, 'fast-preview-return', { 
         previewSize: previewDataUrl.length,
-        originalSize: originalDataUrl.length,
+        originalSize: result.origBuf.length,
         mime: result.origMime
+      });
+      
+      // 同步上传原图到 COS（最多等待 5 秒）
+      let cosUrl: string | null = null;
+      const uploadPromise = (async () => {
+        try {
+          const exists = await objectExistsInCOS(key);
+          if (!exists.exists) {
+            await emitServer(result.traceId, 'cos-upload-start', { key, size: result.origBuf.length });
+            const uploaded = await uploadBufferToCOS(result.origBuf, key, result.origMime);
+            cosUrl = uploaded.url;
+            await emitServer(result.traceId, 'cos-upload-success', { key, url: cosUrl });
+            return cosUrl;
+          } else {
+            cosUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${key}`;
+            await emitServer(result.traceId, 'cos-already-exists', { url: cosUrl });
+            return cosUrl;
+          }
+        } catch (e: any) {
+          await emitServer(result.traceId, 'cos-upload-error', { error: e?.message || String(e) });
+          throw e;
+        }
+      })();
+      
+      await Promise.race([
+        uploadPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]).catch(() => {
+        // 超时或失败：返回 Base64 兜底
+        emitServer(result.traceId, 'cos-upload-timeout-fallback', { waited: 5000 });
       });
       
       return NextResponse.json({
         traceId: result.traceId,
-        preview: previewDataUrl,      // 预览图 DataURL（立即显示）
-        original: originalDataUrl,     // 原图 DataURL（后台加载）
+        preview: previewDataUrl,           // 预览图 DataURL（立即显示）
+        originalUrl: cosUrl,                // 原图 COS URL（优先）
+        originalFallback: cosUrl ? null : `data:${result.origMime};base64,${result.origBase64}`, // Base64 兜底
         mime: result.origMime,
         previewMime: result.mime
       }, {
         status: 200,
         headers: {
           'Cache-Control': 'no-store',
-          'X-TraceId': result.traceId
+          'X-TraceId': result.traceId,
+          'X-Has-COS-URL': cosUrl ? 'true' : 'false'
         }
       });
     }
