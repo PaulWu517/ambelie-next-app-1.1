@@ -299,21 +299,10 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
-      // 先立即返回预览，再后台上传原图
-      const key = buildTryonKey(result.traceId, result.origMime);
-      try {
-        const exists = await objectExistsInCOS(key);
-        if (!exists.exists) {
-          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
-          await uploadBufferToCOS(result.origBuf, key, result.origMime);
-          await emitServer(result.traceId, 'cos-upload-success', { key });
-        } else {
-          await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
-        }
-      } catch (e: any) {
-        await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
-      }
+      
+      // 先立即返回预览图片，不等待 COS 上传，提升响应速度
       await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
+      
       // 确保 header 值只包含 ASCII 字符，避免 ByteString 转换错误
       // 如果包含非ASCII字符，使用 Base64 编码；否则直接使用
       const hasNonAscii = (str: string) => /[^\x00-\x7F]/.test(str);
@@ -333,6 +322,24 @@ export async function POST(req: NextRequest) {
           mimeEncoded: mimeHasNonAscii 
         });
       }
+      
+      // 后台异步上传原图到 COS，不阻塞响应返回
+      const key = buildTryonKey(result.traceId, result.origMime);
+      (async () => {
+        try {
+          const exists = await objectExistsInCOS(key);
+          if (!exists.exists) {
+            await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
+            await uploadBufferToCOS(result.origBuf, key, result.origMime);
+            await emitServer(result.traceId, 'cos-upload-success', { key });
+          } else {
+            await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
+          }
+        } catch (e: any) {
+          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+        }
+      })().catch(() => {}); // 静默处理错误，不影响主流程
+      
       return new NextResponse(arrayBuffer, {
         status: 200,
         headers: {
