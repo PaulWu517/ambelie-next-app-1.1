@@ -3,13 +3,9 @@ import { ProxyAgent } from 'undici';
 import { uploadBufferToCOS, buildTryonKey, objectExistsInCOS } from '@/lib/utils/cos';
 
 // Vercel 配置优化
-// 优先选择更接近Gemini API的区域（us-central1），减少网络延迟
-// 如果主要用户在中国，可以优先使用 hkg1 (香港) 或 sin1 (新加坡)
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-// 优化区域选择：优先使用延迟最低的区域
-// 根据实际测试，可以调整顺序：如果Gemini API响应快，优先选择用户就近区域
-export const preferredRegion = ['iad1', 'hkg1', 'sin1', 'nrt1']; // iad1 (US East) 更接近Gemini API
+export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
 export const maxDuration = 60;
 
 const MODEL = 'gemini-2.5-flash-image';
@@ -102,94 +98,30 @@ async function handleVirtualTryon(req: NextRequest) {
 
     const toBase64 = async (file: File) => Buffer.from(await file.arrayBuffer()).toString('base64');
     const userBase64 = await toBase64(userImage as File);
-    let modelBase64: string = ''; // 初始化默认值，避免 TypeScript 编译错误
-    let modelMime: string = 'image/jpeg'; // 初始化默认值，避免 TypeScript 编译错误
+    let modelBase64: string;
+    let modelMime: string;
     if (modelImage instanceof File) {
       modelBase64 = await toBase64(modelImage as File);
       modelMime = (modelImage as File).type || 'image/jpeg';
     } else {
       const downloadStart = Date.now();
-      const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-      const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
-      // 优化图片下载：添加重试机制，提升生产环境稳定性
-      const maxDownloadRetries = 2; // 最多重试2次
-      let downloadSuccess = false;
-      let lastDownloadError: any = null;
-      
-      for (let attempt = 0; attempt <= maxDownloadRetries; attempt++) {
-        const downloadController = new AbortController();
-        // 每次尝试的超时时间：首次10秒，重试时8秒
-        const downloadTimeoutMs = attempt === 0 ? 10000 : 8000;
-        const downloadTimeout = setTimeout(() => downloadController.abort(), downloadTimeoutMs);
-        
-        try {
-          if (attempt > 0) {
-            await emitServer(traceId, 'model-image-download-retry', { attempt, maxDownloadRetries, url: modelImageUrl });
-            // 重试前等待
-            await new Promise(resolve => setTimeout(resolve, attempt * 500));
-          }
-          
-          const resp = await fetch(modelImageUrl, { 
-            method: 'GET', 
-            signal: downloadController.signal,
-            headers: {
-              'User-Agent': 'Ambelie-VirtualTryOn/1.0',
-              'Accept': 'image/*'
-            },
-            ...(dispatcher ? { dispatcher } : {}) 
-          });
-          clearTimeout(downloadTimeout);
-          
-          if (!resp.ok) {
-            // 对于5xx错误，进行重试
-            if (resp.status >= 500 && attempt < maxDownloadRetries) {
-              await emitServer(traceId, 'model-image-download-retry-wait', { status: resp.status, attempt });
-              continue;
-            }
-            console.error('[virtual-tryon] fetch model_image_url failed', { status: resp.status, statusText: resp.statusText, url: modelImageUrl, attempt });
-            throw { error: 'Failed to download model_image_url', status: resp.status, statusText: resp.statusText };
-          }
-          
-          const buf = Buffer.from(await resp.arrayBuffer());
-          modelBase64 = buf.toString('base64');
-          const ct = resp.headers.get('content-type') || 'image/jpeg';
-          modelMime = ct.split(';')[0];
-          downloadSuccess = true;
-          await emitServer(traceId, 'model-image-download-success', { durationMs: Date.now() - downloadStart, size: buf.length, attempt });
-          if (DEBUG) console.log('[virtual-tryon] model image download', { durationMs: Date.now() - downloadStart, size: buf.length, attempt });
-          break; // 成功，跳出重试循环
-        } catch (fetchErr: any) {
-          clearTimeout(downloadTimeout);
-          lastDownloadError = fetchErr;
-          
-          if (fetchErr.name === 'AbortError') {
-            if (attempt < maxDownloadRetries) {
-              await emitServer(traceId, 'model-image-download-timeout-retry', { timeoutMs: downloadTimeoutMs, attempt });
-              continue;
-            }
-            throw { error: 'Model image download timeout', message: `Download exceeded ${downloadTimeoutMs}ms timeout after ${attempt + 1} attempts`, status: 408 };
-          }
-          
-          // 对于网络错误，进行重试
-          if (attempt < maxDownloadRetries && (fetchErr.message?.includes('fetch') || fetchErr.message?.includes('network'))) {
-            await emitServer(traceId, 'model-image-download-retry-wait', { error: fetchErr.message, attempt });
-            continue;
-          }
-          
-          // 最后一次尝试失败，抛出错误
-          if (attempt === maxDownloadRetries) {
-            console.error('[virtual-tryon] network error downloading model_image_url after retries', { message: fetchErr?.message, attempts: attempt + 1, url: modelImageUrl });
-            await emitServer(traceId, 'model-image-download-error', { message: fetchErr?.message || String(fetchErr), durationMs: Date.now() - downloadStart, attempts: attempt + 1 });
-            if (fetchErr.error) throw fetchErr; // re-throw our own structured error
-            throw { error: 'Network error downloading model_image_url', message: fetchErr?.message || String(fetchErr), status: 400 };
-          }
+      try {
+        const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+        const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
+        const resp = await fetch(modelImageUrl, { method: 'GET', ...(dispatcher ? { dispatcher } : {}) });
+        if (!resp.ok) {
+          console.error('[virtual-tryon] fetch model_image_url failed', { status: resp.status, statusText: resp.statusText, url: modelImageUrl });
+          throw { error: 'Failed to download model_image_url', status: resp.status, statusText: resp.statusText };
         }
-      }
-      
-      if (!downloadSuccess) {
-        console.error('[virtual-tryon] model image download failed after all retries', { url: modelImageUrl, attempts: maxDownloadRetries + 1 });
-        await emitServer(traceId, 'model-image-download-error', { message: lastDownloadError?.message || 'Unknown error', durationMs: Date.now() - downloadStart, attempts: maxDownloadRetries + 1 });
-        throw { error: 'Failed to download model_image_url after retries', message: lastDownloadError?.message || 'Unknown error', status: 400 };
+        const buf = Buffer.from(await resp.arrayBuffer());
+        modelBase64 = buf.toString('base64');
+        const ct = resp.headers.get('content-type') || 'image/jpeg';
+        modelMime = ct.split(';')[0];
+        if (DEBUG) console.log('[virtual-tryon] model image download', { durationMs: Date.now() - downloadStart, size: buf.length });
+      } catch (e: any) {
+        console.error('[virtual-tryon] network error downloading model_image_url', e?.message);
+        if (e.error) throw e; // re-throw our own structured error
+        throw { error: 'Network error downloading model_image_url', message: e?.message || String(e), status: 400 };
       }
     }
     
@@ -233,92 +165,40 @@ async function handleVirtualTryon(req: NextRequest) {
       }
     } as any;
 
-    // 优化Gemini API调用：添加重试机制，提升生产环境稳定性
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
-    const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-    const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
-    const maxRetries = 2; // 最多重试2次
-    let resp: Response | null = null;
-    let lastError: any = null;
-    
-    perf.geminiCalled = Date.now();
-    await emitServer(traceId, 'gemini-call-start', { model: MODEL });
-    
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const controller = new AbortController();
-      // 每次尝试的超时时间：首次60秒，重试时45秒
-      const timeoutMs = attempt === 0 ? 60000 : 45000;
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      
-      try {
-        // 优化请求头，添加keep-alive和压缩支持，提升生产环境性能
-        const fetchOptions: any = {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Connection': 'keep-alive',
-            'Accept-Encoding': 'gzip, deflate, br'
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-          ...(dispatcher ? { dispatcher } : {})
-        };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
-        if (DEBUG) console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher, attempt, traceId });
-        if (attempt > 0) {
-          await emitServer(traceId, 'gemini-call-retry', { attempt, maxRetries });
-        }
-        
-        resp = await fetch(endpoint, fetchOptions);
-        clearTimeout(timeout);
-        
-        perf.geminiResponded = Date.now();
-        await emitServer(traceId, 'gemini-call-end', { durationMs: perf.geminiResponded - perf.geminiCalled, status: resp.status, attempt });
-        
-        if (DEBUG) console.log('[virtual-tryon] gemini response', { 
-          status: resp.status, 
-          statusText: resp.statusText,
-          geminiDurationMs: perf.geminiResponded - perf.geminiCalled,
-          attempt,
-          traceId
-        });
-        
-        // 如果响应成功，跳出重试循环
-        if (resp.ok || resp.status < 500) break;
-        
-        // 对于5xx错误，进行重试
-        if (resp.status >= 500 && attempt < maxRetries) {
-          const waitMs = (attempt + 1) * 1000; // 递增等待时间：1s, 2s
-          await emitServer(traceId, 'gemini-call-retry-wait', { status: resp.status, waitMs, attempt });
-          await new Promise(resolve => setTimeout(resolve, waitMs));
-          continue;
-        }
-      } catch (netErr: any) {
-        clearTimeout(timeout);
-        lastError = netErr;
-        
-        // 对于超时或网络错误，进行重试
-        if ((netErr.name === 'AbortError' || netErr.message?.includes('fetch')) && attempt < maxRetries) {
-          const waitMs = (attempt + 1) * 1000;
-          await emitServer(traceId, 'gemini-call-retry-wait', { error: netErr.name || netErr.message, waitMs, attempt });
-          await new Promise(resolve => setTimeout(resolve, waitMs));
-          continue;
-        }
-        
-        // 最后一次尝试失败，抛出错误
-        if (attempt === maxRetries) {
-          const duration = Date.now() - startedAt;
-          console.error('[virtual-tryon] network error after retries', { message: netErr?.message, attempts: attempt + 1 });
-          throw { error: 'Network failure when calling Gemini', message: netErr?.message || String(netErr), durationMs: duration, status: 502 };
-        }
-      }
-    }
-    
-    if (!resp) {
+    let resp: Response;
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+      const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+      const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
+      const fetchOptions: any = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+        ...(dispatcher ? { dispatcher } : {})
+      };
+
+      if (DEBUG) console.log('[virtual-tryon] calling Gemini', { endpoint, viaProxy: !!dispatcher, traceId });
+      perf.geminiCalled = Date.now();
+      resp = await fetch(endpoint, fetchOptions);
+      perf.geminiResponded = Date.now();
+      if (DEBUG) console.log('[virtual-tryon] gemini response', { 
+        status: resp.status, 
+        statusText: resp.statusText,
+        geminiDurationMs: perf.geminiResponded - perf.geminiCalled,
+        traceId
+      });
+    } catch (netErr: any) {
+      clearTimeout(timeout);
       const duration = Date.now() - startedAt;
-      console.error('[virtual-tryon] no response after retries', { attempts: maxRetries + 1 });
-      throw { error: 'No response from Gemini API', message: lastError?.message || 'Unknown error', durationMs: duration, status: 502 };
+      console.error('[virtual-tryon] network error', netErr?.message);
+      throw { error: 'Network failure when calling Gemini', message: netErr?.message || String(netErr), durationMs: duration, status: 502 };
     }
+
+    clearTimeout(timeout);
     const data = await resp.json().catch((e: any) => { console.error('[virtual-tryon] resp.json failed', e?.message); return null; });
 
     if (!resp.ok) {
@@ -373,31 +253,26 @@ async function handleVirtualTryon(req: NextRequest) {
 
     // Build original buffer
     const origBuf = Buffer.from(outBase64, 'base64');
-    
-    // 关键优化：立即返回原始图片，不等待Sharp压缩
-    // 对于二进制预览请求，直接返回原始图片，大幅减少响应时间
-    // Sharp压缩改为后台异步进行，或在前端需要时再进行
-    const previewBase64 = outBase64; // 直接使用原始图片
-    const previewMime = outMime || 'image/png';
+    // Create a compressed preview (webp 640px) to reduce first-frame size
+    let previewBuf = origBuf;
+    let previewMime = 'image/webp';
+    try {
+      const t0 = Date.now();
+      const sharpMod = await import('sharp');
+      const sharpFn: any = (sharpMod as any).default || sharpMod;
+      previewBuf = await sharpFn(origBuf)
+        .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+      await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: previewBuf.length, durationMs: Date.now() - t0 });
+    } catch (e: any) {
+      previewBuf = origBuf;
+      previewMime = outMime || 'image/png';
+      await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
+    }
+
+    const previewBase64 = previewBuf.toString('base64');
     const dataUrl = `data:${previewMime};base64,${previewBase64}`;
-    
-    // 后台异步压缩（可选，用于后续优化或缓存）
-    // 不阻塞主响应流程
-    (async () => {
-      try {
-        const t0 = Date.now();
-        const sharpMod = await import('sharp');
-        const sharpFn: any = (sharpMod as any).default || sharpMod;
-        const compressedBuf = await sharpFn(origBuf)
-          .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
-          .webp({ quality: 75, effort: 4, smartSubsample: true })
-          .toBuffer();
-        await emitServer(traceId, 'sharp-preview-success', { inSize: origBuf.length, outSize: compressedBuf.length, durationMs: Date.now() - t0 });
-      } catch (e: any) {
-        await emitServer(traceId, 'sharp-preview-error', { message: e?.message || String(e) });
-      }
-    })().catch(() => {}); // 静默处理错误，不影响主流程
-    
     return { traceId, mime: previewMime, base64: previewBase64, dataUrl, perf: perfData, origBuf, origMime: outMime, origBase64: outBase64 };
 
   } catch (err: any) {
@@ -424,54 +299,28 @@ export async function POST(req: NextRequest) {
       const arrayBuffer = new ArrayBuffer(buf.length);
       const view = new Uint8Array(arrayBuffer);
       view.set(buf);
-      
-      // 先立即返回预览图片，不等待 COS 上传，提升响应速度
-      await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
-      
-      // 确保 header 值只包含 ASCII 字符，避免 ByteString 转换错误
-      // 如果包含非ASCII字符，使用 Base64 编码；否则直接使用
-      const hasNonAscii = (str: string) => /[^\x00-\x7F]/.test(str);
-      const traceIdHasNonAscii = hasNonAscii(result.traceId);
-      const safeTraceId = traceIdHasNonAscii 
-        ? Buffer.from(result.traceId, 'utf8').toString('base64')
-        : result.traceId;
-      const mimeValue = result.mime || 'image/png';
-      const mimeHasNonAscii = hasNonAscii(mimeValue);
-      const safeMime = mimeHasNonAscii
-        ? Buffer.from(mimeValue, 'utf8').toString('base64')
-        : mimeValue;
-      // 记录非ASCII字符处理情况，便于调试
-      if (traceIdHasNonAscii || mimeHasNonAscii) {
-        await emitServer(result.traceId, 'header-nonascii-encoded', { 
-          traceIdEncoded: traceIdHasNonAscii, 
-          mimeEncoded: mimeHasNonAscii 
-        });
-      }
-      
-      // 后台异步上传原图到 COS，不阻塞响应返回
+      // 先立即返回预览，再后台上传原图
       const key = buildTryonKey(result.traceId, result.origMime);
-      (async () => {
-        try {
-          const exists = await objectExistsInCOS(key);
-          if (!exists.exists) {
-            await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
-            await uploadBufferToCOS(result.origBuf, key, result.origMime);
-            await emitServer(result.traceId, 'cos-upload-success', { key });
-          } else {
-            await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
-          }
-        } catch (e: any) {
-          await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+      try {
+        const exists = await objectExistsInCOS(key);
+        if (!exists.exists) {
+          await emitServer(result.traceId, 'cos-upload-start', { key, mime: result.origMime, size: result.origBuf.length });
+          await uploadBufferToCOS(result.origBuf, key, result.origMime);
+          await emitServer(result.traceId, 'cos-upload-success', { key });
+        } else {
+          await emitServer(result.traceId, 'cos-upload-skip-exists', { key, contentLength: exists.contentLength, contentType: exists.contentType });
         }
-      })().catch(() => {}); // 静默处理错误，不影响主流程
-      
+      } catch (e: any) {
+        await emitServer(result.traceId, 'cos-upload-error', { key, message: e?.message || String(e) });
+      }
+      await emitServer(result.traceId, 'preview-binary-return', { size: buf.length, mime: result.mime });
       return new NextResponse(arrayBuffer, {
         status: 200,
         headers: {
           'Content-Type': result.mime || 'image/png',
           'Cache-Control': 'no-store',
-          'X-TraceId': safeTraceId,
-          'X-Mime': safeMime
+          'X-TraceId': result.traceId,
+          'X-Mime': result.mime || 'image/png'
         }
       });
     }
