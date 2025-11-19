@@ -406,7 +406,17 @@ const SlugTryOnPage: React.FC = () => {
         } catch {}
       } else if (isJson) {
         try {
-          genData = await genResp.json();
+          const raw = await genResp.text();
+          try { genData = JSON.parse(raw); }
+          catch (e2: any) {
+            diag('server-response-json-parse-error', { message: e2?.message || String(e2), sample: raw.slice(0, 200) });
+            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+            setProcessingProgress(100);
+            setIsResultPending(false);
+            setResultImgLoading(false);
+            setIsProcessing(false);
+            return;
+          }
         } catch (e: any) {
           diag('server-response-json-error', e?.message || String(e));
           if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }

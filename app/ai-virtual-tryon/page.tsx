@@ -317,7 +317,14 @@ const VirtualTryOnPage: React.FC = () => {
       postRespPromise.then(async (resp) => {
         try {
           if (!resp.ok) return;
-          const data = await resp.json().catch(() => null);
+          let data: any = null;
+          try {
+            const raw = await resp.text();
+            data = JSON.parse(raw);
+          } catch (e: any) {
+            diag('server-response-json-parse-error', e?.message || String(e));
+            return;
+          }
           if (!data || !data.dataUrl) return;
           setResultImgLoading(true);
           emitUI('before-set-url', { urlKind: 'server-dataurl', length: data.dataUrl.length });
