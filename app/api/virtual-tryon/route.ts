@@ -321,34 +321,37 @@ export async function POST(req: NextRequest) {
       }
       
       // 步骤2：后台异步上传原图（不等待，不阻塞响应）
+      // ⚠️ 重要：这个 Promise 不会被 await，会在后台继续执行
       const originalUploadPromise = (async () => {
         try {
           const exists = await objectExistsInCOS(originalKey);
           if (!exists.exists) {
+            await emitServer(result.traceId, 'original-cos-upload-start', { size: result.origBuf.length });
             const uploaded = await uploadBufferToCOS(result.origBuf, originalKey, result.origMime);
-            originalUrl = uploaded.url;
-            await emitServer(result.traceId, 'original-cos-success', { url: originalUrl });
+            await emitServer(result.traceId, 'original-cos-success', { url: uploaded.url });
           } else {
-            originalUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
-            await emitServer(result.traceId, 'original-cos-exists', { url: originalUrl });
+            const url = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
+            await emitServer(result.traceId, 'original-cos-exists', { url });
           }
         } catch (e: any) {
           await emitServer(result.traceId, 'original-cos-error', { error: e?.message || String(e) });
         }
       })();
       
-      // 不等待原图上传，让它在后台继续
+      // 🚀 不等待原图上传，让它在后台继续执行
+      // Vercel Lambda 会保持函数活跃直到所有异步任务完成（最多到超时时间）
       void originalUploadPromise;
       
-      // 生成原图的 COS URL（即使还没上传完成，前端可以轮询）
+      // 生成原图的 COS URL（即使还没上传完成，前端会轮询重试）
       const originalCosUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
       
+      // 🎯 立即返回响应（只包含预览图 URL 和原图 URL，不包含大体积 Base64）
       return NextResponse.json({
         traceId: result.traceId,
         previewUrl: previewUrl,                           // 预览图 COS URL（立即可用）
-        originalUrl: originalCosUrl,                      // 原图 COS URL（可能还在上传中）
-        previewFallback: previewUrl ? null : result.dataUrl,  // 预览图 Base64 兜底
-        originalFallback: `data:${result.origMime};base64,${result.origBase64}`, // 原图 Base64 兜底（始终提供）
+        originalUrl: originalCosUrl,                      // 原图 COS URL（可能还在上传中，前端会重试）
+        previewFallback: previewUrl ? null : result.dataUrl,  // 预览图 Base64 兜底（仅在 COS 失败时）
+        originalFallback: null,                           // 🔥 不再提供原图 Base64 兜底（太大，2MB+）
         mime: result.origMime,
         previewMime: result.mime
       }, {
@@ -357,7 +360,7 @@ export async function POST(req: NextRequest) {
           'Cache-Control': 'no-store',
           'X-TraceId': result.traceId,
           'X-Preview-COS': previewUrl ? 'true' : 'false',
-          'X-Original-Uploading': 'true' // 原图可能还在上传
+          'X-Original-Uploading': 'true' // 原图正在后台上传
         }
       });
     }

@@ -402,7 +402,9 @@ const SlugTryOnPage: React.FC = () => {
               if (previewDataUrl) {
                 setResultImgLoading(true);
                 setIsResultPending(true);
-                emitUI('before-set-url', { urlKind: 'preview-from-cos', length: previewDataUrl.length });
+                // 只记录 URL 类型和长度,不打印完整内容
+                const urlType = previewDataUrl.startsWith('data:') ? 'dataurl' : 'url';
+                emitUI('before-set-url', { urlKind: 'preview-from-cos', type: urlType, length: previewDataUrl.length });
                 setResultUrl(previewDataUrl);
                 setShowResult(true);
                 baseResultRef.current = previewDataUrl;
@@ -476,7 +478,9 @@ const SlugTryOnPage: React.FC = () => {
               if (originalDataUrl) {
                 baseResultRef.current = originalDataUrl;
                 setResultImgLoading(true);
-                emitUI('before-set-url', { urlKind: 'original-hd-from-cos', length: originalDataUrl?.length || 0 });
+                // 只记录 URL 类型和长度,不打印完整内容
+                const urlType = originalDataUrl.startsWith('data:') ? 'dataurl' : 'url';
+                emitUI('before-set-url', { urlKind: 'original-hd-from-cos', type: urlType, length: originalDataUrl?.length || 0 });
                 setResultUrl(originalDataUrl);
                 diag('original-replaced');
               }
@@ -505,7 +509,8 @@ const SlugTryOnPage: React.FC = () => {
         const dataUrl = await blobToDataUrl(blob);
         setResultImgLoading(true);
         setIsResultPending(false);
-        emitUI('before-set-url', { urlKind: 'legacy-image', length: dataUrl.length });
+        // 只记录 URL 类型和长度,不打印完整内容
+        emitUI('before-set-url', { urlKind: 'legacy-image', type: 'dataurl', length: dataUrl.length });
         setResultUrl(dataUrl);
         setShowResult(true);
         baseResultRef.current = dataUrl;
@@ -550,7 +555,9 @@ const SlugTryOnPage: React.FC = () => {
       // 新的结果地址出现时，先显示加载占位，待 onLoad 后再展示图片
       setResultImgLoading(true);
       setIsResultPending(true);
-      emitUI('resultUrl-set', { resultUrl, imgLoading: true, pending: true });
+      // 只记录 URL 类型和长度,不打印完整 resultUrl
+      const urlType = resultUrl.startsWith('data:') ? 'dataurl' : 'url';
+      emitUI('resultUrl-set', { type: urlType, length: resultUrl.length, imgLoading: true, pending: true });
       // 预解码兜底：即使 onLoad 未触发，也尝试主动解码后清除 loading
       (async () => {
         try {
