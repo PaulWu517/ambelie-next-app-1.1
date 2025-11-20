@@ -367,8 +367,8 @@ const SlugTryOnPage: React.FC = () => {
             hasOriginalFallback: !!genData.originalFallback
           });
           
-          // 步骤1：立即加载并显示预览图
-          (async () => {
+          // 步骤1：立即加载并显示预览图（await 确保完成后再继续）
+          const loadAndShowPreview = async () => {
             try {
               let previewDataUrl: string | null = null;
               
@@ -416,7 +416,10 @@ const SlugTryOnPage: React.FC = () => {
             } catch (e: any) {
               diag('preview-load-error', e?.message || String(e));
             }
-          })();
+          };
+          
+          // 立即加载预览图
+          await loadAndShowPreview();
           
           // 步骤2：延迟 2.5 秒后加载原图（让用户明显看到预览效果）
           setTimeout(async () => {
