@@ -320,8 +320,8 @@ export async function POST(req: NextRequest) {
         await emitServer(result.traceId, 'preview-cos-error', { error: e?.message || String(e) });
       }
       
-      // 步骤2：后台异步上传原图（不等待，不阻塞响应）
-      // ⚠️ 重要：这个 Promise 不会被 await，会在后台继续执行
+      // 步骤2：启动原图上传（等待上传开始，但不等待完成）
+      // ⚠️ Vercel Lambda 会在 return 后立即终止，必须确保上传请求已发出
       const originalUploadPromise = (async () => {
         try {
           const exists = await objectExistsInCOS(originalKey);
@@ -338,9 +338,15 @@ export async function POST(req: NextRequest) {
         }
       })();
       
-      // 🚀 不等待原图上传，让它在后台继续执行
-      // Vercel Lambda 会保持函数活跃直到所有异步任务完成（最多到超时时间）
-      void originalUploadPromise;
+      // 🚀 等待原图上传开始（最多 1 秒），确保 COS 请求已发出
+      // 但不等待上传完成，避免阻塞响应
+      await Promise.race([
+        originalUploadPromise,
+        new Promise((resolve) => setTimeout(resolve, 1000))
+      ]).catch(() => {
+        // 忽略错误，上传会继续
+        emitServer(result.traceId, 'original-upload-racing', { note: 'continuing' });
+      });
       
       // 生成原图的 COS URL（即使还没上传完成，前端会轮询重试）
       const originalCosUrl = `${process.env.TENCENT_COS_CDN_DOMAIN || 'https://media.ambelie.com'}/${originalKey}`;
