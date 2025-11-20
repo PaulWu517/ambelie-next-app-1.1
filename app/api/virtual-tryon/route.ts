@@ -5,8 +5,10 @@ import { uploadBufferToCOS, buildTryonKey, objectExistsInCOS } from '@/lib/utils
 // Vercel 配置优化
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// 优先使用香港节点（距离广州云函数最近），降低网络延迟和丢包率
 export const preferredRegion = ['hkg1', 'sin1', 'nrt1'];
-export const maxDuration = 60;
+// Pro 会员可用最长 300 秒，避免 Gemini 慢时被 Vercel 提前终止
+export const maxDuration = 300;
 
 const MODEL = 'gemini-2.5-flash-image';
 const DEBUG = process.env.VIRTUAL_TRYON_DEBUG === '1';

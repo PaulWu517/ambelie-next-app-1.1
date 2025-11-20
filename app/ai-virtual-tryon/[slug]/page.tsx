@@ -358,9 +358,10 @@ const SlugTryOnPage: React.FC = () => {
       const scfTryonUrl = process.env.NEXT_PUBLIC_SCF_TRYON_URL;
 
       let genResp: Response;
+      let usedDirectVercel = false;
 
       if (scfTryonUrl) {
-        // 生产环境：通过腾讯云函数代理，请求体改为 JSON，避免 FormData 解析问题
+        // 生产环境：优先通过腾讯云函数代理（国内用户速度快）
         const userBase64 = await fileToBase64(userFile);
         const payload = {
           traceId,
@@ -371,16 +372,45 @@ const SlugTryOnPage: React.FC = () => {
           prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '')
         };
 
-        genResp = await fetch(scfTryonUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'image/*'
-          },
-          body: JSON.stringify(payload)
-        });
+        try {
+          genResp = await fetch(scfTryonUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'image/*'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          // 云函数返回错误（超时 433、SSL 握手 525、网关 502）时，直连 Vercel 兜底
+          if (!genResp.ok && (genResp.status === 433 || genResp.status === 525 || genResp.status === 502 || genResp.status === 504)) {
+            diag('scf-proxy-failed-fallback-to-vercel', { 
+              scfStatus: genResp.status, 
+              reason: genResp.status === 433 ? 'timeout' : genResp.status === 525 ? 'ssl-failed' : 'gateway-error'
+            });
+            
+            // 直连 Vercel（跨境但有时比云函数代理更稳定）
+            genResp = await fetch('/api/virtual-tryon', {
+              method: 'POST',
+              body: formData,
+              headers: { Accept: 'image/*' }
+            });
+            usedDirectVercel = true;
+            diag('direct-vercel-attempt', { status: genResp.status });
+          }
+        } catch (scfError: any) {
+          // 云函数完全不可达时，直连 Vercel
+          diag('scf-unreachable-fallback-to-vercel', { error: scfError?.message || String(scfError) });
+          genResp = await fetch('/api/virtual-tryon', {
+            method: 'POST',
+            body: formData,
+            headers: { Accept: 'image/*' }
+          });
+          usedDirectVercel = true;
+          diag('direct-vercel-attempt', { status: genResp.status });
+        }
       } else {
-        // 本地开发：仍然直接调用 Vercel /api/virtual-tryon，使用 FormData
+        // 本地开发：直接调用 Vercel /api/virtual-tryon
         genResp = await fetch('/api/virtual-tryon', {
           method: 'POST',
           body: formData,
@@ -389,7 +419,7 @@ const SlugTryOnPage: React.FC = () => {
       }
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
-      diag('server-response-meta', { status: genResp.status, contentType });
+      diag('server-response-meta', { status: genResp.status, contentType, viaDirectVercel: usedDirectVercel });
       let genData: any = null;
       // 优先处理 JSON 响应（包含预览和原图）
       const isJson = !!contentType && contentType.toLowerCase().includes('application/json');
