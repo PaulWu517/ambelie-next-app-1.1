@@ -62,44 +62,102 @@ async function handleVirtualTryon(req: NextRequest) {
   };
   
   try {
-    const form = await req.formData();
-    perf.formParsed = Date.now();
-    
-    const userImage = form.get('user_image');
-    const modelImage = form.get('model_image');
-    const modelImageUrl = (form.get('model_image_url') as string) || '';
-    const measurementsStr = form.get('measurements') as string | null;
-    const extraPrompt = (form.get('prompt') as string) || '';
-    const traceId = (form.get('traceId') as string) || `tryon-${Date.now()}`;
-    const tempStr = form.get('temperature') as string | null;
-    const temperature = tempStr ? Math.max(0, Math.min(2, parseFloat(tempStr))) : parseFloat(process.env.GENERATION_TEMPERATURE || '0');
-    const topPStr = form.get('topP') as string | null;
-    const topKStr = form.get('topK') as string | null;
-    const seedStr = form.get('seed') as string | null;
-    const topP = topPStr ? Math.max(0, Math.min(1, parseFloat(topPStr))) : parseFloat(process.env.GENERATION_TOP_P || '0.98');
-    const topK = topKStr ? Math.max(1, Math.min(50, parseInt(topKStr))) : parseInt(process.env.GENERATION_TOP_K || '20');
-    const seed = seedStr ? parseInt(seedStr) : (process.env.GENERATION_SEED ? parseInt(process.env.GENERATION_SEED) : undefined);
-    if (DEBUG) console.log('[virtual-tryon] generationConfig', { temperature, topP, topK, seed, traceId });
+    const contentType = (req.headers.get('content-type') || '').toLowerCase();
 
-    if (!(userImage instanceof File) || (!modelImage && !modelImageUrl)) {
-      console.warn('[virtual-tryon] missing inputs', { hasUserFile: userImage instanceof File, hasModelFile: modelImage instanceof File, hasModelUrl: !!modelImageUrl });
-      throw { error: 'Missing images: user_image (File) and model_image (File or model_image_url) are required.', status: 400 };
-    }
-
-    if (DEBUG) console.log('[virtual-tryon] input meta', {
-      userType: (userImage as File).type, userSize: (userImage as File).size,
-      modelType: modelImage instanceof File ? (modelImage as File).type : 'via-url',
-      modelUrl: modelImage instanceof File ? undefined : modelImageUrl,
-      modelSize: modelImage instanceof File ? (modelImage as File).size : undefined,
-    });
-
-    const measurements = measurementsStr ? JSON.parse(measurementsStr) : null;
-    if (DEBUG) console.log('[virtual-tryon] measurements', measurements);
-
-    const toBase64 = async (file: File) => Buffer.from(await file.arrayBuffer()).toString('base64');
-    const userBase64 = await toBase64(userImage as File);
+    let userBase64: string;
     let modelBase64: string;
     let modelMime: string;
+    let measurements: any = null;
+    let extraPrompt: string;
+    let traceId: string;
+    let temperature: number;
+    let topP: number;
+    let topK: number;
+    let seed: number | undefined;
+    let userImage: File | null = null;
+    let modelImage: File | null = null;
+    let modelImageUrl: string;
+
+    // 通用工具：File -> base64 字符串
+    const toBase64 = async (file: File) =>
+      Buffer.from(await file.arrayBuffer()).toString('base64');
+
+    if (contentType.includes('application/json')) {
+      // 来自云函数代理的 JSON 请求
+      const json = await req.json();
+      traceId = (json.traceId as string) || `tryon-${Date.now()}`;
+      const mode = (json.mode as string) || 'outfit';
+      const userMime = (json.userMime as string) || 'image/png';
+      const base64 = (json.userBase64 as string) || '';
+      modelImageUrl = (json.modelImageUrl as string) || '';
+      extraPrompt = (json.prompt as string) || '';
+
+      if (!base64 || !modelImageUrl) {
+        console.warn('[virtual-tryon] missing fields in JSON body', { hasBase64: !!base64, hasModelUrl: !!modelImageUrl });
+        throw { error: 'Missing required fields in JSON body', status: 400 };
+      }
+
+      userBase64 = base64;
+      measurements = null;
+
+      const tempStr = process.env.GENERATION_TEMPERATURE || '0';
+      temperature = Math.max(0, Math.min(2, parseFloat(tempStr)));
+      const topPStr = process.env.GENERATION_TOP_P || '0.98';
+      const topKStr = process.env.GENERATION_TOP_K || '20';
+      const seedStr = process.env.GENERATION_SEED || '';
+      topP = Math.max(0, Math.min(1, parseFloat(topPStr)));
+      topK = Math.max(1, Math.min(50, parseInt(topKStr)));
+      seed = seedStr ? parseInt(seedStr) : undefined;
+
+      if (DEBUG) console.log('[virtual-tryon] JSON input meta', {
+        userMime,
+        base64Len: userBase64.length,
+        modelUrl: modelImageUrl,
+        mode,
+      });
+
+      // 继续沿用后面的模型图片下载逻辑
+      userImage = null;
+      modelImage = null;
+
+    } else {
+      // 兼容原有 multipart/form-data 请求
+      const form = await req.formData();
+      perf.formParsed = Date.now();
+      
+      userImage = form.get('user_image') as File | null;
+      modelImage = form.get('model_image') as File | null;
+      modelImageUrl = (form.get('model_image_url') as string) || '';
+      const measurementsStr = form.get('measurements') as string | null;
+      extraPrompt = (form.get('prompt') as string) || '';
+      traceId = (form.get('traceId') as string) || `tryon-${Date.now()}`;
+      const tempStr = form.get('temperature') as string | null;
+      temperature = tempStr ? Math.max(0, Math.min(2, parseFloat(tempStr))) : parseFloat(process.env.GENERATION_TEMPERATURE || '0');
+      const topPStr = form.get('topP') as string | null;
+      const topKStr = form.get('topK') as string | null;
+      const seedStr = form.get('seed') as string | null;
+      topP = topPStr ? Math.max(0, Math.min(1, parseFloat(topPStr))) : parseFloat(process.env.GENERATION_TOP_P || '0.98');
+      topK = topKStr ? Math.max(1, Math.min(50, parseInt(topKStr))) : parseInt(process.env.GENERATION_TOP_K || '20');
+      seed = seedStr ? parseInt(seedStr) : (process.env.GENERATION_SEED ? parseInt(process.env.GENERATION_SEED) : undefined);
+
+      if (!(userImage instanceof File) || (!modelImage && !modelImageUrl)) {
+        console.warn('[virtual-tryon] missing inputs', { hasUserFile: userImage instanceof File, hasModelFile: modelImage instanceof File, hasModelUrl: !!modelImageUrl });
+        throw { error: 'Missing images: user_image (File) and model_image (File or model_image_url) are required.', status: 400 };
+      }
+
+      if (DEBUG) console.log('[virtual-tryon] input meta', {
+        userType: (userImage as File).type, userSize: (userImage as File).size,
+        modelType: modelImage instanceof File ? (modelImage as File).type : 'via-url',
+        modelUrl: modelImage instanceof File ? undefined : modelImageUrl,
+        modelSize: modelImage instanceof File ? (modelImage as File).size : undefined,
+      });
+
+      measurements = measurementsStr ? JSON.parse(measurementsStr) : null;
+      userBase64 = await toBase64(userImage as File);
+    }
+
+    if (DEBUG) console.log('[virtual-tryon] measurements', measurements);
+
     if (modelImage instanceof File) {
       modelBase64 = await toBase64(modelImage as File);
       modelMime = (modelImage as File).type || 'image/jpeg';

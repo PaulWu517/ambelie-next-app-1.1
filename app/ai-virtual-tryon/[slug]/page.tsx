@@ -121,6 +121,24 @@ const SlugTryOnPage: React.FC = () => {
     });
   };
 
+  // File -> base64（不带 data: 前缀，仅 data 部分）
+  const fileToBase64 = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        const commaIndex = result.indexOf(',');
+        if (commaIndex >= 0) {
+          resolve(result.slice(commaIndex + 1));
+        } else {
+          resolve(result);
+        }
+      };
+      reader.onerror = (e) => reject(e);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleDownloadResult = async () => {
     if (!resultUrl) return;
     setIsDownloading(true);
@@ -336,8 +354,39 @@ const SlugTryOnPage: React.FC = () => {
 
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
-      // 使用 Accept: image/* 获取二进制预览，加快响应速度
-      const genResp = await fetch('/api/virtual-tryon', { method: 'POST', body: formData, headers: { Accept: 'image/*' } });
+
+      const scfTryonUrl = process.env.NEXT_PUBLIC_SCF_TRYON_URL;
+
+      let genResp: Response;
+
+      if (scfTryonUrl) {
+        // 生产环境：通过腾讯云函数代理，请求体改为 JSON，避免 FormData 解析问题
+        const userBase64 = await fileToBase64(userFile);
+        const payload = {
+          traceId,
+          mode,
+          userMime: userFile.type || 'image/png',
+          userBase64,
+          modelImageUrl: refUrl,
+          prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '')
+        };
+
+        genResp = await fetch(scfTryonUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'image/*'
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        // 本地开发：仍然直接调用 Vercel /api/virtual-tryon，使用 FormData
+        genResp = await fetch('/api/virtual-tryon', {
+          method: 'POST',
+          body: formData,
+          headers: { Accept: 'image/*' }
+        });
+      }
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType });

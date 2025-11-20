@@ -5,8 +5,11 @@
 在 `ambelie-next-app 1.1/.env.local` 中添加以下环境变量：
 
 ```bash
-# 腾讯云函数 URL（helloworld-1763623809）
+# 原图上传到 COS 的云函数（事件函数根路径）
 NEXT_PUBLIC_SCF_UPLOAD_URL=https://1368352639-5umf4ss4xl.ap-guangzhou.tencentscf.com
+
+# 代理 Vercel /api/virtual-tryon 的云函数 URL（带上路径 /tryon-proxy）
+NEXT_PUBLIC_SCF_TRYON_URL=https://1368352639-5umf4ss4xl.ap-guangzhou.tencentscf.com/tryon-proxy
 ```
 
 ## 获取云函数 URL 的步骤
@@ -15,16 +18,21 @@ NEXT_PUBLIC_SCF_UPLOAD_URL=https://1368352639-5umf4ss4xl.ap-guangzhou.tencentscf
 2. 找到云函数 `nextjs_demo-1763611229`
 3. 在"触发管理"标签中，查看"函数 URL"
 4. 复制完整的 URL（格式：`https://xxxxxx.ap-guangzhou.tencentscf.com`）
-5. 将 URL 填入 `.env.local` 的 `NEXT_PUBLIC_SCF_UPLOAD_URL`
+5. 将 URL 填入 `.env.local` 的：
+   - `NEXT_PUBLIC_SCF_UPLOAD_URL`（不带路径）
+   - `NEXT_PUBLIC_SCF_TRYON_URL`（在后面加上 `/tryon-proxy`）
 
 ## 示例
 
 ```bash
 # 你的云函数 URL（从控制台复制）
-NEXT_PUBLIC_SCF_UPLOAD_URL=https://1368352639-hz4wdf78sx.ap-guangzhou.tencentscf.com
+NEXT_PUBLIC_SCF_UPLOAD_URL=https://1368352639-5umf4ss4xl.ap-guangzhou.tencentscf.com
+NEXT_PUBLIC_SCF_TRYON_URL=https://1368352639-5umf4ss4xl.ap-guangzhou.tencentscf.com/tryon-proxy
 ```
 
-**注意**：不需要添加 `/api/upload-to-cos` 路径，直接使用函数 URL 根路径即可。
+**注意**：
+- 上传原图：使用根路径（`NEXT_PUBLIC_SCF_UPLOAD_URL`）
+- 代理试衣：在 URL 后加 `/tryon-proxy`（`NEXT_PUBLIC_SCF_TRYON_URL`）
 
 ## 部署云函数
 
