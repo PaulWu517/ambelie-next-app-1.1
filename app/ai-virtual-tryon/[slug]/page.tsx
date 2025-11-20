@@ -423,12 +423,50 @@ const SlugTryOnPage: React.FC = () => {
           // 立即加载预览图
           await loadAndShowPreview();
           
-          // 步骤2：延迟 2.5 秒后加载原图（让用户明显看到预览效果）
+          // 步骤2：立即调用云函数上传原图到 COS（不阻塞 UI）
+          if (genData.originalBase64 && genData.originalKey) {
+            (async () => {
+              try {
+                diag('scf-upload-start', { 
+                  key: genData.originalKey,
+                  size: Math.round(genData.originalBase64.length * 0.75 / 1024) + 'KB'
+                });
+                
+                // 调用腾讯云函数上传原图
+                const scfUrl = process.env.NEXT_PUBLIC_SCF_UPLOAD_URL || 'https://1368352639-5umf4ss4xl.ap-guangzhou.tencentscf.com';
+                const uploadResp = await fetch(scfUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    traceId: genData.traceId,
+                    base64: genData.originalBase64,
+                    mime: genData.mime,
+                    key: genData.originalKey
+                  })
+                });
+                
+                if (uploadResp.ok) {
+                  const uploadResult = await uploadResp.json();
+                  diag('scf-upload-success', { 
+                    url: uploadResult.url,
+                    duration: uploadResult.duration,
+                    cached: uploadResult.cached
+                  });
+                } else {
+                  diag('scf-upload-failed', { status: uploadResp.status });
+                }
+              } catch (e: any) {
+                diag('scf-upload-error', e?.message || String(e));
+              }
+            })();
+          }
+          
+          // 步骤3：延迟 2.5 秒后加载原图（让用户明显看到预览效果）
           setTimeout(async () => {
             try {
               let originalDataUrl: string | null = null;
               let loadAttempts = 0;
-              const maxAttempts = 5; // 最多尝试 5 次（10 秒）
+              const maxAttempts = 8; // 最多尝试 8 次（16 秒），给云函数上传留足时间
               
               // 优先从 COS URL 加载原图（带重试）
               if (genData.originalUrl) {
@@ -448,8 +486,8 @@ const SlugTryOnPage: React.FC = () => {
                       diag('original-cos-success', { size: blob.size, attempts: loadAttempts + 1 });
                       break;
                     } else if (resp.status === 404 && loadAttempts < maxAttempts - 1) {
-                      // 404 说明还在上传中，等待 2 秒后重试
-                      diag('original-cos-404-retry', { attempt: loadAttempts + 1 });
+                      // 404 说明云函数还在上传中，等待 2 秒后重试
+                      diag('original-cos-404-retry', { attempt: loadAttempts + 1, note: 'scf-uploading' });
                       await new Promise(resolve => setTimeout(resolve, 2000));
                       loadAttempts++;
                     } else {
@@ -468,10 +506,10 @@ const SlugTryOnPage: React.FC = () => {
                 }
               }
               
-              // 兜底：使用 Base64
-              if (!originalDataUrl && genData.originalFallback) {
-                originalDataUrl = genData.originalFallback;
-                diag('using-original-fallback');
+              // 兜底：使用 Base64（直接显示，不再上传）
+              if (!originalDataUrl && genData.originalBase64) {
+                originalDataUrl = `data:${genData.mime};base64,${genData.originalBase64}`;
+                diag('using-original-base64-fallback');
               }
               
               // 替换为原图
