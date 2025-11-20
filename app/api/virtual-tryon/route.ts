@@ -66,6 +66,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
     let userBase64: string;
     let modelBase64: string;
+    let userMime: string;
     let modelMime: string;
     let measurements: any = null;
     let extraPrompt: string;
@@ -87,7 +88,7 @@ async function handleVirtualTryon(req: NextRequest) {
       const json = await req.json();
       traceId = (json.traceId as string) || `tryon-${Date.now()}`;
       const mode = (json.mode as string) || 'outfit';
-      const userMime = (json.userMime as string) || 'image/png';
+      userMime = (json.userMime as string) || 'image/png';
       const base64 = (json.userBase64 as string) || '';
       modelImageUrl = (json.modelImageUrl as string) || '';
       extraPrompt = (json.prompt as string) || '';
@@ -154,6 +155,7 @@ async function handleVirtualTryon(req: NextRequest) {
 
       measurements = measurementsStr ? JSON.parse(measurementsStr) : null;
       userBase64 = await toBase64(userImage as File);
+      userMime = (userImage as File).type || 'image/jpeg';
     }
 
     if (DEBUG) console.log('[virtual-tryon] measurements', measurements);
@@ -207,8 +209,8 @@ async function handleVirtualTryon(req: NextRequest) {
         {
           role: 'user',
           parts: [
-            { inline_data: { mime_type: ((userImage as File).type || 'image/jpeg'), data: userBase64 } },
-            { inline_data: { mime_type: (modelImage instanceof File ? ((modelImage as File).type || 'image/jpeg') : (modelMime || 'image/jpeg')), data: modelBase64 } },
+            { inline_data: { mime_type: (userMime || 'image/jpeg'), data: userBase64 } },
+            { inline_data: { mime_type: (modelMime || 'image/jpeg'), data: modelBase64 } },
             { text: prompt }
           ]
         }
