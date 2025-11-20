@@ -436,8 +436,30 @@ const SlugTryOnPage: React.FC = () => {
           setIsProcessing(false);
           return;
         }
-        
-        // 🔥 最优方案：从 COS 加载预览图和原图（传输量最小）
+
+        // ✅ 香港/美国 SCF 直连 Gemini：不上传 COS，直接返回 originalBase64
+        if (!genData.previewUrl && !genData.previewFallback && genData.originalBase64) {
+          try {
+            const mime = genData.mime || 'image/png';
+            const originalDataUrl = `data:${mime};base64,${genData.originalBase64}`;
+            baseResultRef.current = originalDataUrl;
+            setResultImgLoading(true);
+            setIsResultPending(true);
+            const urlType = 'dataurl';
+            emitUI('before-set-url', { urlKind: 'original-direct-from-scf', type: urlType, length: originalDataUrl.length });
+            setResultUrl(originalDataUrl);
+            setShowResult(true);
+            diag('direct-scf-original-shown');
+          } catch (e: any) {
+            diag('direct-scf-original-error', e?.message || String(e));
+          }
+          if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+          setProcessingProgress(100);
+          setIsProcessing(false);
+          return;
+        }
+
+        // 🔥 默认方案：从 COS 加载预览图和原图（传输量最小）
         if (genData.previewUrl || genData.previewFallback) {
           diag('dual-url-received', { 
             hasPreviewUrl: !!genData.previewUrl,
