@@ -421,10 +421,48 @@ const SlugTryOnPage: React.FC = () => {
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType, viaDirectVercel: usedDirectVercel });
       let genData: any = null;
-      // 优先处理 JSON 响应（包含预览和原图）
-      const isJson = !!contentType && contentType.toLowerCase().includes('application/json');
-      const isImage = !!contentType && contentType.toLowerCase().startsWith('image/');
-      if (genResp.ok && isJson) {
+      // Content-Type 兼容性判断：
+      // - SCF 直返图片时可能是 "application/json, image/png" 这种复合值
+      // - 只要包含 image/* 就优先按图片处理，避免错误地走 JSON 分支
+      const ct = (contentType || '').toLowerCase();
+      const hasImage = ct.includes('image/');
+      const hasJson = ct.includes('application/json');
+      const isMixedJsonImage = hasImage && hasJson;
+      const isImage = hasImage;
+      const isJson = !isImage && hasJson;
+
+      if (genResp.ok && isImage) {
+        // 备用：处理二进制图片响应（兼容云函数 / 旧版本）
+        diag('legacy-image-response', { size: 'unknown', contentType, mixed: isMixedJsonImage });
+
+        let dataUrl: string;
+
+        if (isMixedJsonImage) {
+          // SCF 直返图片：实际 body 是纯 base64 文本（iVBORw0KG...），需要手动拼成 DataURL
+          const base64Text = await genResp.text();
+          const mime =
+            ct.includes('image/png') ? 'image/png'
+              : ct.includes('image/jpeg') || ct.includes('image/jpg') ? 'image/jpeg'
+              : 'image/png';
+          dataUrl = `data:${mime};base64,${base64Text}`;
+        } else {
+          // 纯图片响应：常规 blob -> DataURL
+          const blob = await genResp.blob();
+          dataUrl = await blobToDataUrl(blob);
+        }
+
+        setResultImgLoading(true);
+        setIsResultPending(false);
+        // 只记录 URL 类型和长度,不打印完整内容
+        emitUI('before-set-url', { urlKind: 'legacy-image', type: 'dataurl', length: dataUrl.length });
+        setResultUrl(dataUrl);
+        setShowResult(true);
+        baseResultRef.current = dataUrl;
+        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+        setProcessingProgress(100);
+        setIsProcessing(false);
+        genData = { dataUrl }; // 兼容后续逻辑
+      } else if (genResp.ok && isJson) {
         try {
           genData = await genResp.json();
         } catch (e: any) {
@@ -641,22 +679,6 @@ const SlugTryOnPage: React.FC = () => {
           // 已完成渐进式加载，跳过后续处理
           return;
         }
-      } else if (genResp.ok && isImage) {
-        // 备用：处理二进制图片响应（兼容旧版本）
-        diag('legacy-image-response', { size: 'unknown' });
-        const blob = await genResp.blob();
-        const dataUrl = await blobToDataUrl(blob);
-        setResultImgLoading(true);
-        setIsResultPending(false);
-        // 只记录 URL 类型和长度,不打印完整内容
-        emitUI('before-set-url', { urlKind: 'legacy-image', type: 'dataurl', length: dataUrl.length });
-        setResultUrl(dataUrl);
-        setShowResult(true);
-        baseResultRef.current = dataUrl;
-        if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
-        setProcessingProgress(100);
-        setIsProcessing(false);
-        genData = { dataUrl }; // 兼容后续逻辑
       } else {
         try {
           const txt = await genResp.text();
