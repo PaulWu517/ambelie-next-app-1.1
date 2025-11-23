@@ -355,12 +355,26 @@ const SlugTryOnPage: React.FC = () => {
       console.log('[slug tryon] posting', { mode, refUrl, prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '') });
       diag('api-call');
 
-      const scfTryonUrl = process.env.NEXT_PUBLIC_SCF_TRYON_URL;
+      // 优先从环境变量获取 URL 配置
+      const envDirectUrl = process.env.NEXT_PUBLIC_SCF_DIRECT_URL;
+      const envBridgeUrl = process.env.NEXT_PUBLIC_SCF_BRIDGE_URL;
+      const envLegacyUrl = process.env.NEXT_PUBLIC_SCF_TRYON_URL;
+
+      // 确定有效的桥接地址（广州）：
+      // 1. 优先用明确的 BRIDGE_URL
+      // 2. 如果没有，尝试用旧的 TRYON_URL (但前提是它不等于直连地址，避免配置错误)
+      let finalBridgeUrl = envBridgeUrl;
+      if (!finalBridgeUrl && envLegacyUrl && envLegacyUrl !== envDirectUrl) {
+        finalBridgeUrl = envLegacyUrl;
+      }
+
+      // 确定初始目标地址：有直连先走直连，没有走桥接
+      let targetUrl = envDirectUrl || finalBridgeUrl;
 
       let genResp: Response;
       let usedDirectVercel = false;
 
-      if (scfTryonUrl) {
+      if (targetUrl) {
         // 生产环境：优先通过腾讯云函数代理（国内用户速度快）
         const userBase64 = await fileToBase64(userFile);
         const payload = {
@@ -373,41 +387,51 @@ const SlugTryOnPage: React.FC = () => {
         };
 
         try {
-          genResp = await fetch(scfTryonUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'image/*'
-            },
-            body: JSON.stringify(payload)
-          });
-
-          // 云函数返回错误（超时 433、SSL 握手 525、网关 502）时，直连 Vercel 兜底
-          if (!genResp.ok && (genResp.status === 433 || genResp.status === 525 || genResp.status === 502 || genResp.status === 504)) {
-            diag('scf-proxy-failed-fallback-to-vercel', { 
-              scfStatus: genResp.status, 
-              reason: genResp.status === 433 ? 'timeout' : genResp.status === 525 ? 'ssl-failed' : 'gateway-error'
-            });
-            
-            // 直连 Vercel（跨境但有时比云函数代理更稳定）
-            genResp = await fetch('/api/virtual-tryon', {
+          diag('attempting-scf', { url: targetUrl, isDirect: targetUrl === envDirectUrl });
+          
+          // 设置一个较短的超时给直连尝试（例如 5秒），以便快速失败切换
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), targetUrl === envDirectUrl ? 5000 : 300000);
+          
+          try {
+            genResp = await fetch(targetUrl, {
               method: 'POST',
-              body: formData,
-              headers: { Accept: 'image/*' }
+              headers: {
+                'Content-Type': 'application/json',
+                Accept: 'image/*'
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal
             });
-            usedDirectVercel = true;
-            diag('direct-vercel-attempt', { status: genResp.status });
+            clearTimeout(timeoutId);
+          } catch (e) {
+            clearTimeout(timeoutId);
+            throw e; // 抛出给外层 catch 处理降级
+          }
+
+          // 云函数返回错误（超时 433、SSL 握手 525、网关 502）时，尝试降级
+          if (!genResp.ok && (genResp.status === 433 || genResp.status === 525 || genResp.status === 502 || genResp.status === 504)) {
+             throw new Error(`SCF returned ${genResp.status}`);
           }
         } catch (scfError: any) {
-          // 云函数完全不可达时，直连 Vercel
-          diag('scf-unreachable-fallback-to-vercel', { error: scfError?.message || String(scfError) });
-          genResp = await fetch('/api/virtual-tryon', {
-            method: 'POST',
-            body: formData,
-            headers: { Accept: 'image/*' }
-          });
-          usedDirectVercel = true;
-          diag('direct-vercel-attempt', { status: genResp.status });
+          // 第一层降级：如果刚才用的是直连 (Direct)，现在尝试桥接 (Bridge)
+          // 只要有明确的 bridgeUrl，即使 scfError 是任何网络错误，都尝试降级
+          if (targetUrl === envDirectUrl && finalBridgeUrl) {
+             diag('scf-direct-failed-fallback-to-bridge', { error: scfError?.message || String(scfError), bridgeUrl: finalBridgeUrl });
+             try {
+               genResp = await fetch(finalBridgeUrl, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json', Accept: 'image/*' },
+                 body: JSON.stringify(payload)
+               });
+             } catch (bridgeError: any) {
+               // 桥接也失败，继续抛出，走 Vercel 兜底
+               diag('scf-bridge-failed', { error: bridgeError?.message });
+               throw bridgeError;
+             }
+          } else {
+             throw scfError;
+          }
         }
       } else {
         // 本地开发：直接调用 Vercel /api/virtual-tryon
@@ -464,7 +488,27 @@ const SlugTryOnPage: React.FC = () => {
         genData = { dataUrl }; // 兼容后续逻辑
       } else if (genResp.ok && isJson) {
         try {
-          genData = await genResp.json();
+          const rawText = await genResp.text();
+          // 【补丁逻辑】如果 Content-Type 是 JSON 但内容像是 Base64 图片（iVBOR...），则强制按图片处理
+          // 这是因为云函数桥接时，API 网关可能会强制把 Content-Type 改为 application/json
+          if (rawText.startsWith('iVBORw0KGg') || rawText.startsWith('/9j/')) {
+            diag('json-content-is-actually-base64-image', { length: rawText.length });
+            const mime = rawText.startsWith('/9j/') ? 'image/jpeg' : 'image/png';
+            const dataUrl = `data:${mime};base64,${rawText}`;
+            
+            setResultImgLoading(true);
+            setIsResultPending(false);
+            emitUI('before-set-url', { urlKind: 'legacy-image-forced', type: 'dataurl', length: dataUrl.length });
+            setResultUrl(dataUrl);
+            setShowResult(true);
+            baseResultRef.current = dataUrl;
+            if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
+            setProcessingProgress(100);
+            setIsProcessing(false);
+            return;
+          }
+          
+          genData = JSON.parse(rawText);
         } catch (e: any) {
           diag('server-response-json-error', e?.message || String(e));
           if (progressIntervalRef.current) { try { window.clearInterval(progressIntervalRef.current); } catch {} progressIntervalRef.current = null; }
