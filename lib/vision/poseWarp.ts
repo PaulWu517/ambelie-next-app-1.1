@@ -97,10 +97,10 @@ function getWorker() {
         } else if (success) {
           // Simple success without buffer (e.g. init)
           p.resolve(true);
-        } else {
+    } else {
           p.reject(new Error(error || 'Worker failed'));
-        }
       }
+    }
     };
     _worker.onerror = (e) => {
       console.error('[poseWarp] Worker error', e);
