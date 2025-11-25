@@ -36,7 +36,8 @@ async function loadPoseLandmarker() {
     },
     runningMode: 'IMAGE',
     numPoses: 1,
-    options: { minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5 },
+    minPoseDetectionConfidence: 0.5,
+    minPosePresenceConfidence: 0.5,
   });
   return _pose;
 }
