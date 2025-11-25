@@ -882,7 +882,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 80px 10px 40px; /* increase mobile top padding for better visual spacing */
+    padding: 20px 10px 40px; /* Reduced top padding to remove whitespace */
   }
   
   .mainContent {
@@ -910,6 +910,7 @@
   
   .leftPanel, .centerPanel {
     padding: 20px;
+    scroll-margin-top: 20px; /* Add spacing after scroll jump */
   }
   
   .clothingGrid {
@@ -934,7 +935,7 @@
   }
   
   .resultArea {
-    height: 520px; /* keep mobile comfortable height */
+    height: 600px; /* increased mobile height for better view */
   }
 }
 
@@ -953,7 +954,7 @@
   }
   
   .resultArea {
-    height: 420px; /* smaller height for small phones */
+    height: 500px; /* increased height for small phones */
   }
 }
 

@@ -482,76 +482,110 @@ const SlugTryOnPage: React.FC = () => {
       // 确定初始目标地址：有直连先走直连，没有走桥接
       let targetUrl = envDirectUrl || finalBridgeUrl;
 
-      let genResp: Response;
+      let genResp: Response | null = null;
       let usedDirectVercel = false;
-
-      if (targetUrl) {
-        // 生产环境：优先通过腾讯云函数代理（国内用户速度快）
-        const userBase64 = await fileToBase64(userFile);
-        const payload = {
-          traceId,
-          mode,
-          userMime: userFile.type || 'image/png',
-          userBase64,
-          modelImageUrl: refUrl,
-          prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '')
-        };
-
+      
+      // 自动重试机制：针对 Gemini API 500 错误进行最多 2 次重试
+      for (let attempt = 0; attempt <= 2; attempt++) {
         try {
-          diag('attempting-scf', { url: targetUrl, isDirect: targetUrl === envDirectUrl });
-          
-          // 设置一个较短的超时给直连尝试（例如 5秒），以便快速失败切换
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), targetUrl === envDirectUrl ? 5000 : 300000);
-          
-          try {
-            genResp = await fetch(targetUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Accept: 'image/*'
-              },
-              body: JSON.stringify(payload),
-              signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-          } catch (e) {
-            clearTimeout(timeoutId);
-            throw e; // 抛出给外层 catch 处理降级
-          }
+          if (targetUrl) {
+            // 生产环境：优先通过腾讯云函数代理（国内用户速度快）
+            const userBase64 = await fileToBase64(userFile);
+            const payload = {
+              traceId,
+              mode,
+              userMime: userFile.type || 'image/png',
+              userBase64,
+              modelImageUrl: refUrl,
+              prompt: mode === 'outfit' ? (fashionPrompt || '') : (modelPrompt || '')
+            };
 
-          // 云函数返回错误（超时 433、SSL 握手 525、网关 502）时，尝试降级
-          if (!genResp.ok && (genResp.status === 433 || genResp.status === 525 || genResp.status === 502 || genResp.status === 504)) {
-             throw new Error(`SCF returned ${genResp.status}`);
-          }
-        } catch (scfError: any) {
-          // 第一层降级：如果刚才用的是直连 (Direct)，现在尝试桥接 (Bridge)
-          // 只要有明确的 bridgeUrl，即使 scfError 是任何网络错误，都尝试降级
-          if (targetUrl === envDirectUrl && finalBridgeUrl) {
-             diag('scf-direct-failed-fallback-to-bridge', { error: scfError?.message || String(scfError), bridgeUrl: finalBridgeUrl });
-             try {
-               genResp = await fetch(finalBridgeUrl, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json', Accept: 'image/*' },
-                 body: JSON.stringify(payload)
-               });
-             } catch (bridgeError: any) {
-               // 桥接也失败，继续抛出，走 Vercel 兜底
-               diag('scf-bridge-failed', { error: bridgeError?.message });
-               throw bridgeError;
-             }
+            try {
+              diag(`attempting-scf-try-${attempt}`, { url: targetUrl, isDirect: targetUrl === envDirectUrl });
+              
+              // 设置一个较短的超时给直连尝试（例如 5秒），以便快速失败切换
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), targetUrl === envDirectUrl ? 5000 : 300000);
+              
+              try {
+                genResp = await fetch(targetUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'image/*'
+                  },
+                  body: JSON.stringify(payload),
+                  signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+              } catch (e) {
+                clearTimeout(timeoutId);
+                throw e; // 抛出给外层 catch 处理降级
+              }
+
+              // 云函数返回错误（超时 433、SSL 握手 525、网关 502、超时 504、内部错误 500）时，尝试降级
+              if (!genResp.ok && (genResp.status === 433 || genResp.status === 525 || genResp.status === 502 || genResp.status === 504 || genResp.status === 500)) {
+                 throw new Error(`SCF returned ${genResp.status}`);
+              }
+            } catch (scfError: any) {
+              // 第一层降级：如果刚才用的是直连 (Direct)，现在尝试桥接 (Bridge)
+              // 只要有明确的 bridgeUrl，即使 scfError 是任何网络错误，都尝试降级
+              if (targetUrl === envDirectUrl && finalBridgeUrl) {
+                 diag('scf-direct-failed-fallback-to-bridge', { error: scfError?.message || String(scfError), bridgeUrl: finalBridgeUrl });
+                 try {
+                   genResp = await fetch(finalBridgeUrl, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json', Accept: 'image/*' },
+                     body: JSON.stringify(payload)
+                   });
+                 } catch (bridgeError: any) {
+                   // 桥接也失败，继续抛出，走 Vercel 兜底
+                   diag('scf-bridge-failed', { error: bridgeError?.message });
+                   throw bridgeError;
+                 }
+              } else {
+                 throw scfError;
+              }
+            }
           } else {
-             throw scfError;
+            // 本地开发：直接调用 Vercel /api/virtual-tryon
+            genResp = await fetch('/api/virtual-tryon', {
+              method: 'POST',
+              body: formData,
+              headers: { Accept: 'image/*' }
+            });
           }
+          
+          // 检查是否为 500 Gemini API Error，如果是则抛出以触发重试
+          if (genResp && !genResp.ok && genResp.status === 500) {
+             // 读取 body 看是否是 Gemini Error
+             const clone = genResp.clone();
+             const txt = await clone.text();
+             if (txt.includes('Gemini API error')) {
+                throw new Error('Gemini API error 500');
+             }
+          }
+          
+          // 如果成功或非 500 错误，跳出循环
+          break; 
+          
+        } catch (err: any) {
+          const isLastAttempt = attempt === 2;
+          diag('retry-loop-error', { attempt, error: err?.message, isLast: isLastAttempt });
+          
+          if (isLastAttempt) {
+             // 最后一次尝试也失败，抛出异常让后续逻辑处理（显示错误）
+             // 如果 genResp 存在（比如最后一次是 500），则保留 genResp 让后续逻辑读取错误信息
+             if (genResp && genResp.status === 500) break; 
+             throw err;
+          }
+          // 等待 1.5s 后重试
+          await new Promise(r => setTimeout(r, 1500));
         }
-      } else {
-        // 本地开发：直接调用 Vercel /api/virtual-tryon
-        genResp = await fetch('/api/virtual-tryon', {
-          method: 'POST',
-          body: formData,
-          headers: { Accept: 'image/*' }
-        });
       }
+      
+      if (!genResp) throw new Error('No response received');
+
       // 记录响应元信息
       const contentType = genResp.headers.get('Content-Type') || genResp.headers.get('content-type');
       diag('server-response-meta', { status: genResp.status, contentType, viaDirectVercel: usedDirectVercel });
