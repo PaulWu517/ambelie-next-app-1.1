@@ -2555,8 +2555,8 @@ main.cart-page {
     color: var(--brand-black);
     font-family: var(--font-body);
     padding: 60px 0 40px;
-    margin-top: 80px;
-    border-top: none; /* 删除多余的顶部边框 */
+    margin-top: 0; /* 移除顶部边距，避免产生不可控的空白 */
+    border-top: none;
 }
 
 .footer-divider {

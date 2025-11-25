@@ -882,7 +882,7 @@
 
 @media (max-width: 768px) {
   .container {
-    padding: 20px 10px 40px; /* Reduced top padding to remove whitespace */
+    padding: 20px 10px 40px; /* Reverted to reasonable padding */
   }
   
   .mainContent {

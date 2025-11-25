@@ -100,6 +100,7 @@ const SlugTryOnPage: React.FC = () => {
   
   // Mobile Editor State
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [activeEditPart, setActiveEditPart] = useState<string>('shoulder');
   const [tempWarpControls, setTempWarpControls] = useState(defaultWarp);
   const [isSliderDragging, setIsSliderDragging] = useState(false); // Track drag state for tooltip visibility
@@ -1013,6 +1014,7 @@ const SlugTryOnPage: React.FC = () => {
     if (!resultUrl) return;
     setTempWarpControls({ ...warpControls });
     setIsEditorOpen(true);
+    setIsEditorLoading(true);
     document.body.style.overflow = 'hidden';
     
     // Init session next tick to allow canvas to render
@@ -1029,7 +1031,11 @@ const SlugTryOnPage: React.FC = () => {
           await session.warp(warpControls);
         } catch (e) {
           console.warn('Failed to init warp session', e);
+        } finally {
+          setIsEditorLoading(false);
         }
+      } else {
+        setIsEditorLoading(false);
       }
     }, 100);
   };
@@ -1394,8 +1400,14 @@ const SlugTryOnPage: React.FC = () => {
             </button>
           </div>
           <div className={styles.mobileEditorImageArea}>
+             {isEditorLoading && (
+               <div className={styles.mobileEditorLoading}>
+                 <div className={styles.spinner} style={{ marginBottom: 12 }}></div>
+                 <span>Loading...</span>
+               </div>
+             )}
              {/* Use Canvas for fast updates, img for initial loading/fallback if needed */}
-             <canvas ref={editorCanvasRef} className={styles.mobileEditorImage} style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+             <canvas ref={editorCanvasRef} className={styles.mobileEditorImage} style={{ objectFit: 'contain', width: '100%', height: '100%', opacity: isEditorLoading ? 0 : 1, transition: 'opacity 0.2s' }} />
           </div>
           <div className={styles.mobileEditorControls}>
              <div className={styles.mobilePartSelector}>
