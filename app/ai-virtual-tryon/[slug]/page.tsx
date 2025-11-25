@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { applyPoseWarpToDataUrl } from '@/lib/vision/poseWarp';
+import { applyPoseWarpToDataUrl, initWarpSession } from '@/lib/vision/poseWarp';
 import { detectPoseLandmarksNormalized } from '@/lib/vision/poseWarp';
 import { useParams, useSearchParams } from 'next/navigation';
 import { compressImage } from '@/lib/utils/imageCompression';
@@ -97,6 +97,36 @@ const SlugTryOnPage: React.FC = () => {
   }, []);
   const defaultWarp = { hip: 0, waist: 0, shoulder: 0, thigh: 0, upper_arm: 0, forearm: 0, calf: 0 };
   const [warpControls, setWarpControls] = useState(defaultWarp);
+  
+  // Mobile Editor State
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [activeEditPart, setActiveEditPart] = useState<string>('shoulder');
+  const [tempWarpControls, setTempWarpControls] = useState(defaultWarp);
+  const [isSliderDragging, setIsSliderDragging] = useState(false); // Track drag state for tooltip visibility
+  
+  // Persistent worker session for desktop editor
+  // Modified to support request queueing to prevent race conditions
+  const desktopSessionRef = useRef<{ 
+    warp: (c: any) => void, 
+    cleanup: () => void 
+  } | null>(null);
+  const desktopCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDesktopSessionReady, setIsDesktopSessionReady] = useState(false);
+
+  // Persistent worker session for mobile editor
+  const warpSessionRef = useRef<{ warp: (c: any) => Promise<void>, cleanup: () => void } | null>(null);
+  const editorCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isWarpingRef = useRef(false); // prevent overlapping warps
+
+  const bodyParts = [
+    { key: 'shoulder', label: 'Shoulder' },
+    { key: 'upper_arm', label: 'Upper Arm' },
+    { key: 'waist', label: 'Waist' },
+    { key: 'forearm', label: 'Forearm' },
+    { key: 'hip', label: 'Hip' },
+    { key: 'thigh', label: 'Thigh' },
+    { key: 'calf', label: 'Calf' },
+  ];
   const warpDebounce = useRef<number | null>(null);
   const warpPreviewDebounce = useRef<number | null>(null);
   const warpFinalDebounce = useRef<number | null>(null);
@@ -255,6 +285,78 @@ const SlugTryOnPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Desktop Session Management
+  useEffect(() => {
+    const isMobileDetect = typeof window !== 'undefined' && window.innerWidth <= 768;
+    if (isMobileDetect) return;
+
+    // Check if we have base image and canvas
+    if (baseResultRef.current && desktopCanvasRef.current && !desktopSessionRef.current) {
+      const initSession = async () => {
+        try {
+          // Ensure landmarks are available
+          let lms = poseLmsRef.current;
+          if (!lms && baseResultRef.current) {
+             lms = await detectPoseLandmarksNormalized(baseResultRef.current);
+             if (lms) poseLmsRef.current = lms;
+          }
+          
+          // If still no lms (detection failed), allow initWarpSession to try internally or fail gracefully
+          // Note: initWarpSession also tries detection if not provided.
+          
+          if (desktopCanvasRef.current) {
+             const session = await initWarpSession(baseResultRef.current!, desktopCanvasRef.current, { 
+               maxDimension: 640, 
+               landmarksNormalized: lms || undefined 
+             });
+             
+             // Create a serialized queue wrapper around the session
+             let pendingControls: any | null = null;
+             let isProcessing = false;
+             
+             const processQueue = async () => {
+               if (isProcessing || !pendingControls) return;
+               
+               // Grab latest controls and clear pending
+               const controlsToApply = pendingControls;
+               pendingControls = null;
+               isProcessing = true;
+               
+               try {
+                 await session.warp(controlsToApply);
+               } catch (err) {
+                 console.warn('Desktop warp failed', err);
+               } finally {
+                 isProcessing = false;
+                 // If new requests came in while processing, process them immediately
+                 if (pendingControls) {
+                   processQueue();
+                 }
+               }
+             };
+             
+             const queuedSession = {
+               warp: (controls: any) => {
+                 pendingControls = controls;
+                 processQueue();
+               },
+               cleanup: session.cleanup
+             };
+
+             desktopSessionRef.current = queuedSession;
+             setIsDesktopSessionReady(true);
+             // Initial render to sync visual state
+             queuedSession.warp(warpControlsRef.current);
+          }
+        } catch (e) {
+          console.warn('[desktop session] init failed', e);
+        }
+      };
+      
+      initSession();
+    }
+  }, [resultUrl, isEditorOpen]); // resultUrl changes when baseResultRef changes effectively
+
   // Removed: goToBeta (no longer needed per design)
 
   const handleTryOn = async () => {
@@ -270,6 +372,14 @@ const SlugTryOnPage: React.FC = () => {
     setIsResultPending(true);
     emitUI('tryon-start', { pending: true, resultUrl });
     setIsProcessing(true);
+    
+    // Reset desktop session state for new generation
+    setIsDesktopSessionReady(false);
+    if (desktopSessionRef.current) {
+      desktopSessionRef.current.cleanup();
+      desktopSessionRef.current = null;
+    }
+
     setResultUrl(null);
     setShowResult(false);
     baseResultRef.current = null;
@@ -295,6 +405,7 @@ const SlugTryOnPage: React.FC = () => {
     setProcessingProgress(0);
     diag('request-start', { mode, refUrl });
     
+    // Removed fragile nested timeout logic from handleTryOn
     // Mobile only: auto-scroll to Try-On Result to reveal progress UI
     setTimeout(() => {
       try {
@@ -813,7 +924,8 @@ const SlugTryOnPage: React.FC = () => {
     const mySeq = ++applySeq.current;
     try {
       const controls = warpControlsRef.current;
-      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { showKeypoints: false, maxDimension: 640, landmarksNormalized: poseLmsRef.current || undefined });
+      // 降级预览尺寸以提升速度：480px，配合 Web Worker 实现丝滑拖动
+      const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, controls, { showKeypoints: false, maxDimension: 480, landmarksNormalized: poseLmsRef.current || undefined });
       if (mySeq === applySeq.current) {
         setResultUrl(adjusted);
       }
@@ -863,14 +975,103 @@ const SlugTryOnPage: React.FC = () => {
     }
   };
 
-  const handleControlChange = (key: keyof typeof warpControls, value: number) => {
-    setWarpControls(prev => ({ ...prev, [key]: value }));
+  const handleOpenEditor = async () => {
+    if (!resultUrl) return;
+    setTempWarpControls({ ...warpControls });
+    setIsEditorOpen(true);
+    document.body.style.overflow = 'hidden';
+    
+    // Init session next tick to allow canvas to render
+    setTimeout(async () => {
+      if (editorCanvasRef.current && resultUrl) {
+        try {
+          // Use higher dimension (640px) now that we have optimized mesh warping
+          const session = await initWarpSession(resultUrl, editorCanvasRef.current, { 
+            maxDimension: 640, 
+            landmarksNormalized: poseLmsRef.current || undefined 
+          });
+          warpSessionRef.current = session;
+          // Initial warp to show current state
+          await session.warp(warpControls);
+        } catch (e) {
+          console.warn('Failed to init warp session', e);
+        }
+      }
+    }, 100);
+  };
+
+  const handleCloseEditor = async (save: boolean) => {
+    // Cleanup session
+    if (warpSessionRef.current) {
+      warpSessionRef.current.cleanup();
+      warpSessionRef.current = null;
+    }
+
+    // Clear any pending debounce timers to prevent overwriting the final state
     if (warpPreviewDebounce.current) window.clearTimeout(warpPreviewDebounce.current);
     if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
-    // 预览快速响应
-    warpPreviewDebounce.current = window.setTimeout(applyWarpPreviewFromControls, 60);
-    // 高清结果稍后覆盖
-    warpFinalDebounce.current = window.setTimeout(applyWarpFinalFromControls, 300);
+
+    if (!save) {
+      setWarpControls(tempWarpControls);
+      if (baseResultRef.current) {
+        try {
+          // Force revert visual immediately
+          const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, tempWarpControls, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
+          setResultUrl(adjusted);
+        } catch (e) { console.warn('revert failed', e); }
+      }
+    } else {
+      // Ensure high-quality render is applied on Done if we were only previewing
+      if (baseResultRef.current) {
+         // Trigger a final high-quality warp to be sure (optional, but good for sharpness)
+         applyWarpFinalFromControls(); 
+      }
+    }
+    setIsEditorOpen(false);
+    document.body.style.overflow = '';
+  };
+
+  const handleControlChange = (key: keyof typeof warpControls, value: number) => {
+    setWarpControls(prev => {
+      const next = { ...prev, [key]: value };
+      // Immediate sync for debounce callbacks to see latest state
+      warpControlsRef.current = next;
+      
+      // Fast path for mobile editor using persistent session
+      if (isEditorOpen && warpSessionRef.current && !isWarpingRef.current) {
+        isWarpingRef.current = true;
+        warpSessionRef.current.warp(next).finally(() => {
+          isWarpingRef.current = false;
+        });
+        return next;
+      }
+      
+      // Fast path for desktop editor using persistent session
+      if (!isEditorOpen && desktopSessionRef.current) {
+          // Just push to the queue, no await needed here
+          desktopSessionRef.current.warp(next);
+          return next;
+      }
+      
+      return next;
+    });
+    
+    // Standard debounce path for fallback (no active session)
+    if (!isEditorOpen && !desktopSessionRef.current) {
+      if (warpPreviewDebounce.current) window.clearTimeout(warpPreviewDebounce.current);
+      if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
+      warpPreviewDebounce.current = window.setTimeout(applyWarpPreviewFromControls, 60);
+      warpFinalDebounce.current = window.setTimeout(applyWarpFinalFromControls, 300);
+    }
+  };
+  
+  const handleControlFinalize = () => {
+      // Trigger high-quality sync to resultUrl (for download/share compatibility) when dragging stops
+      if (!isEditorOpen && desktopSessionRef.current) {
+          if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
+          // Small delay to let last warp finish
+          warpFinalDebounce.current = window.setTimeout(applyWarpFinalFromControls, 100);
+      }
   };
 
   return (
@@ -943,13 +1144,29 @@ const SlugTryOnPage: React.FC = () => {
         </div>
 
         <div className={styles.centerPanel} ref={centerPanelRef}>
-          <h2 className={styles.sectionTitle}>Ai Try-On Result</h2>
+          <div className={styles.centerPanelHeader}>
+            <h2 className={styles.sectionTitle} style={{ marginBottom: 0 }}>Ai Try-On Result</h2>
+            {resultUrl && !isProcessing && !isResultPending && (
+              <button className={styles.mobileEditTrigger} onClick={(e) => { e.stopPropagation(); handleOpenEditor(); }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>Edit Body</span>
+              </button>
+            )}
+          </div>
           <div className={styles.resultArea} ref={resultAreaRef}>
             {resultUrl ? (
               <div className={styles.result}>
-                {(resultImgLoading || isCosPolling) && (
-                  <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}>Loading image...</div>
-                )}
+                <canvas 
+                  ref={desktopCanvasRef}
+                  className={styles.resultImage}
+                  style={{ 
+                      display: isDesktopSessionReady ? 'block' : 'none', 
+                      cursor: 'pointer', 
+                      objectFit: 'contain',
+                      width: '100%', height: '100%'
+                  }}
+                  onClick={handleImageClick}
+                />
                 <img 
                   src={resultUrl} 
                   alt="Try-on result" 
@@ -957,7 +1174,11 @@ const SlugTryOnPage: React.FC = () => {
                   onClick={handleImageClick}
                   onLoad={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onload'); }}
                   onError={() => { setResultImgLoading(false); setIsResultPending(false); emitUI('img-onerror'); }}
-                  style={{ cursor: 'pointer', transition: 'opacity 200ms ease' }}
+                  style={{ 
+                      cursor: 'pointer', 
+                      transition: 'opacity 200ms ease',
+                      display: isDesktopSessionReady ? 'none' : 'block'
+                  }}
                   title="点击放大查看"
                 />
               </div>
@@ -1012,23 +1233,74 @@ const SlugTryOnPage: React.FC = () => {
                 { key: 'hip', label: 'Hip Width' },
                 { key: 'thigh', label: 'Thigh Width' },
                 { key: 'calf', label: 'Calf Width' },
-              ].map(({ key, label }) => (
-                <div key={key} className={styles.sliderGroup}>
-                  <label className={styles.sliderLabel}>
-                    {label}
-                    <span className={styles.sliderValue}>{(warpControls as any)[key]}%</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="-10"
-                    max="10"
-                    step="2"
-                    value={(warpControls as any)[key]}
-                    onInput={(e) => handleControlChange(key as keyof typeof warpControls, parseInt((e.currentTarget as HTMLInputElement).value))}
-                    className={styles.slider}
-                  />
-                </div>
-              ))}
+              ].map(({ key, label }) => {
+                // 转换逻辑：UI 显示 -10~10，实际存储 -20~20
+                // 1 UI unit = 2% warp
+                const actualValue = (warpControls as any)[key];
+                const uiValue = Math.round(actualValue / 2);
+
+                const updateValue = (newUiVal: number) => {
+                  const clamped = Math.max(-10, Math.min(10, newUiVal));
+                  const nextActual = clamped * 2;
+                  handleControlChange(key as keyof typeof warpControls, nextActual);
+                  // For buttons, manual finalize trigger (debounced) to ensure high-quality result is eventually saved
+                  // (since buttons don't fire onMouseUp on the input)
+                  if (!isEditorOpen && desktopSessionRef.current) {
+                     if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
+                     warpFinalDebounce.current = window.setTimeout(applyWarpFinalFromControls, 500);
+                  }
+                };
+
+                return (
+                  <div key={key} className={styles.sliderGroup}>
+                    <div className={styles.sliderHeader}>
+                      <label className={styles.sliderLabel}>{label}</label>
+                      <div className={styles.sliderControls}>
+                         <button 
+                           className={styles.iconButton} 
+                           onClick={() => {
+                              // Read fresh value from ref to avoid stale closure issues in fast clicks
+                              const currentActual = (warpControlsRef.current as any)[key];
+                              const currentUi = Math.round(currentActual / 2);
+                              updateValue(currentUi - 1);
+                           }}
+                           disabled={uiValue <= -10 || (!isDesktopSessionReady && !!resultUrl)}
+                           aria-label="Decrease"
+                         >
+                           −
+                         </button>
+                         <span className={styles.sliderValue}>{uiValue > 0 ? `+${uiValue}` : uiValue}</span>
+                         <button 
+                           className={styles.iconButton} 
+                           onClick={() => {
+                              // Read fresh value from ref to avoid stale closure issues in fast clicks
+                              const currentActual = (warpControlsRef.current as any)[key];
+                              const currentUi = Math.round(currentActual / 2);
+                              updateValue(currentUi + 1);
+                           }}
+                           disabled={uiValue >= 10 || (!isDesktopSessionReady && !!resultUrl)}
+                           aria-label="Increase"
+                         >
+                           +
+                         </button>
+                      </div>
+                    </div>
+                    <input
+                      type="range"
+                      min="-10"
+                      max="10"
+                      step="1"
+                      value={uiValue}
+                      onInput={(e) => updateValue(parseInt((e.currentTarget as HTMLInputElement).value))}
+                      onMouseUp={() => handleControlFinalize()}
+                      onTouchEnd={() => handleControlFinalize()}
+                      className={styles.slider}
+                      disabled={!isDesktopSessionReady && !!resultUrl}
+                      style={{ opacity: (!isDesktopSessionReady && !!resultUrl) ? 0.5 : 1 }}
+                    />
+                  </div>
+                );
+              })}
             </div>
             <div className={styles.resultActions}>
               <button
@@ -1064,6 +1336,92 @@ const SlugTryOnPage: React.FC = () => {
               alt="Try-on result - enlarged" 
               className={styles.enlargedImage}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Fullscreen Editor Overlay */}
+      {isEditorOpen && resultUrl && (
+        <div className={styles.mobileEditorOverlay}>
+          <div className={styles.mobileEditorTopBar}>
+            <button className={styles.mobileEditorCancel} onClick={() => handleCloseEditor(false)} aria-label="Cancel">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <button className={styles.mobileEditorReset} onClick={async () => {
+              const def = { hip: 0, waist: 0, shoulder: 0, thigh: 0, upper_arm: 0, forearm: 0, calf: 0 };
+              setWarpControls(def);
+              warpControlsRef.current = def;
+              if (warpSessionRef.current) {
+                await warpSessionRef.current.warp(def);
+              }
+            }}>RESET</button>
+            <button className={styles.mobileEditorDone} onClick={() => handleCloseEditor(true)} aria-label="Done">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </button>
+          </div>
+          <div className={styles.mobileEditorImageArea}>
+             {/* Use Canvas for fast updates, img for initial loading/fallback if needed */}
+             <canvas ref={editorCanvasRef} className={styles.mobileEditorImage} style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
+          </div>
+          <div className={styles.mobileEditorControls}>
+             <div className={styles.mobilePartSelector}>
+                {bodyParts.map(p => (
+                  <div 
+                    key={p.key} 
+                    className={`${styles.mobilePartItem} ${activeEditPart === p.key ? styles.mobilePartItemActive : ''}`}
+                    onClick={() => setActiveEditPart(p.key)}
+                  >
+                    {p.label}
+                  </div>
+                ))}
+             </div>
+          <div className={styles.mobileSliderContainer}>
+             {(() => {
+               const key = activeEditPart as keyof typeof warpControls;
+               const actualValue = (warpControls as any)[key];
+               // 转换逻辑：UI 显示 -10~10，实际存储 -20~20
+               // 1 UI unit = 2% warp (之前是 4%)
+               const uiValue = Math.round(actualValue / 2);
+               const updateValue = (newUiVal: number) => {
+                  const clamped = Math.max(-10, Math.min(10, newUiVal));
+                  handleControlChange(key, clamped * 2);
+               };
+               // Calculate left percentage for tooltip position
+               // Range is -10 to 10, total 20 units. (uiValue + 10) / 20 * 100
+               const percent = ((uiValue + 10) / 20) * 100;
+               
+               return (
+                  <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, padding: '0 10px' }}>
+                     <div className={styles.mobileSliderWrapper}>
+                       {/* Tooltip value above thumb */}
+                       <div 
+                         className={styles.mobileSliderTooltip} 
+                         style={{ 
+                           left: `calc(${percent}% + (${8 - percent * 0.16}px))`,
+                           opacity: isSliderDragging ? 1 : 0,
+                           transform: isSliderDragging ? 'translateX(-50%) translateY(0)' : 'translateX(-50%) translateY(4px)',
+                         }}
+                       >
+                         {uiValue > 0 ? `+${uiValue}` : uiValue}
+                       </div>
+                       <input 
+                         type="range" 
+                         min="-10" 
+                         max="10" 
+                         step="1" 
+                         value={uiValue} 
+                         onInput={(e) => updateValue(parseInt((e.currentTarget as HTMLInputElement).value))} 
+                         onTouchStart={() => setIsSliderDragging(true)}
+                         onTouchEnd={() => setIsSliderDragging(false)}
+                         onMouseDown={() => setIsSliderDragging(true)}
+                         onMouseUp={() => setIsSliderDragging(false)}
+                         className={styles.slider} 
+                       />
+                     </div>
+                  </div>
+               );
+             })()}
+          </div>
           </div>
         </div>
       )}
