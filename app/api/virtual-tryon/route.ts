@@ -14,7 +14,7 @@ const MODEL = 'gemini-2.5-flash-image';
 const DEBUG = process.env.VIRTUAL_TRYON_DEBUG === '1';
 
 function buildPrompt(measurements?: any, extraPrompt?: string) {
-  const base = 'Maintain character consistency.Front-facing photo.';
+  const base = 'Full-body portrait, close-up framing. Person fills the frame from head to toe, with head near top edge and feet near bottom edge of image. Maintain character consistency and front-facing pose. Background: Empty elegant room with white walls featuring classical ornate molding and plaster relief details, a white carved decorative fireplace on the left side, and light oak parquet flooring with geometric herringbone pattern. Natural soft lighting, photorealistic quality.';
   return extraPrompt ? `${base} ${extraPrompt}` : base;
 }
 
@@ -201,7 +201,7 @@ async function handleVirtualTryon(req: NextRequest) {
     const systemInstruction = {
       role: 'system',
       parts: [
-        { text: 'You are a clothing replacement AI. Input: person image + clothing reference. Task: Replace person\'s clothing with reference clothing. Keep: original face, pose, background, lighting. Output: Single edited image only, no text, no collages.' }
+        { text: 'You are a professional fashion photography AI. Input: person image + clothing reference. Task: 1) Replace person\'s clothing with the reference clothing while maintaining perfect fit and drape, 2) Generate the specified background environment with harmonious lighting and atmosphere that complements the person and outfit. Keep: original face identity and natural body pose. Output: Single high-quality fashion photograph, no text, no collages.' }
       ]
     } as any;
 
@@ -217,6 +217,7 @@ async function handleVirtualTryon(req: NextRequest) {
           ]
         }
       ],
+
       generationConfig: { 
         temperature, 
         topP, 
