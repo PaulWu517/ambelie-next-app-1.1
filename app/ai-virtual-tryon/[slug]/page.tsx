@@ -360,6 +360,32 @@ const SlugTryOnPage: React.FC = () => {
 
   // Removed: goToBeta (no longer needed per design)
 
+  // 智能检测：用户是否能访问国际网络（基于快速 HEAD 请求测试连通性）
+  const detectNetworkEnvironment = async (): Promise<'international' | 'china'> => {
+    const envDirectUrl = process.env.NEXT_PUBLIC_SCF_DIRECT_URL;
+    if (!envDirectUrl) return 'china'; // 无直连地址时直接走桥接
+    
+    try {
+      // 快速 HEAD 请求测试新加坡 SCF 连通性（仅 2 秒超时）
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+      const testResp = await fetch(envDirectUrl, {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-store'
+      });
+      
+      clearTimeout(timeoutId);
+      // 能在 2 秒内收到响应（无论成功或 405/404），说明网络可达
+      return 'international';
+    } catch (e) {
+      // 超时或网络错误，判断为国内网络
+      console.log('[network-detect] international SCF unreachable, using bridge', e);
+      return 'china';
+    }
+  };
+
   const handleTryOn = async () => {
     if (!userPreview) {
       alert('Please upload your photo first.');
@@ -480,8 +506,17 @@ const SlugTryOnPage: React.FC = () => {
         finalBridgeUrl = envLegacyUrl;
       }
 
-      // 确定初始目标地址：有直连先走直连，没有走桥接
-      let targetUrl = envDirectUrl || finalBridgeUrl;
+      // 🔥 智能路由：快速检测网络环境，选择最优路径
+      const networkEnv = await detectNetworkEnvironment();
+      diag('network-detected', { environment: networkEnv });
+      
+      // 根据检测结果选择初始目标
+      let targetUrl: string | undefined;
+      if (networkEnv === 'international' && envDirectUrl) {
+        targetUrl = envDirectUrl; // 国际网络 → 新加坡直连（快）
+      } else {
+        targetUrl = finalBridgeUrl; // 国内网络 → 广州桥接（稳）
+      }
 
       let genResp: Response | null = null;
       let usedDirectVercel = false;
@@ -504,9 +539,9 @@ const SlugTryOnPage: React.FC = () => {
             try {
               diag(`attempting-scf-try-${attempt}`, { url: targetUrl, isDirect: targetUrl === envDirectUrl });
               
-              // 设置一个较短的超时给直连尝试（例如 5秒），以便快速失败切换
+              // 设置超时：直连 90 秒（AI 生图 + 冷启动），桥接 300 秒
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), targetUrl === envDirectUrl ? 5000 : 300000);
+              const timeoutId = setTimeout(() => controller.abort(), targetUrl === envDirectUrl ? 90000 : 300000);
               
               try {
                 genResp = await fetch(targetUrl, {
