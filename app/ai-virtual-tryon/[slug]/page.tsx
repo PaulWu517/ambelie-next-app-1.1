@@ -522,11 +522,19 @@ const SlugTryOnPage: React.FC = () => {
       let usedDirectVercel = false;
       
       // 自动重试机制：针对 Gemini API 500 错误进行最多 2 次重试
+      let scfErrorForFallback: any = null;
       for (let attempt = 0; attempt <= 2; attempt++) {
         try {
           if (targetUrl) {
             // 生产环境：优先通过腾讯云函数代理（国内用户速度快）
             const userBase64 = await fileToBase64(userFile);
+            
+            // 🛡️ 防御性检查：确保图片数据不为空
+            if (!userBase64 || userBase64.length < 1024) {
+               console.error('[slug tryon] generated base64 is invalid/empty', { length: userBase64?.length });
+               throw new Error('Image processing failed (empty data). Please re-upload your photo.');
+            }
+
             const payload = {
               traceId,
               mode,
@@ -606,17 +614,54 @@ const SlugTryOnPage: React.FC = () => {
           break; 
           
         } catch (err: any) {
+          scfErrorForFallback = err;
           const isLastAttempt = attempt === 2;
           diag('retry-loop-error', { attempt, error: err?.message, isLast: isLastAttempt });
           
           if (isLastAttempt) {
-             // 最后一次尝试也失败，抛出异常让后续逻辑处理（显示错误）
-             // 如果 genResp 存在（比如最后一次是 500），则保留 genResp 让后续逻辑读取错误信息
+             // 如果配置了云函数但全失败了，暂时不抛出，break 出去尝试 Vercel 兜底
+             if (targetUrl) {
+               console.warn('[slug tryon] SCF attempts exhausted, preparing fallback to Vercel');
+               break;
+             }
+             
+             // 如果本来就是本地 Vercel 开发模式，直接抛出
              if (genResp && genResp.status === 500) break; 
              throw err;
           }
           // 等待 1.5s 后重试
           await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+      
+      // 🛡️ 最终兜底：如果 SCF 尝试全部失败（或者响应不成功）且我们原本是在尝试 SCF
+      // 则尝试直接调用 Next.js 同源 API (Vercel)
+      if ((!genResp || !genResp.ok) && targetUrl) {
+        diag('fallback-to-vercel-start', { previousError: scfErrorForFallback?.message });
+        try {
+          // 使用之前准备好的 formData (包含文件流)
+          // Vercel Serverless Function (Pro) 限制 60s，Hobby 限制 10s
+          // 如果是 Hobby 账号，这个请求可能会超时，但值得一试
+          const fallbackResp = await fetch('/api/virtual-tryon', {
+            method: 'POST',
+            body: formData, 
+            headers: { Accept: 'image/*' }
+          });
+          
+          if (fallbackResp.ok) {
+            genResp = fallbackResp;
+            usedDirectVercel = true; // 标记为使用了 Vercel 兜底
+            diag('fallback-to-vercel-success');
+          } else {
+            const txt = await fallbackResp.text();
+            diag('fallback-to-vercel-failed', { status: fallbackResp.status });
+            // 兜底也失败了，抛出之前的 SCF 错误（通常更有参考意义）或组合错误
+            throw new Error(`Connection failed (SCF: ${scfErrorForFallback?.message || 'unknown'}) and Fallback failed (${fallbackResp.status})`);
+          }
+        } catch (fallbackErr: any) {
+          diag('fallback-to-vercel-error', fallbackErr?.message);
+          // 优先抛出最开始的 SCF 错误，因为它才是主要的失败原因
+          throw scfErrorForFallback || fallbackErr;
         }
       }
       
