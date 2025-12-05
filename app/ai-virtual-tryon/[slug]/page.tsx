@@ -184,9 +184,9 @@ const SlugTryOnPage: React.FC = () => {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[slug tryon] download failed', e);
-      alert('Download failed. Please try again.');
+      alert(`Download failed.\n\nDetails: ${e?.message || String(e)}`);
     } finally {
       setIsDownloading(false);
     }
@@ -212,9 +212,9 @@ const SlugTryOnPage: React.FC = () => {
       }
       await navAny.clipboard?.writeText(resultUrl);
       alert('Result URL copied to clipboard.');
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[slug tryon] share failed', e);
-      alert('Share failed. You can download and share manually.');
+      alert(`Share failed. You can download and share manually.\n\nDetails: ${e?.message || String(e)}`);
     } finally {
       setIsSharing(false);
     }
@@ -469,13 +469,27 @@ const SlugTryOnPage: React.FC = () => {
       const userBlob = await toBlob(userPreview);
       const originalFile = new File([userBlob], mode === 'outfit' ? 'user-fullbody.jpg' : 'user-headshot.jpg', { type: userBlob.type || 'image/jpeg' });
 
-      // 云端限制保护：仅当超限时进行轻量压缩（默认阈值 ≈ 9.5MB）
-      const MAX_MB = 9.5;
+      // 云端限制保护：为了确保 Vercel 兜底 (4.5MB 限制) 和 SCF 稳定性，这里设置较严格的压缩阈值
+      // Gemini 实际上不需要超高分辨率，1536px 足够清晰且生成速度更快
+      const MAX_MB = 3.5;
       let userFile = originalFile;
-      if (userFile.size > MAX_MB * 1024 * 1024) {
+      
+      // 即使文件小于 3.5MB，如果是超大分辨率图片也建议缩小，以加快传输和处理
+      const needsCompression = userFile.size > MAX_MB * 1024 * 1024;
+      
+      if (needsCompression) {
         try {
-          const compressed = await compressImage(userFile, { maxWidth: 2048, maxHeight: 2048, quality: 0.9, outputFormat: 'jpeg' });
-          console.log('[slug tryon] image compressed due to size', { before: userFile.size, after: compressed.size });
+          // 压缩策略：最大边长 1536px，质量 0.85 (通常能将 10MB 压到 1-2MB)
+          const compressed = await compressImage(userFile, { 
+            maxWidth: 1536, 
+            maxHeight: 1536, 
+            quality: 0.85, 
+            outputFormat: 'jpeg' 
+          });
+          console.log('[slug tryon] image compressed due to size/optimization', { 
+            before: (userFile.size / 1024 / 1024).toFixed(2) + 'MB', 
+            after: (compressed.size / 1024 / 1024).toFixed(2) + 'MB' 
+          });
           userFile = compressed;
         } catch (e) {
           console.warn('[slug tryon] compress failed, using original', e);
@@ -968,7 +982,19 @@ const SlugTryOnPage: React.FC = () => {
     } catch (err) {
       console.error('[slug tryon] error', err);
       try { await fetch('/api/diagnostic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ traceId, stage: 'error', message: (err instanceof Error ? err.message : String(err)), ts: new Date().toISOString() }) }); } catch {}
-      alert('Failed to generate: ' + (err instanceof Error ? err.message : String(err)));
+      
+      const mainErr = err instanceof Error ? err.message : String(err);
+      let detailMsg = '';
+      // 如果存在之前的 SCF 错误，且与当前捕获的错误描述不同，则补充显示
+      if (scfErrorForFallback) {
+        const scfMsg = scfErrorForFallback instanceof Error ? scfErrorForFallback.message : String(scfErrorForFallback);
+        if (scfMsg && scfMsg !== mainErr) {
+           detailMsg += `\n\n[Upstream Error]: ${scfMsg}`;
+        }
+      }
+      detailMsg += `\n\n[Trace ID]: ${traceId}`;
+      
+      alert(`Failed to generate.\n\nError: ${mainErr}${detailMsg}`);
     } finally {
       if (progressIntervalRef.current) {
         window.clearInterval(progressIntervalRef.current);
