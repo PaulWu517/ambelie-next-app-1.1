@@ -461,6 +461,7 @@ const SlugTryOnPage: React.FC = () => {
         setProcessingProgress(pct);
       }, 100);
     }
+    let scfErrorForFallback: any = null;
     try {
       const toBlob = async (urlOrDataUrl: string) => {
         const res = await fetch(urlOrDataUrl);
@@ -536,7 +537,7 @@ const SlugTryOnPage: React.FC = () => {
       let usedDirectVercel = false;
       
       // 自动重试机制：针对 Gemini API 500 错误进行最多 2 次重试
-      let scfErrorForFallback: any = null;
+      scfErrorForFallback = null;
       for (let attempt = 0; attempt <= 2; attempt++) {
         try {
           if (targetUrl) {
