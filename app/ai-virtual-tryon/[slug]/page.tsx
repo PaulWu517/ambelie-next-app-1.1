@@ -171,6 +171,22 @@ const SlugTryOnPage: React.FC = () => {
       img.src = src;
     });
 
+  // 将任意 DataURL/URL 图片绘制到给定 canvas（用于 Edit Body 在移动端的兜底显示）
+  const drawImageToCanvas = async (canvas: HTMLCanvasElement, src: string, maxDimension = 1080) => {
+    const img = await loadImage(src);
+    const origW = img.naturalWidth || img.width;
+    const origH = img.naturalHeight || img.height;
+    const scale = Math.min(1, maxDimension / Math.max(origW, origH));
+    const targetW = Math.round(origW * scale);
+    const targetH = Math.round(origH * scale);
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, targetW, targetH);
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+  };
+
   /**
    * 将「人物图层」与统一背景图（默认 `tryon-bg-default.webp`）合成为一张完整图片。
    * - 处理步骤：
@@ -1479,6 +1495,13 @@ const SlugTryOnPage: React.FC = () => {
         if (!baseForEditor) {
           // 若分割失败或未配置云函数，则回退到整张结果图
           baseForEditor = resultUrl;
+        }
+
+        // 🚑 兜底：无论后续 warp Session 是否初始化成功，都先用 2D Canvas 把人物画出来
+        try {
+          await drawImageToCanvas(editorCanvasRef.current, baseForEditor, 1080);
+        } catch (e) {
+          console.warn('[slug tryon] draw base image for editor failed', e);
         }
 
         // 使用更接近原图分辨率初始化形变编辑，减少画质损失
