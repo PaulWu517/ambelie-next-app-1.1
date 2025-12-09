@@ -765,6 +765,19 @@
   position: relative;
 }
 
+/* Edit Body 背景层：单独一层做虚化，避免影响前景人物 Canvas 画质 */
+.mobileEditorBackground {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(0.5px); /* 仅做非常轻微的虚化，保留更多背景细节 */
+  transform: scale(1.01); /* 轻微放大避免 blur 后边缘露底色 */
+  transform-origin: center;
+  z-index: 0;
+}
+
 .mobileEditorLoading {
   position: absolute;
   top: 0;
@@ -785,6 +798,8 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  position: relative;
+  z-index: 1; /* 覆盖在虚化背景之上，保持清晰 */
 }
 
 .mobileEditorControls {

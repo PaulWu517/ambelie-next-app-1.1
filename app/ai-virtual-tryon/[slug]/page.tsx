@@ -9,7 +9,9 @@ import { compressImage } from '@/lib/utils/imageCompression';
 import styles from '../VirtualTryOn.module.css';
 
 // 统一试衣背景图（静态，不参与 Edit Body 变形）
-const DEFAULT_BACKGROUND_URL = '/assets/backgrounds/tryon-bg-default.png';
+// 优先使用环境变量（例如指向腾讯云 COS/CDN），否则回退到本地 WebP 资源
+const DEFAULT_BACKGROUND_URL =
+  process.env.NEXT_PUBLIC_TRYON_BG_URL || '/assets/backgrounds/tryon-bg-default.webp';
 
 const SlugTryOnPage: React.FC = () => {
   // UI诊断：统一将关键状态变化上报到后端终端日志，同时在浏览器控制台打印
@@ -170,7 +172,7 @@ const SlugTryOnPage: React.FC = () => {
     });
 
   /**
-   * 将「人物图层」与统一背景图 `tryon-bg-default.png` 合成为一张完整图片。
+   * 将「人物图层」与统一背景图（默认 `tryon-bg-default.webp`）合成为一张完整图片。
    * - 处理步骤：
    *   1) 在独立画布中对人物图做亮度 / 饱和度微调 + 轻微边缘柔化；
    *   2) 在主画布中绘制固定背景；
@@ -1479,10 +1481,11 @@ const SlugTryOnPage: React.FC = () => {
           baseForEditor = resultUrl;
         }
 
-        // 使用稍高分辨率初始化形变编辑
-        const session = await initWarpSession(baseForEditor, editorCanvasRef.current, { 
-          maxDimension: 640, 
-          landmarksNormalized: poseLmsRef.current || undefined 
+        // 使用更接近原图分辨率初始化形变编辑，减少画质损失
+        // maxDimension 调高到 1080，兼顾画质与性能
+        const session = await initWarpSession(baseForEditor, editorCanvasRef.current, {
+          maxDimension: 1080,
+          landmarksNormalized: poseLmsRef.current || undefined,
         });
         warpSessionRef.current = session;
         // Initial warp to show current state
@@ -1868,35 +1871,30 @@ const SlugTryOnPage: React.FC = () => {
             </button>
           </div>
           <div className={styles.mobileEditorImageArea}>
-             {isEditorLoading && (
-               <div className={styles.mobileEditorLoading}>
-                 <div className={styles.spinner} style={{ marginBottom: 12 }}></div>
-                 <span>Loading...</span>
-               </div>
-             )}
-             {/* 背景层：统一房间背景图；前景：透明人物 Canvas，仅对人物进行形变 */}
-             <div
-               style={{
-                 width: '100%',
-                 height: '100%',
-                 backgroundImage: `url(${DEFAULT_BACKGROUND_URL})`,
-                 backgroundSize: 'cover',
-                 backgroundPosition: 'center',
-                 backgroundRepeat: 'no-repeat',
-               }}
-             >
-               <canvas
-                 ref={editorCanvasRef}
-                 className={styles.mobileEditorImage}
-                 style={{
-                   objectFit: 'contain',
-                   width: '100%',
-                   height: '100%',
-                   opacity: isEditorLoading ? 0 : 1,
-                   transition: 'opacity 0.2s',
-                 }}
-               />
-             </div>
+            {isEditorLoading && (
+              <div className={styles.mobileEditorLoading}>
+                <div className={styles.spinner} style={{ marginBottom: 12 }}></div>
+                <span>Loading...</span>
+              </div>
+            )}
+            {/* 背景层：统一房间背景图（带轻微虚化）；前景：透明人物 Canvas，仅对人物进行形变 */}
+            <div
+              className={styles.mobileEditorBackground}
+              style={{
+                backgroundImage: `url(${DEFAULT_BACKGROUND_URL})`,
+              }}
+            />
+            <canvas
+              ref={editorCanvasRef}
+              className={styles.mobileEditorImage}
+              style={{
+                objectFit: 'contain',
+                width: '100%',
+                height: '100%',
+                opacity: isEditorLoading ? 0 : 1,
+                transition: 'opacity 0.2s',
+              }}
+            />
           </div>
           <div className={styles.mobileEditorControls}>
              <div className={styles.mobilePartSelector}>
