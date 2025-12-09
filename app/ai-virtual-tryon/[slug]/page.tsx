@@ -8,6 +8,9 @@ import { compressImage } from '@/lib/utils/imageCompression';
  
 import styles from '../VirtualTryOn.module.css';
 
+// 统一试衣背景图（静态，不参与 Edit Body 变形）
+const DEFAULT_BACKGROUND_URL = '/assets/backgrounds/tryon-bg-default.png';
+
 const SlugTryOnPage: React.FC = () => {
   // UI诊断：统一将关键状态变化上报到后端终端日志，同时在浏览器控制台打印
   const uiTraceIdRef = useRef<string>(`slug-ui-${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -82,6 +85,11 @@ const SlugTryOnPage: React.FC = () => {
   const baseResultRef = useRef<string | null>(null);
   const centerPanelRef = useRef<HTMLDivElement | null>(null);
   const resultAreaRef = useRef<HTMLDivElement | null>(null);
+  // Edit Body 专用：缓存「分割后的人物图层」，避免重复请求云函数
+  const personLayerForEditorRef = useRef<string | null>(null);
+  const lastSegmentedSourceRef = useRef<string | null>(null);
+  // 调试用：最近一次根据掩码计算得到的背景图层（人物已挖空）
+  const debugBackgroundLayerRef = useRef<string | null>(null);
   const cosPollTimerRef = useRef<number | null>(null);
   const cosPollAttemptsRef = useRef<number>(0);
   const lastTraceIdRef = useRef<string | null>(null);
@@ -152,6 +160,334 @@ const SlugTryOnPage: React.FC = () => {
     });
   };
 
+  // 通用图片加载工具：从 DataURL 或 URL 创建 HTMLImageElement
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+
+  /**
+   * 将「人物图层」与统一背景图 `tryon-bg-default.png` 合成为一张完整图片。
+   * - 处理步骤：
+   *   1) 在独立画布中对人物图做亮度 / 饱和度微调 + 轻微边缘柔化；
+   *   2) 在主画布中绘制固定背景；
+   *   3) 在人物脚下绘制一块软阴影，增强接触感；
+   *   4) 叠加调整后的人物层。
+   */
+  const compositeWithDefaultBackground = async (personDataUrl: string): Promise<string> => {
+    const [bgImg, personImg] = await Promise.all([
+      loadImage(DEFAULT_BACKGROUND_URL),
+      loadImage(personDataUrl),
+    ]);
+
+    const width = personImg.naturalWidth || personImg.width;
+    const height = personImg.naturalHeight || personImg.height;
+
+    // 1. 在独立画布中调整人物的亮度 / 饱和度，并做轻微柔化
+    const personCanvas = document.createElement('canvas');
+    personCanvas.width = width;
+    personCanvas.height = height;
+    const personCtx = personCanvas.getContext('2d');
+    if (!personCtx) throw new Error('Person 2D context not available');
+
+    personCtx.drawImage(personImg, 0, 0, width, height);
+    const personData = personCtx.getImageData(0, 0, width, height);
+    const data = personData.data;
+
+    // 简单的 HSL 调整：整体略微变暗 + 降低饱和度，让人物更贴近背景色调
+    const adjustBrightnessFactor = 0.96; // 略微变暗
+    const saturationFactor = 0.9;        // 略微降低饱和度
+
+    const rgbToHsl = (r: number, g: number, b: number): [number, number, number] => {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return [h, s, l];
+    };
+
+    const hslToRgb = (h: number, s: number, l: number): [number, number, number] => {
+      let r: number, g: number, b: number;
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const hue2rgb = (p: number, q: number, t: number) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1 / 6) return p + (q - p) * 6 * t;
+          if (t < 1 / 2) return q;
+          if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+      }
+      return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    };
+
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i + 3];
+      if (a < 8) continue; // 跳过完全透明区域
+
+      let r = data[i];
+      let g = data[i + 1];
+      let b = data[i + 2];
+
+      let [h, s, l] = rgbToHsl(r, g, b);
+      s *= saturationFactor;
+      l *= adjustBrightnessFactor;
+      const [nr, ng, nb] = hslToRgb(h, s, l);
+      data[i] = nr;
+      data[i + 1] = ng;
+      data[i + 2] = nb;
+    }
+
+    personCtx.putImageData(personData, 0, 0);
+
+    // 轻微整体模糊，柔化边缘（半径很小，不会明显变糊）
+    personCtx.filter = 'blur(0.5px)';
+    personCtx.drawImage(personCanvas, 0, 0);
+    personCtx.filter = 'none';
+
+    // 2. 在主画布上绘制背景
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context not available');
+    ctx.drawImage(bgImg, 0, 0, width, height);
+
+    // 3. 在人物脚下绘制一块软阴影（增强接触感）
+    const shadowWidth = width * 0.25;
+    const shadowHeight = height * 0.06;
+    const shadowX = width / 2;
+    const shadowY = height * 0.92;
+    ctx.save();
+    ctx.translate(shadowX, shadowY);
+    ctx.scale(shadowWidth / 2, shadowHeight / 2);
+    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    grad.addColorStop(0, 'rgba(0,0,0,0.35)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 4. 叠加调整后的人物层
+    ctx.drawImage(personCanvas, 0, 0, width, height);
+
+    return canvas.toDataURL('image/png');
+  };
+
+  /**
+   * 利用「分割掩码」从原图中抠出人物层（透明背景 PNG）
+   * - originalDataUrl: 试衣结果整图（dataURL）
+   * - maskDataUrl: 人像分割返回的掩码图（data:image/png;base64,...）
+   */
+  const createPersonLayerFromMask = async (
+    originalDataUrl: string,
+    maskDataUrl: string
+  ): Promise<string> => {
+    const [origImg, maskImg] = await Promise.all([
+      loadImage(originalDataUrl),
+      loadImage(maskDataUrl),
+    ]);
+
+    const width = origImg.naturalWidth || origImg.width;
+    const height = origImg.naturalHeight || origImg.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context not available');
+
+    // 绘制原图
+    ctx.drawImage(origImg, 0, 0, width, height);
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const imgPixels = imgData.data;
+
+    // 绘制掩码到独立画布，读取其灰度值作为前景权重
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext('2d');
+    if (!maskCtx) throw new Error('Mask 2D context not available');
+    maskCtx.drawImage(maskImg, 0, 0, width, height);
+    const maskData = maskCtx.getImageData(0, 0, width, height);
+    const maskPixels = maskData.data;
+
+    for (let i = 0; i < imgPixels.length; i += 4) {
+      // 腾讯云 SegmentPortraitPic 的 ResultMask 是灰度图：
+      // R/G/B 为相同的 0~255 置信度值，alpha 恒为 255。
+      // 因此这里用 R/G/B 的平均值作为前景 alpha，而不是使用 mask 的 alpha 通道。
+      const r = maskPixels[i];
+      const g = maskPixels[i + 1];
+      const b = maskPixels[i + 2];
+      const maskAlpha = Math.round((r + g + b) / 3); // 0~255
+      imgPixels[i + 3] = maskAlpha;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+    const personDataUrl = canvas.toDataURL('image/png');
+
+    // 为调试方便，同时构造一个「背景图层」（人物挖空），并缓存到 debugBackgroundLayerRef
+    try {
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = width;
+      bgCanvas.height = height;
+      const bgCtx = bgCanvas.getContext('2d');
+      if (bgCtx) {
+        // 背景从原图拷贝，再用反向 alpha 只保留背景
+        bgCtx.drawImage(origImg, 0, 0, width, height);
+        const bgData = bgCtx.getImageData(0, 0, width, height);
+        const bgPixels = bgData.data;
+        for (let i = 0; i < bgPixels.length; i += 4) {
+          const r = maskPixels[i];
+          const g = maskPixels[i + 1];
+          const b = maskPixels[i + 2];
+          const maskAlpha = Math.round((r + g + b) / 3);
+          // 前景越不透明，背景越透明（反向 alpha）
+          bgPixels[i + 3] = 255 - maskAlpha;
+        }
+        bgCtx.putImageData(bgData, 0, 0);
+        const backgroundDataUrl = bgCanvas.toDataURL('image/png');
+
+         debugBackgroundLayerRef.current = backgroundDataUrl;
+
+        // 将完整调试对象通过诊断通道写入本地终端日志，方便在本地查看
+        try {
+          const payload = {
+            original: originalDataUrl,
+            mask: maskDataUrl,
+            person: personDataUrl,
+            background: backgroundDataUrl,
+          };
+          emitUI('segment-debug-layers', payload);
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('[slug tryon] build background debug layer failed', e);
+    }
+
+    return personDataUrl;
+  };
+
+  /**
+   * 为当前试衣结果调用「广州人像分割云函数」，并返回仅包含人物的 PNG DataURL。
+   * - 优先使用 baseResultRef（高质量原图），否则回退到 resultUrl。
+   * - 结果会缓存到 personLayerForEditorRef，避免重复调用。
+   */
+  const getPersonLayerForCurrentResult = async (): Promise<string | null> => {
+    const src = baseResultRef.current || resultUrl;
+    if (!src) return null;
+
+    // 如果已经针对当前图像做过分割，直接复用
+    if (lastSegmentedSourceRef.current === src && personLayerForEditorRef.current) {
+      return personLayerForEditorRef.current;
+    }
+
+    const segUrl = process.env.NEXT_PUBLIC_SEGMENTATION_URL;
+    if (!segUrl) {
+      console.warn('[slug tryon] segmentation URL not configured (NEXT_PUBLIC_SEGMENTATION_URL missing)');
+      return null;
+    }
+
+    // 保证是 DataURL，若是远程 URL 则先拉取后转成 DataURL
+    let dataUrl = src;
+    if (!dataUrl.startsWith('data:')) {
+      try {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        dataUrl = await blobToDataUrl(blob);
+      } catch (e) {
+        console.warn('[slug tryon] failed to convert image to dataURL for segmentation', e);
+        return null;
+      }
+    }
+
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex < 0) return null;
+    const header = dataUrl.slice(0, commaIndex);
+    const base64 = dataUrl.slice(commaIndex + 1);
+    const mimeMatch = header.match(/data:(.*);base64/);
+    const mime = (mimeMatch && mimeMatch[1]) || 'image/png';
+
+    const traceId = lastTraceIdRef.current || uiTraceIdRef.current;
+
+    try {
+      const resp = await fetch(segUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mime,
+          traceId,
+        }),
+      });
+
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        console.warn('[slug tryon] segmentation request failed', {
+          status: resp.status,
+          bodySnippet: txt.slice(0, 200),
+        });
+        return null;
+      }
+
+      const json = await resp.json();
+
+      // 优先使用腾讯云直接返回的透明人物图（ResultImage）
+      const portraitBase64 = json?.portraitBase64;
+      let personLayer: string | null = null;
+      if (portraitBase64 && typeof portraitBase64 === 'string') {
+        personLayer = `data:image/png;base64,${portraitBase64}`;
+        // 为本地调试，把原图和人物图整体写入诊断日志
+        try {
+          const payload = {
+            original: dataUrl,
+            person: personLayer,
+          };
+          emitUI('segment-debug-portrait', payload);
+        } catch {}
+      } else {
+        const maskBase64 = json?.foregroundMaskBase64;
+        if (!maskBase64 || typeof maskBase64 !== 'string') {
+          console.warn('[slug tryon] segmentation response missing foregroundMaskBase64 and portraitBase64');
+          return null;
+        }
+        const maskDataUrl = `data:image/png;base64,${maskBase64}`;
+        personLayer = await createPersonLayerFromMask(dataUrl, maskDataUrl);
+      }
+
+      if (!personLayer) return null;
+
+      personLayerForEditorRef.current = personLayer;
+      lastSegmentedSourceRef.current = src;
+
+      return personLayer;
+    } catch (e) {
+      console.warn('[slug tryon] segmentation error', e);
+      return null;
+    }
+  };
+
   // File -> base64（不带 data: 前缀，仅 data 部分）
   const fileToBase64 = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -191,6 +527,7 @@ const SlugTryOnPage: React.FC = () => {
       setIsDownloading(false);
     }
   };
+
 
   const handleShareResult = async () => {
     if (!resultUrl) return;
@@ -410,6 +747,9 @@ const SlugTryOnPage: React.FC = () => {
     setResultUrl(null);
     setShowResult(false);
     baseResultRef.current = null;
+    // 新一次生成：清空 Edit Body 用的人像分割缓存
+    personLayerForEditorRef.current = null;
+    lastSegmentedSourceRef.current = null;
     setResultImgLoading(false);
     const traceId = `slug-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     lastTraceIdRef.current = traceId;
@@ -1126,22 +1466,30 @@ const SlugTryOnPage: React.FC = () => {
     
     // Init session next tick to allow canvas to render
     setTimeout(async () => {
-      if (editorCanvasRef.current && resultUrl) {
-        try {
-          // Use higher dimension (640px) now that we have optimized mesh warping
-          const session = await initWarpSession(resultUrl, editorCanvasRef.current, { 
-            maxDimension: 640, 
-            landmarksNormalized: poseLmsRef.current || undefined 
-          });
-          warpSessionRef.current = session;
-          // Initial warp to show current state
-          await session.warp(warpControls);
-        } catch (e) {
-          console.warn('Failed to init warp session', e);
-        } finally {
-          setIsEditorLoading(false);
+      if (!editorCanvasRef.current || !resultUrl) {
+        setIsEditorLoading(false);
+        return;
+      }
+
+      try {
+        // 优先尝试使用「分割后的人物图层」作为 Edit Body 的基础图像
+        let baseForEditor = await getPersonLayerForCurrentResult();
+        if (!baseForEditor) {
+          // 若分割失败或未配置云函数，则回退到整张结果图
+          baseForEditor = resultUrl;
         }
-      } else {
+
+        // 使用稍高分辨率初始化形变编辑
+        const session = await initWarpSession(baseForEditor, editorCanvasRef.current, { 
+          maxDimension: 640, 
+          landmarksNormalized: poseLmsRef.current || undefined 
+        });
+        warpSessionRef.current = session;
+        // Initial warp to show current state
+        await session.warp(warpControls);
+      } catch (e) {
+        console.warn('Failed to init warp session', e);
+      } finally {
         setIsEditorLoading(false);
       }
     }, 100);
@@ -1159,19 +1507,32 @@ const SlugTryOnPage: React.FC = () => {
     if (warpFinalDebounce.current) window.clearTimeout(warpFinalDebounce.current);
 
     if (!save) {
+      // 取消：还原滑杆与结果图到进入编辑前的状态（不改变原始 AI 结果图）
       setWarpControls(tempWarpControls);
       if (baseResultRef.current) {
         try {
-          // Force revert visual immediately
           const adjusted = await applyPoseWarpToDataUrl(baseResultRef.current, tempWarpControls, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
           setResultUrl(adjusted);
         } catch (e) { console.warn('revert failed', e); }
       }
     } else {
-      // Ensure high-quality render is applied on Done if we were only previewing
-      if (baseResultRef.current) {
-         // Trigger a final high-quality warp to be sure (optional, but good for sharpness)
-         applyWarpFinalFromControls(); 
+      // 确认：如果有分割出的人物层，则只对人物做高质量形变，并与统一背景图重新合成
+      if (personLayerForEditorRef.current) {
+        try {
+          const controls = warpControlsRef.current;
+          const warpedPerson = await applyPoseWarpToDataUrl(personLayerForEditorRef.current, controls, { showKeypoints: false, landmarksNormalized: poseLmsRef.current || undefined });
+          const finalComposite = await compositeWithDefaultBackground(warpedPerson);
+          setResultUrl(finalComposite);
+          baseResultRef.current = finalComposite;
+        } catch (e) {
+          console.warn('[slug tryon] finalize editor with segmentation failed, fallback to legacy', e);
+          if (baseResultRef.current) {
+            await applyWarpFinalFromControls();
+          }
+        }
+      } else if (baseResultRef.current) {
+        // 没有人像分割（或调用失败）时，退回到原有整图形变逻辑
+        await applyWarpFinalFromControls();
       }
     }
     setIsEditorOpen(false);
@@ -1513,8 +1874,29 @@ const SlugTryOnPage: React.FC = () => {
                  <span>Loading...</span>
                </div>
              )}
-             {/* Use Canvas for fast updates, img for initial loading/fallback if needed */}
-             <canvas ref={editorCanvasRef} className={styles.mobileEditorImage} style={{ objectFit: 'contain', width: '100%', height: '100%', opacity: isEditorLoading ? 0 : 1, transition: 'opacity 0.2s' }} />
+             {/* 背景层：统一房间背景图；前景：透明人物 Canvas，仅对人物进行形变 */}
+             <div
+               style={{
+                 width: '100%',
+                 height: '100%',
+                 backgroundImage: `url(${DEFAULT_BACKGROUND_URL})`,
+                 backgroundSize: 'cover',
+                 backgroundPosition: 'center',
+                 backgroundRepeat: 'no-repeat',
+               }}
+             >
+               <canvas
+                 ref={editorCanvasRef}
+                 className={styles.mobileEditorImage}
+                 style={{
+                   objectFit: 'contain',
+                   width: '100%',
+                   height: '100%',
+                   opacity: isEditorLoading ? 0 : 1,
+                   transition: 'opacity 0.2s',
+                 }}
+               />
+             </div>
           </div>
           <div className={styles.mobileEditorControls}>
              <div className={styles.mobilePartSelector}>
