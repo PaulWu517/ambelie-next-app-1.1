@@ -31,8 +31,7 @@ async function loadPoseLandmarker() {
   const { PoseLandmarker } = await import('@mediapipe/tasks-vision');
   _pose = await PoseLandmarker.createFromOptions(vision, {
     baseOptions: {
-      modelAssetPath:
-        'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+      modelAssetPath: '/models/pose_landmarker_full.task', // Use local proxy
     },
     runningMode: 'IMAGE',
     numPoses: 1,
@@ -67,7 +66,7 @@ async function imageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
       img.crossOrigin = 'anonymous';
     }
     img.onload = () => resolve(img);
-    img.onerror = (e) => reject(new Error('Image load failed'));
+    img.onerror = (e) => reject(new Error(`Image load failed for ${dataUrl.slice(0, 50)}...`));
     img.src = dataUrl;
   });
 }

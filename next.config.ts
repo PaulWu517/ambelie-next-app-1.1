@@ -36,6 +36,11 @@ const nextConfig: NextConfig = {
     return [
       // 将 /favicon.ico 映射到英文文件名的头像图片，避免编码问题
       { source: '/favicon.ico', destination: '/assets/vi/avatar.png' },
+      // Proxy MediaPipe model to bypass GFW/CORS
+      { 
+        source: '/models/pose_landmarker_full.task', 
+        destination: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task' 
+      },
     ];
   },
 };
