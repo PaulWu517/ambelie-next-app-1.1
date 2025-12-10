@@ -141,6 +141,10 @@ const SlugTryOnPage: React.FC = () => {
   const warpDebounce = useRef<number | null>(null);
   const warpPreviewDebounce = useRef<number | null>(null);
   const warpFinalDebounce = useRef<number | null>(null);
+  // Mobile Editor 专用：在某些设备上 WebGL / Worker 初始化失败时，使用 CPU 版 warp 进行兜底预览
+  const editorFallbackDebounceRef = useRef<number | null>(null);
+  const editorFallbackSeqRef = useRef(0);
+  const editorBaseImageRef = useRef<string | null>(null);
   const poseLmsRef = useRef<Float32Array | null>(null);
   // 保持最新的滑杆值以避免定时器闭包读取旧值
   const warpControlsRef = useRef(warpControls);
@@ -1497,6 +1501,9 @@ const SlugTryOnPage: React.FC = () => {
           baseForEditor = resultUrl;
         }
 
+        // 记录当前编辑使用的基础图像，供 CPU 兜底形变使用
+        editorBaseImageRef.current = baseForEditor;
+
         // 🚑 兜底：无论后续 warp Session 是否初始化成功，都先用 2D Canvas 把人物画出来
         try {
           await drawImageToCanvas(editorCanvasRef.current, baseForEditor, 1080);
@@ -1506,13 +1513,18 @@ const SlugTryOnPage: React.FC = () => {
 
         // 使用更接近原图分辨率初始化形变编辑，减少画质损失
         // maxDimension 调高到 1080，兼顾画质与性能
-        const session = await initWarpSession(baseForEditor, editorCanvasRef.current, {
-          maxDimension: 1080,
-          landmarksNormalized: poseLmsRef.current || undefined,
-        });
-        warpSessionRef.current = session;
-        // Initial warp to show current state
-        await session.warp(warpControls);
+        try {
+          const session = await initWarpSession(baseForEditor, editorCanvasRef.current, {
+            maxDimension: 1080,
+            landmarksNormalized: poseLmsRef.current || undefined,
+          });
+          warpSessionRef.current = session;
+          // Initial warp to show current state
+          await session.warp(warpControls);
+        } catch (e) {
+          console.warn('[slug tryon] initWarpSession failed on mobile, will use CPU fallback warp only', e);
+          // 不抛错，让用户至少可以看到静态人物并使用兜底形变
+        }
       } catch (e) {
         console.warn('Failed to init warp session', e);
       } finally {
@@ -1527,6 +1539,7 @@ const SlugTryOnPage: React.FC = () => {
       warpSessionRef.current.cleanup();
       warpSessionRef.current = null;
     }
+    editorBaseImageRef.current = null;
 
     // Clear any pending debounce timers to prevent overwriting the final state
     if (warpPreviewDebounce.current) window.clearTimeout(warpPreviewDebounce.current);
@@ -1577,6 +1590,32 @@ const SlugTryOnPage: React.FC = () => {
         warpSessionRef.current.warp(next).finally(() => {
           isWarpingRef.current = false;
         });
+        return next;
+      }
+      
+      // Mobile Editor 兜底：某些设备上 warpSession 初始化失败时，使用 CPU 版 warp + Canvas 预览
+      if (isEditorOpen && !warpSessionRef.current) {
+        if (editorFallbackDebounceRef.current) {
+          window.clearTimeout(editorFallbackDebounceRef.current);
+        }
+        editorFallbackDebounceRef.current = window.setTimeout(async () => {
+          const base = editorBaseImageRef.current || personLayerForEditorRef.current || baseResultRef.current || resultUrl;
+          if (!base || !editorCanvasRef.current) return;
+          const mySeq = ++editorFallbackSeqRef.current;
+          try {
+            const controls = warpControlsRef.current;
+            const warped = await applyPoseWarpToDataUrl(base, controls, {
+              showKeypoints: false,
+              // 为了速度稍微降低分辨率，保证手机上拖动不卡
+              maxDimension: 720,
+              landmarksNormalized: poseLmsRef.current || undefined,
+            });
+            if (mySeq !== editorFallbackSeqRef.current) return;
+            await drawImageToCanvas(editorCanvasRef.current, warped, 1080);
+          } catch (e) {
+            console.warn('[slug tryon] mobile editor CPU fallback warp failed', e);
+          }
+        }, 80);
         return next;
       }
       
@@ -1912,8 +1951,6 @@ const SlugTryOnPage: React.FC = () => {
               className={styles.mobileEditorImage}
               style={{
                 objectFit: 'contain',
-                width: '100%',
-                height: '100%',
                 opacity: isEditorLoading ? 0 : 1,
                 transition: 'opacity 0.2s',
               }}
