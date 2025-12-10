@@ -33,6 +33,7 @@ async function loadPoseLandmarker() {
     baseOptions: {
       modelAssetPath:
         'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task',
+      delegate: 'CPU', // 强制使用 CPU 推理，避免移动端 WebGL 上下文丢失或显存不足导致的卡死
     },
     runningMode: 'IMAGE',
     numPoses: 1,
@@ -429,17 +430,32 @@ export async function initWarpSession(
   // Detect landmarks if not provided
   let lmsNorm = options?.landmarksNormalized;
   if (!lmsNorm) {
-    _logger('Detecting landmarks...');
-    const pose = await loadPoseLandmarker();
-    const result = pose.detect(img);
-    const lms = (result as any)?.landmarks?.[0] as Array<{ x: number, y: number }> | undefined;
-    if (!lms || lms.length < 33) {
-        _logger('No landmarks detected');
-        throw new Error('No landmarks detected');
+    _logger('Detecting landmarks (CPU enforced)...');
+    try {
+        // Race detection with timeout
+        const detectPromise = (async () => {
+            const pose = await loadPoseLandmarker();
+            return pose.detect(img);
+        })();
+        
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Landmark detection timeout (5s)')), 5000)
+        );
+
+        const result: any = await Promise.race([detectPromise, timeoutPromise]);
+        
+        const lms = result?.landmarks?.[0] as Array<{ x: number, y: number }> | undefined;
+        if (!lms || lms.length < 33) {
+            _logger('No landmarks detected');
+            throw new Error('No landmarks detected');
+        }
+        lmsNorm = new Float32Array(33 * 2);
+        for (let i = 0; i < 33; i++) { lmsNorm[i * 2] = lms[i].x; lmsNorm[i * 2 + 1] = lms[i].y; }
+        _logger('Landmarks detected');
+    } catch (e) {
+        _logger('Landmark detection failed or timed out', e);
+        throw e;
     }
-    lmsNorm = new Float32Array(33 * 2);
-    for (let i = 0; i < 33; i++) { lmsNorm[i * 2] = lms[i].x; lmsNorm[i * 2 + 1] = lms[i].y; }
-    _logger('Landmarks detected');
   }
 
   // Determine view size
