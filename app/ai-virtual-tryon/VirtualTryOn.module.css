@@ -773,7 +773,7 @@
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
-  filter: blur(0.5px); /* 仅做非常轻微的虚化，保留更多背景细节 */
+  filter: blur(0.3px); /* 仅做非常轻微的虚化，保留更多背景细节 */
   transform: none;
   transform-origin: center;
   z-index: 0;
