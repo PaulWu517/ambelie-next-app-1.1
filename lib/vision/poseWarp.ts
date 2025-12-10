@@ -62,9 +62,12 @@ export async function detectPoseLandmarksNormalized(dataUrl: string): Promise<Fl
 async function imageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // Only set crossOrigin for remote URLs, not data URLs
+    if (!dataUrl.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = (e) => reject(new Error('Image load failed'));
     img.src = dataUrl;
   });
 }

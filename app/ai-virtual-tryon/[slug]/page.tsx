@@ -161,7 +161,10 @@ const SlugTryOnPage: React.FC = () => {
   const loadImage = (src: string): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      // Only set crossOrigin for remote URLs, not data URLs to avoid Safari issues
+      if (!src.startsWith('data:')) {
+        img.crossOrigin = 'anonymous';
+      }
       img.onload = () => resolve(img);
       img.onerror = (e) => reject(e);
       img.src = src;
@@ -1409,6 +1412,22 @@ const SlugTryOnPage: React.FC = () => {
         } catch (e) {
           console.warn('Failed to init warp session', e);
           emitUI('editor-init-error', e instanceof Error ? e.message : String(e));
+          
+          // Fallback: Draw static image so user sees something
+          if (editorCanvasRef.current && sourceImage) {
+             try {
+               const ctx = editorCanvasRef.current.getContext('2d');
+               const img = await loadImage(sourceImage);
+               if (ctx) {
+                 // Clear just in case
+                 ctx.clearRect(0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
+                 ctx.drawImage(img, 0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
+                 emitUI('editor-fallback-draw-success');
+               }
+             } catch (fallbackErr) {
+               console.warn('Fallback draw failed', fallbackErr);
+             }
+          }
         } finally {
           setIsEditorLoading(false);
         }
