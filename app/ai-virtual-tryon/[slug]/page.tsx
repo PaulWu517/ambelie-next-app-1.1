@@ -1353,28 +1353,68 @@ const SlugTryOnPage: React.FC = () => {
 
     document.body.style.overflow = 'hidden';
     
+    emitUI('editor-open-start', { 
+      isLayered: isLayeredModeRef.current, 
+      hasPersonLayer: !!personLayerRef.current,
+      hasBgLayer: !!backgroundLayerRef.current,
+      canvasExists: !!editorCanvasRef.current,
+      resultUrl: resultUrl?.slice(0, 50)
+    });
+
     // Init session next tick to allow canvas to render
     setTimeout(async () => {
       // Use person layer if available, otherwise full result
       const sourceImage = (isLayeredModeRef.current && personLayerRef.current) ? personLayerRef.current : resultUrl;
       
+      emitUI('editor-init-attempt', {
+        sourceImageLen: sourceImage?.length || 0,
+        canvasWidth: editorCanvasRef.current?.width,
+        canvasHeight: editorCanvasRef.current?.height,
+        clientWidth: editorCanvasRef.current?.clientWidth,
+        clientHeight: editorCanvasRef.current?.clientHeight
+      });
+
       if (editorCanvasRef.current && sourceImage) {
         try {
+          // Pre-set canvas dimensions from image to ensure correct background aspect ratio even before warp init
+          // This fixes "partial background" if warp is slow or fails
+          try {
+             const img = await loadImage(sourceImage);
+             // We want to limit max dimension same as initWarpSession to avoid huge canvas on mobile
+             const origW = img.naturalWidth;
+             const origH = img.naturalHeight;
+             const maxDim = 640;
+             const scale = Math.min(1, maxDim / Math.max(origW, origH));
+             const viewW = Math.max(1, Math.round(origW * scale));
+             const viewH = Math.max(1, Math.round(origH * scale));
+             
+             editorCanvasRef.current.width = viewW;
+             editorCanvasRef.current.height = viewH;
+             emitUI('editor-canvas-presized', { w: viewW, h: viewH });
+          } catch (e) {
+             console.warn('Failed to pre-size canvas', e);
+          }
+
           // Use higher dimension (640px) now that we have optimized mesh warping
           const session = await initWarpSession(sourceImage, editorCanvasRef.current, { 
             maxDimension: 640, 
             landmarksNormalized: poseLmsRef.current || undefined 
           });
           warpSessionRef.current = session;
+          emitUI('editor-session-ready');
+          
           // Initial warp to show current state
           await session.warp(warpControls);
+          emitUI('editor-initial-warp-done');
         } catch (e) {
           console.warn('Failed to init warp session', e);
+          emitUI('editor-init-error', e instanceof Error ? e.message : String(e));
         } finally {
           setIsEditorLoading(false);
         }
       } else {
         setIsEditorLoading(false);
+        emitUI('editor-init-skipped', { reason: 'missing-canvas-or-image' });
       }
     }, 100);
   };
