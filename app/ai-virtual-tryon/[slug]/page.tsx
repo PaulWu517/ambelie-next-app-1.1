@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { applyPoseWarpToDataUrl, initWarpSession } from '@/lib/vision/poseWarp';
+import { applyPoseWarpToDataUrl, initWarpSession, setWarpLogger } from '@/lib/vision/poseWarp';
 import { detectPoseLandmarksNormalized } from '@/lib/vision/poseWarp';
 import { useParams, useSearchParams } from 'next/navigation';
 import { compressImage } from '@/lib/utils/imageCompression';
@@ -37,6 +37,14 @@ const SlugTryOnPage: React.FC = () => {
 
   // 首次挂载打点
   useEffect(() => { emitUI('mount', { at: Date.now() }); }, []);
+  
+  // 注入 poseWarp 库的远程日志 logger
+  useEffect(() => {
+    setWarpLogger((msg, data) => {
+      // 通过 emitUI 发送到后端 /api/diagnostic，这样我们能在终端看到移动端的详细报错
+      emitUI('warp-lib', { msg, data });
+    });
+  }, []);
 
   const params = useParams();
   const search = useSearchParams();

@@ -345,13 +345,21 @@ let _worker: Worker | null = null;
 let _reqId = 0;
 const _pending = new Map<number, { resolve: (val: any) => void, reject: (err: any) => void }>();
 
+// 新增：允许外部注入日志函数，用于远程诊断移动端问题
+let _logger: (msg: string, data?: any) => void = (msg, data) => console.log(`[poseWarp] ${msg}`, data);
+export function setWarpLogger(fn: (msg: string, data?: any) => void) {
+  _logger = fn;
+}
+
 function getWorker() {
   if (typeof window === 'undefined') return null; // Server-side safe
   if (!_worker) {
     try {
+      _logger('Creating Blob Worker...');
       // Create Worker from Blob to avoid file loading issues on mobile/different environments
       const blob = new Blob([WORKER_CODE], { type: 'application/javascript' });
       const url = URL.createObjectURL(blob);
+      _logger('Blob URL created', { url });
       _worker = new Worker(url);
       
       _worker.onmessage = (e) => {
@@ -365,16 +373,20 @@ function getWorker() {
             // Simple success without buffer (e.g. init)
             p.resolve(true);
           } else {
-            p.reject(new Error(error || 'Worker failed'));
+            const errMsg = error || 'Worker failed';
+            _logger('Worker response error', { id, errMsg });
+            p.reject(new Error(errMsg));
           }
         }
       };
       
       _worker.onerror = (e) => {
+        _logger('Worker error event', { message: e.message, filename: e.filename, lineno: e.lineno });
         console.error('[poseWarp] Worker error', e);
         // If worker fails hard, we might want to kill it
       };
     } catch (e) {
+      _logger('Failed to create Blob Worker', e);
       console.error('[poseWarp] Failed to create Blob Worker', e);
       return null;
     }
@@ -402,22 +414,32 @@ export async function initWarpSession(
   canvas: HTMLCanvasElement, 
   options?: { maxDimension?: number, landmarksNormalized?: Float32Array }
 ) {
+  _logger('initWarpSession start', { maxDimension: options?.maxDimension });
   const worker = getWorker();
-  if (!worker) throw new Error('Worker not available');
+  if (!worker) {
+     _logger('initWarpSession failed: No worker');
+     throw new Error('Worker not available');
+  }
 
   const img = await imageFromDataUrl(dataUrl);
   const origW = img.width;
   const origH = img.height;
+  _logger('Image loaded for session', { w: origW, h: origH });
   
   // Detect landmarks if not provided
   let lmsNorm = options?.landmarksNormalized;
   if (!lmsNorm) {
+    _logger('Detecting landmarks...');
     const pose = await loadPoseLandmarker();
     const result = pose.detect(img);
     const lms = (result as any)?.landmarks?.[0] as Array<{ x: number, y: number }> | undefined;
-    if (!lms || lms.length < 33) throw new Error('No landmarks detected');
+    if (!lms || lms.length < 33) {
+        _logger('No landmarks detected');
+        throw new Error('No landmarks detected');
+    }
     lmsNorm = new Float32Array(33 * 2);
     for (let i = 0; i < 33; i++) { lmsNorm[i * 2] = lms[i].x; lmsNorm[i * 2 + 1] = lms[i].y; }
+    _logger('Landmarks detected');
   }
 
   // Determine view size
@@ -451,6 +473,7 @@ export async function initWarpSession(
     setTimeout(() => { if (_pending.has(id)) { _pending.delete(id); reject(new Error('Init timeout')); } }, 10000);
   });
 
+  _logger('Sending init msg to worker', { id, viewW, viewH });
   worker.postMessage({
     type: 'init',
     id,
@@ -460,11 +483,18 @@ export async function initWarpSession(
     src33
   }, [srcImageData.data.buffer]);
 
-  await p;
+  try {
+      await p;
+      _logger('Worker init success');
+  } catch (err) {
+      _logger('Worker init failed', err);
+      throw err;
+  }
 
   // Return interface
   return {
     warp: async (controls: WarpControls) => {
+      // _logger('warp() called', { controls }); 
       const warpId = ++_reqId;
       const warpP = new Promise<{ resultBuffer: ArrayBuffer }>((resolve, reject) => {
         _pending.set(warpId, { resolve, reject });
@@ -478,9 +508,14 @@ export async function initWarpSession(
         measurements: controls
       });
 
-      const { resultBuffer } = await warpP;
-      const outImageData = new ImageData(new Uint8ClampedArray(resultBuffer), viewW, viewH);
-      ctx.putImageData(outImageData, 0, 0);
+      try {
+          const { resultBuffer } = await warpP;
+          const outImageData = new ImageData(new Uint8ClampedArray(resultBuffer), viewW, viewH);
+          ctx.putImageData(outImageData, 0, 0);
+      } catch (e) {
+          _logger('warp execution failed', { warpId, error: e });
+          throw e;
+      }
     },
     cleanup: () => {
       // If we need to tell worker to free memory, we can add a 'destroy' message
