@@ -1368,7 +1368,7 @@ const SlugTryOnPage: React.FC = () => {
               const img = await loadImage(sourceImage);
               const origW = img.naturalWidth;
               const origH = img.naturalHeight;
-              const maxDim = 640;
+              const maxDim = 1280;
               const scale = Math.min(1, maxDim / Math.max(origW, origH));
               const viewW = Math.max(1, Math.round(origW * scale));
               const viewH = Math.max(1, Math.round(origH * scale));
@@ -1381,7 +1381,7 @@ const SlugTryOnPage: React.FC = () => {
            }
 
            const session = await initWarpSession(sourceImage, editorCanvasRef.current, { 
-             maxDimension: 640, 
+             maxDimension: 1280, 
              landmarksNormalized: poseLmsRef.current || undefined 
            });
            warpSessionRef.current = session;
