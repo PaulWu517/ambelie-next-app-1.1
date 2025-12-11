@@ -1288,157 +1288,121 @@ const SlugTryOnPage: React.FC = () => {
     }
   };
 
-  const handleOpenEditor = async () => {
+  const handleOpenEditor = () => {
     if (!resultUrl) return;
 
-    // 点击按钮后立即进入编辑模块，同时显示加载动画
-    const currentControls = { ...warpControls };
-    setTempWarpControls(currentControls);
+    // 1. Open UI immediately
+    setTempWarpControls({ ...warpControls });
     setIsEditorOpen(true);
     setIsEditorLoading(true);
-
     document.body.style.overflow = 'hidden';
+    
+    emitUI('editor-open-start', { 
+      isLayered: isLayeredModeRef.current, 
+      resultUrl: resultUrl?.slice(0, 50)
+    });
 
-    // 下一帧再做重计算和网络请求，确保模态框先渲染出来
-    setTimeout(async () => {
-      let sourceImage: string | null = resultUrl;
-
-      // 在编辑器内部、加载动画期间调用人物分割云函数
-      if (!isLayeredModeRef.current || !personLayerRef.current) {
-        try {
-          console.log('[slug tryon] Starting segmentation for layered editing (inside editor)...');
-
-          // 1. 获取当前结果图的 Base64
+    // 2. Start Async Process
+    (async () => {
+      try {
+        // --- Segmentation Logic ---
+        if (!isLayeredModeRef.current || !personLayerRef.current) {
+          console.log('[slug tryon] Starting segmentation for layered editing...');
+          
+          // Get Base64 of current result
           const resp = await fetch(resultUrl);
           const blob = await resp.blob();
           const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const res = reader.result as string;
-              resolve(res.split(',')[1]);
-            };
-            reader.readAsDataURL(blob);
+             const reader = new FileReader();
+             reader.onloadend = () => {
+               const res = reader.result as string;
+               resolve(res.split(',')[1]);
+             };
+             reader.readAsDataURL(blob);
           });
-
-          // 2. 调用人像分割 SCF
-          const segUrl =
-            process.env.NEXT_PUBLIC_SCF_SEGMENTATION_URL ||
-            'https://service-q703080k-1305470656.gz.apigw.tencentcs.com/release/segment';
-
+          
+          // Call Segmentation SCF
+          const segUrl = process.env.NEXT_PUBLIC_SCF_SEGMENTATION_URL || 'https://service-q703080k-1305470656.gz.apigw.tencentcs.com/release/segment';
+          
           const segResp = await fetch(segUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, mime: blob.type }),
+            body: JSON.stringify({ imageBase64: base64, mime: blob.type })
           });
-
+          
           if (!segResp.ok) throw new Error(`Segmentation failed: ${segResp.status}`);
           const segData = await segResp.json();
           if (!segData.foregroundMaskBase64) throw new Error('No mask returned');
-
-          // 3. 生成人物图层
+          
+          // Create Person Layer
           const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, blob.type);
           personLayerRef.current = personLayer;
-
-          // 4. 加载并适配背景图层，使之与人物图层尺寸完全一致
+          
+          // Load & Fit Background Layer
           const pImg = await loadImage(personLayer);
-          const fittedBg = await createFittedBackgroundLayer(
-            '/assets/backgrounds/tryon-bg-default.webp',
-            pImg.naturalWidth,
-            pImg.naturalHeight
-          );
+          const fittedBg = await createFittedBackgroundLayer('/assets/backgrounds/tryon-bg-default.webp', pImg.naturalWidth, pImg.naturalHeight);
           backgroundLayerRef.current = fittedBg;
-
-          // 5. 将变形基准切换为人物图层（只对人物做 warp）
+          
+          // Update Ref
           baseResultRef.current = personLayer;
           isLayeredModeRef.current = true;
-          sourceImage = personLayer;
-
+          
           console.log('[slug tryon] Segmentation complete, switched to layered mode');
-        } catch (e) {
-          console.warn('[slug tryon] Segmentation setup failed, falling back to full image edit', e);
-          // 兜底：继续使用整图作为基准
-          baseResultRef.current = resultUrl;
-          isLayeredModeRef.current = false;
-          sourceImage = resultUrl;
         }
-      } else {
-        // 已经有分层结果，直接复用
-        sourceImage = personLayerRef.current || resultUrl;
-        baseResultRef.current = sourceImage;
-      }
 
-      emitUI('editor-open-start', {
-        isLayered: isLayeredModeRef.current,
-        hasPersonLayer: !!personLayerRef.current,
-        hasBgLayer: !!backgroundLayerRef.current,
-        canvasExists: !!editorCanvasRef.current,
-        resultUrl: resultUrl?.slice(0, 50),
-      });
+        // --- Init Warp Session ---
+        // Ensure canvas is mounted (wait a tick if segmentation was super fast or cached)
+        await new Promise(r => setTimeout(r, 100));
+        
+        const sourceImage = (isLayeredModeRef.current && personLayerRef.current) ? personLayerRef.current : resultUrl;
+        
+        emitUI('editor-init-attempt', {
+          sourceImageLen: sourceImage?.length || 0,
+          canvasWidth: editorCanvasRef.current?.width,
+          canvasHeight: editorCanvasRef.current?.height
+        });
 
-      emitUI('editor-init-attempt', {
-        sourceImageLen: sourceImage?.length || 0,
-        canvasWidth: editorCanvasRef.current?.width,
-        canvasHeight: editorCanvasRef.current?.height,
-        clientWidth: editorCanvasRef.current?.clientWidth,
-        clientHeight: editorCanvasRef.current?.clientHeight,
-      });
-
-      if (editorCanvasRef.current && sourceImage) {
-        try {
-          // 先根据图片尺寸预设 canvas，避免 warp 失败时出现“背景只铺了一半”
-          try {
-            const img = await loadImage(sourceImage);
-            const origW = img.naturalWidth;
-            const origH = img.naturalHeight;
-            const maxDim = 640;
-            const scale = Math.min(1, maxDim / Math.max(origW, origH));
-            const viewW = Math.max(1, Math.round(origW * scale));
-            const viewH = Math.max(1, Math.round(origH * scale));
-
-            editorCanvasRef.current.width = viewW;
-            editorCanvasRef.current.height = viewH;
-            emitUI('editor-canvas-presized', { w: viewW, h: viewH });
-          } catch (e) {
-            console.warn('Failed to pre-size canvas', e);
-          }
-
-          // 初始化持久 warp 会话
-          const session = await initWarpSession(sourceImage, editorCanvasRef.current, {
-            maxDimension: 640,
-            landmarksNormalized: poseLmsRef.current || undefined,
-          });
-          warpSessionRef.current = session;
-          emitUI('editor-session-ready');
-
-          // 初始一次 warp，保证进入时即为当前数值
-          await session.warp(currentControls);
-          emitUI('editor-initial-warp-done');
-        } catch (e) {
-          console.warn('Failed to init warp session', e);
-          emitUI('editor-init-error', e instanceof Error ? e.message : String(e));
-
-          // 兜底：至少把静态图画出来
-          if (editorCanvasRef.current && sourceImage) {
-            try {
-              const ctx = editorCanvasRef.current.getContext('2d');
+        if (editorCanvasRef.current && sourceImage) {
+           // Pre-size canvas
+           try {
               const img = await loadImage(sourceImage);
-              if (ctx) {
-                ctx.clearRect(0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
-                ctx.drawImage(img, 0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
-                emitUI('editor-fallback-draw-success');
-              }
-            } catch (fallbackErr) {
-              console.warn('Fallback draw failed', fallbackErr);
-            }
-          }
-        } finally {
-          setIsEditorLoading(false);
+              const origW = img.naturalWidth;
+              const origH = img.naturalHeight;
+              const maxDim = 640;
+              const scale = Math.min(1, maxDim / Math.max(origW, origH));
+              const viewW = Math.max(1, Math.round(origW * scale));
+              const viewH = Math.max(1, Math.round(origH * scale));
+              
+              editorCanvasRef.current.width = viewW;
+              editorCanvasRef.current.height = viewH;
+              emitUI('editor-canvas-presized', { w: viewW, h: viewH });
+           } catch (e) {
+              console.warn('Failed to pre-size canvas', e);
+           }
+
+           const session = await initWarpSession(sourceImage, editorCanvasRef.current, { 
+             maxDimension: 640, 
+             landmarksNormalized: poseLmsRef.current || undefined 
+           });
+           warpSessionRef.current = session;
+           emitUI('editor-session-ready');
+           
+           // Initial warp
+           await session.warp(warpControls);
+           emitUI('editor-initial-warp-done');
+        } else {
+           throw new Error('Canvas or Source Image missing after setup');
         }
-      } else {
+
+      } catch (e) {
+        console.warn('Editor setup failed', e);
+        // On failure, alert user and close editor (no static fallback)
+        alert('Failed to initialize editor: ' + (e instanceof Error ? e.message : String(e)));
+        handleCloseEditor(false);
+      } finally {
         setIsEditorLoading(false);
-        emitUI('editor-init-skipped', { reason: 'missing-canvas-or-image' });
       }
-    }, 100);
+    })();
   };
 
   const handleCloseEditor = async (save: boolean) => {
