@@ -63,7 +63,7 @@ async function imageFromDataUrl(dataUrl: string): Promise<HTMLImageElement> {
     const img = new Image();
     // Only set crossOrigin for remote URLs, not data URLs
     if (!dataUrl.startsWith('data:')) {
-      img.crossOrigin = 'anonymous';
+    img.crossOrigin = 'anonymous';
     }
     img.onload = () => resolve(img);
     img.onerror = (e) => reject(new Error(`Image load failed for ${dataUrl.slice(0, 50)}...`));

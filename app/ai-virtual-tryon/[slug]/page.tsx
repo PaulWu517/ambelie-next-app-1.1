@@ -1290,143 +1290,146 @@ const SlugTryOnPage: React.FC = () => {
 
   const handleOpenEditor = async () => {
     if (!resultUrl) return;
-    
-    // Check if we need to perform segmentation
-    if (!isLayeredModeRef.current || !personLayerRef.current) {
-      setIsEditorLoading(true);
-      try {
-        console.log('[slug tryon] Starting segmentation for layered editing...');
-        
-        // 1. Get Base64 of current result
-        const resp = await fetch(resultUrl);
-        const blob = await resp.blob();
-        const base64 = await new Promise<string>((resolve) => {
-           const reader = new FileReader();
-           reader.onloadend = () => {
-             const res = reader.result as string;
-             resolve(res.split(',')[1]);
-           };
-           reader.readAsDataURL(blob);
-        });
-        
-        // 2. Call Segmentation SCF
-        const segUrl = process.env.NEXT_PUBLIC_SCF_SEGMENTATION_URL || 'https://service-q703080k-1305470656.gz.apigw.tencentcs.com/release/segment';
-        // Note: Using a default placeholder based on Guangzhou region pattern, but user needs to config if different.
-        // For now, I'll trust user provided env or fallback.
-        
-        const segResp = await fetch(segUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64: base64, mime: blob.type })
-        });
-        
-        if (!segResp.ok) throw new Error(`Segmentation failed: ${segResp.status}`);
-        const segData = await segResp.json();
-        if (!segData.foregroundMaskBase64) throw new Error('No mask returned');
-        
-        // 3. Create Person Layer
-        const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, blob.type);
-        personLayerRef.current = personLayer;
-        
-        // 4. Load & Fit Background Layer
-        // We must crop the background to the exact dimensions of the person layer 
-        // to ensure they align perfectly in the editor (which uses object-fit: contain).
-        const pImg = await loadImage(personLayer);
-        const fittedBg = await createFittedBackgroundLayer('/assets/backgrounds/tryon-bg-default.webp', pImg.naturalWidth, pImg.naturalHeight);
-        backgroundLayerRef.current = fittedBg;
-        
-        // 5. Update Ref to point to Person Layer (so warping only affects person)
-        baseResultRef.current = personLayer;
-        isLayeredModeRef.current = true;
-        
-        console.log('[slug tryon] Segmentation complete, switched to layered mode');
-        
-      } catch (e) {
-        console.warn('[slug tryon] Segmentation setup failed, falling back to full image edit', e);
-        // Fallback: keep using resultUrl as baseResultRef (default behavior)
-      } finally {
-        setIsEditorLoading(false);
-      }
-    }
 
-    setTempWarpControls({ ...warpControls });
+    // 点击按钮后立即进入编辑模块，同时显示加载动画
+    const currentControls = { ...warpControls };
+    setTempWarpControls(currentControls);
     setIsEditorOpen(true);
-    // setIsEditorLoading(true); // Already handled or reset above
-    if (!isLayeredModeRef.current) setIsEditorLoading(true); // Set loading if we didn't do segmentation logic above
+    setIsEditorLoading(true);
 
     document.body.style.overflow = 'hidden';
-    
-    emitUI('editor-open-start', { 
-      isLayered: isLayeredModeRef.current, 
-      hasPersonLayer: !!personLayerRef.current,
-      hasBgLayer: !!backgroundLayerRef.current,
-      canvasExists: !!editorCanvasRef.current,
-      resultUrl: resultUrl?.slice(0, 50)
-    });
 
-    // Init session next tick to allow canvas to render
+    // 下一帧再做重计算和网络请求，确保模态框先渲染出来
     setTimeout(async () => {
-      // Use person layer if available, otherwise full result
-      const sourceImage = (isLayeredModeRef.current && personLayerRef.current) ? personLayerRef.current : resultUrl;
-      
+      let sourceImage: string | null = resultUrl;
+
+      // 在编辑器内部、加载动画期间调用人物分割云函数
+      if (!isLayeredModeRef.current || !personLayerRef.current) {
+        try {
+          console.log('[slug tryon] Starting segmentation for layered editing (inside editor)...');
+
+          // 1. 获取当前结果图的 Base64
+          const resp = await fetch(resultUrl);
+          const blob = await resp.blob();
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const res = reader.result as string;
+              resolve(res.split(',')[1]);
+            };
+            reader.readAsDataURL(blob);
+          });
+
+          // 2. 调用人像分割 SCF
+          const segUrl =
+            process.env.NEXT_PUBLIC_SCF_SEGMENTATION_URL ||
+            'https://service-q703080k-1305470656.gz.apigw.tencentcs.com/release/segment';
+
+          const segResp = await fetch(segUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64: base64, mime: blob.type }),
+          });
+
+          if (!segResp.ok) throw new Error(`Segmentation failed: ${segResp.status}`);
+          const segData = await segResp.json();
+          if (!segData.foregroundMaskBase64) throw new Error('No mask returned');
+
+          // 3. 生成人物图层
+          const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, blob.type);
+          personLayerRef.current = personLayer;
+
+          // 4. 加载并适配背景图层，使之与人物图层尺寸完全一致
+          const pImg = await loadImage(personLayer);
+          const fittedBg = await createFittedBackgroundLayer(
+            '/assets/backgrounds/tryon-bg-default.webp',
+            pImg.naturalWidth,
+            pImg.naturalHeight
+          );
+          backgroundLayerRef.current = fittedBg;
+
+          // 5. 将变形基准切换为人物图层（只对人物做 warp）
+          baseResultRef.current = personLayer;
+          isLayeredModeRef.current = true;
+          sourceImage = personLayer;
+
+          console.log('[slug tryon] Segmentation complete, switched to layered mode');
+        } catch (e) {
+          console.warn('[slug tryon] Segmentation setup failed, falling back to full image edit', e);
+          // 兜底：继续使用整图作为基准
+          baseResultRef.current = resultUrl;
+          isLayeredModeRef.current = false;
+          sourceImage = resultUrl;
+        }
+      } else {
+        // 已经有分层结果，直接复用
+        sourceImage = personLayerRef.current || resultUrl;
+        baseResultRef.current = sourceImage;
+      }
+
+      emitUI('editor-open-start', {
+        isLayered: isLayeredModeRef.current,
+        hasPersonLayer: !!personLayerRef.current,
+        hasBgLayer: !!backgroundLayerRef.current,
+        canvasExists: !!editorCanvasRef.current,
+        resultUrl: resultUrl?.slice(0, 50),
+      });
+
       emitUI('editor-init-attempt', {
         sourceImageLen: sourceImage?.length || 0,
         canvasWidth: editorCanvasRef.current?.width,
         canvasHeight: editorCanvasRef.current?.height,
         clientWidth: editorCanvasRef.current?.clientWidth,
-        clientHeight: editorCanvasRef.current?.clientHeight
+        clientHeight: editorCanvasRef.current?.clientHeight,
       });
 
       if (editorCanvasRef.current && sourceImage) {
         try {
-          // Pre-set canvas dimensions from image to ensure correct background aspect ratio even before warp init
-          // This fixes "partial background" if warp is slow or fails
+          // 先根据图片尺寸预设 canvas，避免 warp 失败时出现“背景只铺了一半”
           try {
-             const img = await loadImage(sourceImage);
-             // We want to limit max dimension same as initWarpSession to avoid huge canvas on mobile
-             const origW = img.naturalWidth;
-             const origH = img.naturalHeight;
-             const maxDim = 640;
-             const scale = Math.min(1, maxDim / Math.max(origW, origH));
-             const viewW = Math.max(1, Math.round(origW * scale));
-             const viewH = Math.max(1, Math.round(origH * scale));
-             
-             editorCanvasRef.current.width = viewW;
-             editorCanvasRef.current.height = viewH;
-             emitUI('editor-canvas-presized', { w: viewW, h: viewH });
+            const img = await loadImage(sourceImage);
+            const origW = img.naturalWidth;
+            const origH = img.naturalHeight;
+            const maxDim = 640;
+            const scale = Math.min(1, maxDim / Math.max(origW, origH));
+            const viewW = Math.max(1, Math.round(origW * scale));
+            const viewH = Math.max(1, Math.round(origH * scale));
+
+            editorCanvasRef.current.width = viewW;
+            editorCanvasRef.current.height = viewH;
+            emitUI('editor-canvas-presized', { w: viewW, h: viewH });
           } catch (e) {
-             console.warn('Failed to pre-size canvas', e);
+            console.warn('Failed to pre-size canvas', e);
           }
 
-          // Use higher dimension (640px) now that we have optimized mesh warping
-          const session = await initWarpSession(sourceImage, editorCanvasRef.current, { 
-            maxDimension: 640, 
-            landmarksNormalized: poseLmsRef.current || undefined 
+          // 初始化持久 warp 会话
+          const session = await initWarpSession(sourceImage, editorCanvasRef.current, {
+            maxDimension: 640,
+            landmarksNormalized: poseLmsRef.current || undefined,
           });
           warpSessionRef.current = session;
           emitUI('editor-session-ready');
-          
-          // Initial warp to show current state
-          await session.warp(warpControls);
+
+          // 初始一次 warp，保证进入时即为当前数值
+          await session.warp(currentControls);
           emitUI('editor-initial-warp-done');
         } catch (e) {
           console.warn('Failed to init warp session', e);
           emitUI('editor-init-error', e instanceof Error ? e.message : String(e));
-          
-          // Fallback: Draw static image so user sees something
+
+          // 兜底：至少把静态图画出来
           if (editorCanvasRef.current && sourceImage) {
-             try {
-               const ctx = editorCanvasRef.current.getContext('2d');
-               const img = await loadImage(sourceImage);
-               if (ctx) {
-                 // Clear just in case
-                 ctx.clearRect(0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
-                 ctx.drawImage(img, 0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
-                 emitUI('editor-fallback-draw-success');
-               }
-             } catch (fallbackErr) {
-               console.warn('Fallback draw failed', fallbackErr);
-             }
+            try {
+              const ctx = editorCanvasRef.current.getContext('2d');
+              const img = await loadImage(sourceImage);
+              if (ctx) {
+                ctx.clearRect(0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
+                ctx.drawImage(img, 0, 0, editorCanvasRef.current.width, editorCanvasRef.current.height);
+                emitUI('editor-fallback-draw-success');
+              }
+            } catch (fallbackErr) {
+              console.warn('Fallback draw failed', fallbackErr);
+            }
           }
         } finally {
           setIsEditorLoading(false);
