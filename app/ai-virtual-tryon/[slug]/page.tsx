@@ -157,25 +157,36 @@ const SlugTryOnPage: React.FC = () => {
     });
   };
 
-  // Helper: Load image from src
-  const loadImage = (src: string): Promise<HTMLImageElement> =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      // Only set crossOrigin for remote URLs, not data URLs to avoid Safari issues
-      if (!src.startsWith('data:')) {
-        img.crossOrigin = 'anonymous';
+  // Helper: Load image from src with retry logic to handle transient failures or memory pressure
+  const loadImage = async (src: string, retries = 2): Promise<HTMLImageElement> => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await new Promise((resolve, reject) => {
+          const img = new Image();
+          // Only set crossOrigin for remote URLs, not data URLs to avoid Safari issues
+          if (!src.startsWith('data:')) {
+            img.crossOrigin = 'anonymous';
+          }
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error(`Image load failed (attempt ${i + 1})`));
+          img.src = src;
+        });
+      } catch (e) {
+        if (i === retries) throw e;
+        console.warn(`Image load failed, retrying (${i + 1}/${retries})...`);
+        // Wait a bit before retry to allow memory cleanup
+        await new Promise(r => setTimeout(r, 200));
       }
-      img.onload = () => resolve(img);
-      img.onerror = (e) => reject(e);
-      img.src = src;
-    });
+    }
+    throw new Error('Image load failed after retries');
+  };
 
   // Helper: Create person layer using mask
   const createPersonLayer = async (originalBase64: string, maskBase64: string, mime: string): Promise<string> => {
-    const [origImg, maskImg] = await Promise.all([
-      loadImage(`data:${mime};base64,${originalBase64}`),
-      loadImage(`data:image/png;base64,${maskBase64}`)
-    ]);
+    // Load sequentially instead of Promise.all to reduce peak memory pressure on mobile
+    // This helps prevent "Load failed" errors on iOS during heavy operations
+    const origImg = await loadImage(`data:${mime};base64,${originalBase64}`);
+    const maskImg = await loadImage(`data:image/png;base64,${maskBase64}`);
     
     const width = origImg.naturalWidth;
     const height = origImg.naturalHeight;
