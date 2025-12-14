@@ -1314,51 +1314,81 @@ const SlugTryOnPage: React.FC = () => {
     });
 
     // 2. Start Async Process
-    (async () => {
+    // 使用 setTimeout 将重任务推迟到下一帧，确保 setIsEditorLoading(true) 有机会渲染出 Loading 界面
+    setTimeout(async () => {
       try {
         // --- Segmentation Logic ---
         if (!isLayeredModeRef.current || !personLayerRef.current) {
           console.log('[slug tryon] Starting segmentation for layered editing...');
           
-          // Get Base64 of current result
-          const resp = await fetch(resultUrl);
-          const blob = await resp.blob();
-          const base64 = await new Promise<string>((resolve) => {
-             const reader = new FileReader();
-             reader.onloadend = () => {
-               const res = reader.result as string;
-               resolve(res.split(',')[1]);
-             };
-             reader.readAsDataURL(blob);
-          });
+          // Get Base64 of current result directly from string to avoid fetch overhead/issues
+          let base64 = '';
+          let mime = 'image/png';
           
-          // Call Segmentation SCF
-          const segUrl = process.env.NEXT_PUBLIC_SCF_SEGMENTATION_URL || 'https://service-q703080k-1305470656.gz.apigw.tencentcs.com/release/segment';
+          if (resultUrl.startsWith('data:')) {
+            const parts = resultUrl.split(',');
+            if (parts.length === 2) {
+                base64 = parts[1];
+                const mimeMatch = parts[0].match(/:(.*?);/);
+                if (mimeMatch) mime = mimeMatch[1];
+            }
+          } else {
+             // Fallback for remote URLs
+             const resp = await fetch(resultUrl);
+             const blob = await resp.blob();
+             mime = blob.type;
+             base64 = await new Promise<string>((resolve) => {
+                 const reader = new FileReader();
+                 reader.onloadend = () => {
+                   const res = reader.result as string;
+                   resolve(res.split(',')[1]);
+                 };
+                 reader.readAsDataURL(blob);
+             });
+          }
           
-          const segResp = await fetch(segUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageBase64: base64, mime: blob.type })
-          });
+          // Call Segmentation via Local Proxy (Vercel -> SCF) instead of Direct Browser -> SCF
+          // This solves the connection timeout issues for international users accessing Guangzhou SCF
+          const segUrl = '/api/segment';
           
-          if (!segResp.ok) throw new Error(`Segmentation failed: ${segResp.status}`);
-          const segData = await segResp.json();
-          if (!segData.foregroundMaskBase64) throw new Error('No mask returned');
-          
-          // Create Person Layer
-          const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, blob.type);
-          personLayerRef.current = personLayer;
-          
-          // Load & Fit Background Layer
-          const pImg = await loadImage(personLayer);
-          const fittedBg = await createFittedBackgroundLayer('/assets/backgrounds/tryon-bg-default.webp', pImg.naturalWidth, pImg.naturalHeight);
-          backgroundLayerRef.current = fittedBg;
-          
-          // Update Ref
-          baseResultRef.current = personLayer;
-          isLayeredModeRef.current = true;
-          
-          console.log('[slug tryon] Segmentation complete, switched to layered mode');
+          // 增加 60秒 超时控制
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+          try {
+            const segResp = await fetch(segUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageBase64: base64, mime }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            if (!segResp.ok) {
+                const errTxt = await segResp.text();
+                throw new Error(`Segmentation failed: ${segResp.status} - ${errTxt.slice(0, 100)}`);
+            }
+            const segData = await segResp.json();
+            if (!segData.foregroundMaskBase64) throw new Error('No mask returned from segmentation');
+            
+            // Create Person Layer
+            const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, mime);
+            personLayerRef.current = personLayer;
+            
+            // Load & Fit Background Layer
+            const pImg = await loadImage(personLayer);
+            const fittedBg = await createFittedBackgroundLayer('/assets/backgrounds/tryon-bg-default.webp', pImg.naturalWidth, pImg.naturalHeight);
+            backgroundLayerRef.current = fittedBg;
+            
+            // Update Ref
+            baseResultRef.current = personLayer;
+            isLayeredModeRef.current = true;
+            
+            console.log('[slug tryon] Segmentation complete, switched to layered mode');
+          } catch (segErr) {
+             clearTimeout(timeoutId);
+             throw segErr;
+          }
         }
 
         // --- Init Warp Session ---
@@ -1413,7 +1443,7 @@ const SlugTryOnPage: React.FC = () => {
       } finally {
         setIsEditorLoading(false);
       }
-    })();
+    }, 100);
   };
 
   const handleCloseEditor = async (save: boolean) => {
