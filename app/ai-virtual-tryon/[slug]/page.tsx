@@ -1347,48 +1347,96 @@ const SlugTryOnPage: React.FC = () => {
              });
           }
           
-          // Call Segmentation via Local Proxy (Vercel -> SCF) instead of Direct Browser -> SCF
-          // This solves the connection timeout issues for international users accessing Guangzhou SCF
-          const segUrl = '/api/segment';
-          
-          // 增加 60秒 超时控制
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 60000);
+          // --- Segmentation Smart Routing + Fallback ---
+          // 目标：国际用户优先走新加坡分割；国内用户走广州分割；
+          // 兜底：直连失败时 -> /api/segment（Vercel Node 代理到广州），避免海外浏览器直连广州卡死。
+          const segDirectUrl = process.env.NEXT_PUBLIC_SCF_SEGMENTATION_DIRECT_URL; // 新加坡（国际直连）
+          const segBridgeUrl =
+            process.env.NEXT_PUBLIC_SCF_SEGMENTATION_BRIDGE_URL || // 广州（推荐新增）
+            process.env.NEXT_PUBLIC_SCF_SEGMENTATION_URL; // 广州（兼容旧配置）
+          const segProxyUrl = '/api/segment'; // Vercel 代理（服务器到广州）
 
-          try {
-            const segResp = await fetch(segUrl, {
+          const postSeg = async (url: string, timeoutMs: number, tag: string) => {
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+              emitUI('seg-attempt', { tag, url, timeoutMs, base64Len: base64.length });
+              const resp = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ imageBase64: base64, mime }),
                 signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            
-            if (!segResp.ok) {
-                const errTxt = await segResp.text();
-                throw new Error(`Segmentation failed: ${segResp.status} - ${errTxt.slice(0, 100)}`);
+              });
+              if (!resp.ok) {
+                const errTxt = await resp.text().catch(() => '');
+                throw new Error(`Segmentation failed: ${resp.status}${errTxt ? ` - ${errTxt.slice(0, 120)}` : ''}`);
+              }
+              return await resp.json();
+            } finally {
+              clearTimeout(tid);
             }
-            const segData = await segResp.json();
-            if (!segData.foregroundMaskBase64) throw new Error('No mask returned from segmentation');
-            
-            // Create Person Layer
-            const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, mime);
-            personLayerRef.current = personLayer;
-            
-            // Load & Fit Background Layer
-            const pImg = await loadImage(personLayer);
-            const fittedBg = await createFittedBackgroundLayer('/assets/backgrounds/tryon-bg-default.webp', pImg.naturalWidth, pImg.naturalHeight);
-            backgroundLayerRef.current = fittedBg;
-            
-            // Update Ref
-            baseResultRef.current = personLayer;
-            isLayeredModeRef.current = true;
-            
-            console.log('[slug tryon] Segmentation complete, switched to layered mode');
-          } catch (segErr) {
-             clearTimeout(timeoutId);
-             throw segErr;
+          };
+
+          const netEnv = await detectNetworkEnvironment();
+          emitUI('seg-network', { environment: netEnv, hasDirect: !!segDirectUrl, hasBridge: !!segBridgeUrl });
+
+          let segData: any | null = null;
+          let lastSegErr: any = null;
+
+          // Try 1: prefer route by network env
+          const primaryUrl = (netEnv === 'international' && segDirectUrl) ? segDirectUrl : segBridgeUrl;
+          const secondaryUrl = (primaryUrl === segDirectUrl) ? segBridgeUrl : segDirectUrl;
+
+          // Primary
+          if (primaryUrl) {
+            try {
+              segData = await postSeg(primaryUrl, 20000, primaryUrl === segDirectUrl ? 'direct-sg' : 'bridge-gz');
+            } catch (e) {
+              lastSegErr = e;
+              emitUI('seg-primary-failed', { error: e instanceof Error ? e.message : String(e) });
+            }
+          } else {
+            emitUI('seg-primary-missing-url', { primary: netEnv === 'international' ? 'direct-sg' : 'bridge-gz' });
           }
+
+          // Secondary (only if primary failed)
+          if (!segData && secondaryUrl) {
+            try {
+              segData = await postSeg(secondaryUrl, 25000, secondaryUrl === segDirectUrl ? 'direct-sg-secondary' : 'bridge-gz-secondary');
+            } catch (e) {
+              lastSegErr = e;
+              emitUI('seg-secondary-failed', { error: e instanceof Error ? e.message : String(e) });
+            }
+          }
+
+          // Fallback: Vercel proxy (Node runtime) -> Guangzhou
+          if (!segData) {
+            try {
+              segData = await postSeg(segProxyUrl, 30000, 'proxy-vercel');
+            } catch (e) {
+              lastSegErr = e;
+              emitUI('seg-proxy-failed', { error: e instanceof Error ? e.message : String(e) });
+            }
+          }
+
+          if (!segData?.foregroundMaskBase64) {
+            throw new Error(`No mask returned from segmentation${lastSegErr ? `: ${lastSegErr instanceof Error ? lastSegErr.message : String(lastSegErr)}` : ''}`);
+          }
+
+          // Create Person Layer
+          const personLayer = await createPersonLayer(base64, segData.foregroundMaskBase64, mime);
+          personLayerRef.current = personLayer;
+
+          // Load & Fit Background Layer
+          const pImg = await loadImage(personLayer);
+          const fittedBg = await createFittedBackgroundLayer('/assets/backgrounds/tryon-bg-default.webp', pImg.naturalWidth, pImg.naturalHeight);
+          backgroundLayerRef.current = fittedBg;
+
+          // Update Ref
+          baseResultRef.current = personLayer;
+          isLayeredModeRef.current = true;
+
+          console.log('[slug tryon] Segmentation complete, switched to layered mode');
         }
 
         // --- Init Warp Session ---
