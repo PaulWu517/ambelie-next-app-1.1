@@ -32,6 +32,8 @@ interface Product {
   // 新增：AI试穿需要的后端字段
   fashionImage?: ImageItem | null;
   modelImage?: ImageItem | null;
+  // 新增：产品PDF文档
+  productPDF?: ImageItem | null;
 }
 
 interface StrapiResponse {
@@ -47,7 +49,7 @@ async function getProductBySlug(slug: string): Promise<Product | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
-    const res = await fetch(`${API_URL}/api/products?filters[slug][$eq]=${slug}&populate[0]=images&populate[1]=category&populate[2]=fashionImage&populate[3]=modelImage`, {
+    const res = await fetch(`${API_URL}/api/products?filters[slug][$eq]=${slug}&populate[0]=images&populate[1]=category&populate[2]=fashionImage&populate[3]=modelImage&populate[4]=productPDF`, {
       cache: 'no-store',
       signal: controller.signal,
       headers: {

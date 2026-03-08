@@ -35,6 +35,7 @@ interface Product {
   // 新增：AI试穿依赖的单媒体字段
   fashionImage?: ImageItem | null;
   modelImage?: ImageItem | null;
+  productPDF?: ImageItem | null;
 }
 
 interface ProductDisplayProps {
@@ -152,12 +153,20 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   // 解析媒体的绝对 URL
   const resolveMediaUrl = (media: any): string | null => {
     if (!media) return null;
-    const raw = (media as any).url || media?.data?.attributes?.url;
+    // 情况1：直接是对象且有 url (如 test-pdf-fetch.js 的结果)
+    if (media.url) {
+      const raw = media.url;
+      return /^(https?:)?\/\//i.test(raw) ? raw : `${API_URL}${raw}`;
+    }
+    // 情况2：嵌套在 data.attributes 中 (Strapi 默认格式)
+    const raw = media?.data?.attributes?.url;
     if (!raw) return null;
     return /^(https?:)?\/\//i.test(raw) ? raw : `${API_URL}${raw}`;
   };
   const fashionUrl = resolveMediaUrl(product.fashionImage);
   const modelUrl = resolveMediaUrl(product.modelImage);
+  const productPDFUrl = resolveMediaUrl(product.productPDF);
+
   const handleAddToCart = async () => {
     if (isInquiryOnly) return;
     
@@ -515,6 +524,20 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
           </div>
 
           {/* 移除原“Try on your room”按钮，改为在操作区展示 */}
+
+          {/* 产品文档下载 */}
+          {productPDFUrl && (
+            <div className={styles.downloadSection}>
+              <a 
+                href={productPDFUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className={styles.downloadLink}
+              >
+                Download product tearsheet
+              </a>
+            </div>
+          )}
 
           <div className={styles.productActions}>
             {/* 当有价格时：同时展示“Add to Cart”和“Add to Inquiry”，并保证顺序为：Cart -> Inquiry -> Collection */}

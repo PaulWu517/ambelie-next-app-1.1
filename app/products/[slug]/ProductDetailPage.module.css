@@ -270,6 +270,31 @@
     line-height: 1.3;
 }
 
+/* 下载区域 */
+.downloadSection {
+    margin-bottom: 25px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 15px;
+}
+
+.downloadLink {
+    font-weight: 500;
+    color: #333; /* 与 detailLabel 一致 */
+    font-size: 1em;
+    text-decoration: underline;
+    text-decoration-thickness: 0.5px;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.3s ease;
+}
+
+.downloadLink:hover {
+    color: var(--brand-red);
+}
+
 /* Introduction 部分 */
 .introduction {
     margin-top: 30px;
@@ -289,7 +314,7 @@
 
 .introductionText.collapsed {
     display: -webkit-box;
-    -webkit-line-clamp: 5;
+    line-clamp: 5;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -317,6 +342,7 @@
     margin-top: auto;
     padding-top: 20px;
     flex-shrink: 0;
+    flex-wrap: wrap;
 }
 
 .actionButton {
@@ -332,7 +358,8 @@
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    min-width: 180px;  /* 减小按钮最小宽度 */
+    min-width: 160px;  /* 减小按钮最小宽度 */
+    flex: 1;
     white-space: nowrap;
 }
 
