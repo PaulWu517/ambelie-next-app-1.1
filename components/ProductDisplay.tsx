@@ -10,6 +10,7 @@ import { Product as CartProduct } from '@/types';
 import styles from '../app/products/[slug]/ProductDetailPage.module.css';
 import QRCodeModal from './QRCodeModal';
 import AITryOnChoiceModal from './AITryOnChoiceModal';
+import { generateProductPDF } from '@/lib/utils/pdfGenerator';
 
 interface ImageItem {
   url: string;
@@ -25,6 +26,7 @@ interface Product {
   origin: string;
   dimensions: string;
   designer: string;
+  Manufacturer?: string; // 新增：制造商
   price?: number;
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;
@@ -112,6 +114,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const [touchEndX, setTouchEndX] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const vrPageUrl = useMemo(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     return `${origin}/vr/${product.slug}`;
@@ -362,7 +365,37 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
     { label: 'Origin:', value: product.origin },
     { label: 'Materials:', value: product.materials },
     { label: 'Designer:', value: product.designer },
+    { label: 'Manufacturer:', value: product.Manufacturer },
   ].filter(detail => detail.value && detail.value.trim() !== ''); // 过滤掉空值
+
+  const handleGeneratePDF = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isGeneratingPDF) return;
+    
+    setIsGeneratingPDF(true);
+    try {
+      await generateProductPDF(
+        {
+          name: product.name,
+          dimensions: product.dimensions,
+          period: product.period,
+          origin: product.origin,
+          materials: product.materials,
+          designer: product.designer,
+          Manufacturer: product.Manufacturer,
+          description: product.description,
+          images: images
+        },
+        '/assets/vi/cover.jpg', // You will need to put your cover image here
+        '/assets/vi/back.jpg'   // You will need to put your back cover image here
+      );
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
 
   // 有无描述：用于在无描述时让右侧文字块左对齐
   const hasDescription = !!(product.description && product.description.trim());
@@ -525,19 +558,17 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
 
           {/* 移除原“Try on your room”按钮，改为在操作区展示 */}
 
-          {/* 产品文档下载 */}
-          {productPDFUrl && (
-            <div className={styles.downloadSection}>
-              <a 
-                href={productPDFUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className={styles.downloadLink}
-              >
-                Download product tearsheet
-              </a>
-            </div>
-          )}
+          {/* 产品文档下载（前端动态生成） */}
+          <div className={styles.downloadSection}>
+            <button 
+              onClick={handleGeneratePDF}
+              className={styles.downloadLink}
+              disabled={isGeneratingPDF}
+              style={{ opacity: isGeneratingPDF ? 0.5 : 1, cursor: isGeneratingPDF ? 'wait' : 'pointer' }}
+            >
+              {isGeneratingPDF ? 'Generating PDF...' : 'Download product tearsheet'}
+            </button>
+          </div>
 
           <div className={styles.productActions}>
             {/* 当有价格时：同时展示“Add to Cart”和“Add to Inquiry”，并保证顺序为：Cart -> Inquiry -> Collection */}

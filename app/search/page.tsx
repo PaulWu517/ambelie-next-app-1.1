@@ -110,21 +110,54 @@ const SearchContent = () => {
 
     try {
       // 使用本地API路由进行搜索，避免直接调用远程API导致的网络问题
-      const [productsResponse, exhibitionsResponse, projectsResponse] = await Promise.all([
+      // 允许部分请求失败
+      const responses = await Promise.allSettled([
         fetch(`/api/search?q=${encodeURIComponent(query)}`),
         fetch(`/api/search/exhibitions?q=${encodeURIComponent(query)}`),
         fetch(`/api/search/projects?q=${encodeURIComponent(query)}`)
       ]);
       
-      if (!productsResponse.ok || !exhibitionsResponse.ok || !projectsResponse.ok) {
-        throw new Error('搜索失败');
-      }
+      const [productsResponse, exhibitionsResponse, projectsResponse] = responses;
       
-      const [productsData, exhibitionsData, projectsData] = await Promise.all([
-        productsResponse.json(),
-        exhibitionsResponse.json(),
-        projectsResponse.json()
-      ]);
+      let productsData = { data: [] };
+      let exhibitionsData = { data: [] };
+      let projectsData = { data: [] };
+
+      // 处理产品结果
+      if (productsResponse.status === 'fulfilled' && productsResponse.value.ok) {
+        try {
+          productsData = await productsResponse.value.json();
+        } catch (e) {
+          console.error('Error parsing products JSON:', e);
+        }
+      }
+
+      // 处理展览结果
+      if (exhibitionsResponse.status === 'fulfilled' && exhibitionsResponse.value.ok) {
+        try {
+          exhibitionsData = await exhibitionsResponse.value.json();
+        } catch (e) {
+          console.error('Error parsing exhibitions JSON:', e);
+        }
+      }
+
+      // 处理项目结果
+      if (projectsResponse.status === 'fulfilled' && projectsResponse.value.ok) {
+        try {
+          projectsData = await projectsResponse.value.json();
+        } catch (e) {
+          console.error('Error parsing projects JSON:', e);
+        }
+      }
+
+      // 只有当所有请求都失败时才抛出错误
+      const allFailed = responses.every(
+        res => res.status === 'rejected' || (res.status === 'fulfilled' && !res.value.ok)
+      );
+
+      if (allFailed) {
+        throw new Error('搜索服务暂时不可用');
+      }
       
       const results: SearchResults = {
         products: productsData.data || [],
@@ -137,6 +170,7 @@ const SearchContent = () => {
     } catch (err) {
       console.error('Search failed:', err);
       setError(err instanceof Error ? err.message : '搜索失败，请稍后重试');
+      // 如果发生严重错误，保留之前的搜索结果或者清空，这里选择清空以明确错误状态
       setSearchResults({
         products: [],
         exhibitions: [],
@@ -177,6 +211,26 @@ const SearchContent = () => {
     setSearchQuery(e.target.value);
   };
 
+  const handleKeywordClick = (keyword: string) => {
+    setSearchQuery(keyword);
+    // 更新URL参数
+    const newUrl = `/search?q=${encodeURIComponent(keyword)}`;
+    router.push(newUrl);
+    
+    // 执行搜索
+    performSearch(keyword);
+  };
+
+  const quickKeywords = [
+    "Chinoiserie", 
+    "Coromandel", 
+    "Lacquer", 
+    "Mother-of-Pearl Inlaid", 
+    "Byōbu",
+    "Pietra Dura", 
+    "Art Deco"
+  ];
+
   return (
     <main className={styles.container}>
       {/* Search Header */}
@@ -195,6 +249,22 @@ const SearchContent = () => {
             <button type="submit" className={styles.searchButton}>
               <Search size={20} />
             </button>
+          </div>
+          
+          {/* 快捷搜索关键词 */}
+          <div className={styles.quickKeywordsContainer}>
+            <div className={styles.quickKeywordsList}>
+              {quickKeywords.map((keyword, index) => (
+                <button 
+                  key={index}
+                  type="button"
+                  className={styles.keywordButton}
+                  onClick={() => handleKeywordClick(keyword)}
+                >
+                  {keyword}
+                </button>
+              ))}
+            </div>
           </div>
         </form>
       </header>

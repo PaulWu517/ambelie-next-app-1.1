@@ -69,6 +69,47 @@
   background: #555;
 }
 
+/* 快捷搜索关键词 */
+.quickKeywordsContainer {
+  margin-top: 15px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.quickKeywordsLabel {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}
+
+.quickKeywordsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.keywordButton {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: var(--font-body);
+}
+
+.keywordButton:hover {
+  background: var(--brand-black);
+  color: white;
+  border-color: var(--brand-black);
+}
+
 /* 结果区域 */
 .resultsSection {
   margin-top: 40px;

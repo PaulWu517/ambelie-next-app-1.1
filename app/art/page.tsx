@@ -53,6 +53,8 @@ function ArtContent() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [shouldResetSubCategory, setShouldResetSubCategory] = useState(false);
   const requestIdRef = useRef(0);
 
@@ -102,22 +104,30 @@ function ArtContent() {
     const subcategoryParam = searchParams.get('subcategory');
     
     // 确保在URL参数变化时正确更新状态
-    if (categoryParam && categoryParam !== activeCategory) {
-      setActiveCategory(categoryParam);
+    if (categoryParam) {
+      if (categoryParam !== activeCategory) {
+        setActiveCategory(categoryParam);
+        setCurrentPage(1);
+      }
       // 当从URL参数设置状态时，禁用重置逻辑
       setShouldResetSubCategory(false);
       // 如果没有指定子分类参数，重置为'all'
       if (!subcategoryParam) {
-        setActiveSubCategory('all');
+        if (activeSubCategory !== 'all') {
+          setActiveSubCategory('all');
+          setCurrentPage(1);
+        }
       }
     }
     if (subcategoryParam && subcategoryParam !== activeSubCategory) {
       setActiveSubCategory(subcategoryParam);
+      setCurrentPage(1);
     } else if (!subcategoryParam && activeSubCategory !== 'all') {
       // 如果URL中没有子分类参数，重置为'all'
       setActiveSubCategory('all');
+      setCurrentPage(1);
     }
-  }, [searchParams, activeCategory, activeSubCategory]);
+  }, [searchParams]);
 
   // 当切换一级分类时，根据标志决定是否重置二级分类
   useEffect(() => {
@@ -169,12 +179,14 @@ function ArtContent() {
         if (!query) {
           if (requestId === requestIdRef.current) {
             setProducts([]);
+            setTotalPages(1);
             setLoading(false);
           }
           return;
         }
-        // 统一按后端更新时间倒序排序（最新修改的产品排在最前）
-        query += `&sort[0]=updatedAt:desc`;
+        // 统一按后端更新时间倒序排序（最新修改的产品排在最前），并添加分页参数（每页24个）
+        const pageSize = 24;
+        query += `&sort[0]=updatedAt:desc&pagination[page]=${currentPage}&pagination[pageSize]=${pageSize}`;
 
         console.log('Art page query:', query);
         console.log('Active category:', activeCategory, 'Active subcategory:', activeSubCategory);
@@ -191,6 +203,7 @@ function ArtContent() {
           console.warn(`API request failed with status ${response.status}`);
           if (requestId === requestIdRef.current) {
             setProducts([]);
+            setTotalPages(1);
           }
           return;
         }
@@ -202,6 +215,7 @@ function ArtContent() {
           console.warn('Invalid data structure received from API');
           if (requestId === requestIdRef.current) {
             setProducts([]);
+            setTotalPages(1);
           }
           return;
         }
@@ -235,12 +249,19 @@ function ArtContent() {
 
         if (requestId === requestIdRef.current) {
           setProducts(transformedProducts);
+          // 从meta数据中获取总页数
+          if (data.meta && data.meta.pagination) {
+            setTotalPages(data.meta.pagination.pageCount || 1);
+          } else {
+            setTotalPages(1);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch products:', err);
         // 不设置错误状态，而是显示空产品列表
         if (requestId === requestIdRef.current) {
           setProducts([]);
+          setTotalPages(1);
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -256,11 +277,21 @@ function ArtContent() {
       setProducts([]);
       setLoading(false);
     }
-  }, [activeCategory, activeSubCategory, API_URL]);
+  }, [activeCategory, activeSubCategory, API_URL, currentPage]);
+
+  // 分页处理函数
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      // 平滑滚动到顶部，优化用户体验
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const handleCategoryChange = (categorySlug: string) => {
     setShouldResetSubCategory(true); // 标记需要重置子分类
     setActiveCategory(categorySlug);
+    setCurrentPage(1); // 切换分类时重置到第一页
     setOpenDropdown(null); // 关闭下拉菜单
     
     // 只更新URL参数，不进行页面跳转
@@ -275,6 +306,7 @@ function ArtContent() {
       setActiveCategory(parentCategorySlug);
     }
     setActiveSubCategory(subCategorySlug);
+    setCurrentPage(1); // 切换子分类时重置到第一页
     setOpenDropdown(null); // 关闭下拉菜单
     
     // 不进行路由跳转，只更新URL参数以保持状态同步
@@ -448,6 +480,39 @@ function ArtContent() {
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 分页控制 */}
+        {!loading && totalPages > 1 && (
+          <div className={styles.pagination}>
+            <button 
+              className={styles.pageButton} 
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              ← Prev
+            </button>
+            
+            <div className={styles.pageNumbers}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  className={`${styles.pageNumber} ${currentPage === page ? styles.activePage : ''}`}
+                  onClick={() => handlePageChange(page)}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              className={styles.pageButton} 
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              Next →
+            </button>
           </div>
         )}
       </section>

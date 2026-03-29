@@ -57,6 +57,8 @@ function AntiqueFurnitureContent() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [shouldResetSubCategory, setShouldResetSubCategory] = useState(false);
   const requestIdRef = useRef(0);
 
@@ -70,13 +72,22 @@ function AntiqueFurnitureContent() {
     const subcategory = searchParams.get('subcategory');
     
     if (category) {
-      setActiveCategory(category);
+      if (category !== activeCategory) {
+        setActiveCategory(category);
+        setCurrentPage(1); // 切换分类时重置页码
+      }
       // 当从URL参数设置状态时，禁用重置逻辑
       setShouldResetSubCategory(false);
       if (subcategory) {
-        setActiveSubCategory(subcategory);
+        if (subcategory !== activeSubCategory) {
+          setActiveSubCategory(subcategory);
+          setCurrentPage(1); // 切换子分类时重置页码
+        }
       } else {
-        setActiveSubCategory('all');
+        if (activeSubCategory !== 'all') {
+          setActiveSubCategory('all');
+          setCurrentPage(1);
+        }
       }
     }
   }, [searchParams]);
@@ -203,12 +214,14 @@ function AntiqueFurnitureContent() {
         if (!query) {
           if (currentRequestId === requestIdRef.current) {
             setProducts([]);
+            setTotalPages(1);
             setLoading(false);
           }
           return;
         }
-        // 统一按后端更新时间倒序排序（最新修改的产品排在最前）
-        query += `&sort[0]=updatedAt:desc`;
+        // 统一按后端更新时间倒序排序（最新修改的产品排在最前），并添加分页参数（每页24个）
+        const pageSize = 24;
+        query += `&sort[0]=updatedAt:desc&pagination[page]=${currentPage}&pagination[pageSize]=${pageSize}`;
 
         console.log('Antique furniture page query:', query);
         console.log('Active category:', activeCategory, 'Active subcategory:', activeSubCategory);
@@ -225,6 +238,7 @@ function AntiqueFurnitureContent() {
           console.warn(`API request failed with status ${response.status}`);
           if (currentRequestId === requestIdRef.current) {
             setProducts([]);
+            setTotalPages(1);
           }
           return;
         }
@@ -236,6 +250,7 @@ function AntiqueFurnitureContent() {
           console.warn('Invalid data structure received from API');
           if (currentRequestId === requestIdRef.current) {
             setProducts([]);
+            setTotalPages(1);
           }
           return;
         }
@@ -269,6 +284,12 @@ function AntiqueFurnitureContent() {
 
         if (currentRequestId === requestIdRef.current) {
           setProducts(transformedProducts);
+          // 从meta数据中获取总页数
+          if (data.meta && data.meta.pagination) {
+            setTotalPages(data.meta.pagination.pageCount || 1);
+          } else {
+            setTotalPages(1);
+          }
         } else {
           console.log('Ignored stale products response for', { activeCategory, activeSubCategory });
         }
@@ -277,6 +298,7 @@ function AntiqueFurnitureContent() {
         // 不设置错误状态，而是显示空产品列表
         if (currentRequestId === requestIdRef.current) {
           setProducts([]);
+          setTotalPages(1);
         }
       } finally {
         if (currentRequestId === requestIdRef.current) {
@@ -292,7 +314,16 @@ function AntiqueFurnitureContent() {
       setProducts([]);
       setLoading(false);
     }
-  }, [activeCategory, activeSubCategory, API_URL]);
+  }, [activeCategory, activeSubCategory, API_URL, currentPage]);
+
+  // 分页处理函数
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      // 平滑滚动到顶部，优化用户体验
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const handleCategoryChange = (categorySlug: string) => {
     setShouldResetSubCategory(true); // 标记需要重置子分类
@@ -474,6 +505,39 @@ function AntiqueFurnitureContent() {
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 分页控制 */}
+        {!loading && totalPages > 1 && (
+          <div className={styles.pagination}>
+            <button 
+              className={styles.pageButton} 
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              ← Prev
+            </button>
+            
+            <div className={styles.pageNumbers}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  className={`${styles.pageNumber} ${currentPage === page ? styles.activePage : ''}`}
+                  onClick={() => handlePageChange(page)}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              className={styles.pageButton} 
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              Next →
+            </button>
           </div>
         )}
       </section>

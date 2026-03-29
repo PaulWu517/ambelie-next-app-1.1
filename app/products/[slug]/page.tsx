@@ -24,6 +24,7 @@ interface Product {
   origin: string;
   dimensions: string;
   designer: string;
+  Manufacturer?: string; // 新增：制造商
   price?: number;
   isInquiryOnly?: boolean;
   images?: ImageItem[] | null;

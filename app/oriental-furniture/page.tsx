@@ -39,6 +39,8 @@ function OrientalFurnitureContent() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const requestIdRef = useRef(0);
 
   const searchParams = useSearchParams();
@@ -53,9 +55,11 @@ function OrientalFurnitureContent() {
     const category = searchParams.get('category');
     if (category && category !== activeCategory) {
       setActiveCategory(category);
+      setCurrentPage(1); // 切换分类时重置页码
     } else if (!category && activeCategory !== 'screens') {
       // 如果没有URL参数，设置默认分类
       setActiveCategory('screens');
+      setCurrentPage(1);
     }
   }, [searchParams, activeCategory]);
 
@@ -104,7 +108,9 @@ function OrientalFurnitureContent() {
         const inQuery = candidateSlugs
           .map((slug, idx) => `filters[category][slug][$in][${idx}]=${slug}`)
           .join('&');
-        const query = `${inQuery}&populate[0]=main_image&populate[1]=hover_image&sort[0]=updatedAt:desc`;
+        // 添加分页参数：每页24个（Strapi默认是25，这里显式指定并传入当前页码）
+        const pageSize = 24;
+        const query = `${inQuery}&populate[0]=main_image&populate[1]=hover_image&sort[0]=updatedAt:desc&pagination[page]=${currentPage}&pagination[pageSize]=${pageSize}`;
         
         const response = await fetch(`${API_URL}/api/products?${query}`, {
           cache: 'no-store',
@@ -141,6 +147,12 @@ function OrientalFurnitureContent() {
 
         if (requestId === requestIdRef.current) {
           setProducts(transformedProducts);
+          // 从meta数据中获取总页数
+          if (data.meta && data.meta.pagination) {
+            setTotalPages(data.meta.pagination.pageCount || 1);
+          } else {
+            setTotalPages(1);
+          }
           setError(null);
         }
       } catch (err) {
@@ -148,6 +160,7 @@ function OrientalFurnitureContent() {
         if (requestId === requestIdRef.current) {
           setError('Failed to load products');
           setProducts([]);
+          setTotalPages(1);
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -157,12 +170,22 @@ function OrientalFurnitureContent() {
     };
 
     fetchProducts();
-  }, [activeCategory, API_URL]);
+  }, [activeCategory, API_URL, currentPage]);
 
   const handleCategoryChange = (categorySlug: string) => {
     setActiveCategory(categorySlug);
+    setCurrentPage(1); // 点击分类时重置到第一页
     // 更新URL参数
     router.replace(`/oriental-furniture?category=${categorySlug}`);
+  };
+
+  // 分页处理函数
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      // 平滑滚动到顶部，优化用户体验
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   if (error) {
@@ -225,6 +248,39 @@ function OrientalFurnitureContent() {
                 </Link>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 分页控制 */}
+        {!loading && totalPages > 1 && (
+          <div className={styles.pagination}>
+            <button 
+              className={styles.pageButton} 
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              ← Prev
+            </button>
+            
+            <div className={styles.pageNumbers}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  className={`${styles.pageNumber} ${currentPage === page ? styles.activePage : ''}`}
+                  onClick={() => handlePageChange(page)}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              className={styles.pageButton} 
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              Next →
+            </button>
           </div>
         )}
       </section>
