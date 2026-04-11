@@ -62,7 +62,18 @@ export const generateProductPDF = async (
         x = (pageWidth - drawWidth) / 2;
       }
 
-      pdf.addImage(coverImg, 'JPEG', x, y, drawWidth, drawHeight);
+      // Convert via canvas to standardize color space and reduce oversaturation
+      const processCanvas = document.createElement('canvas');
+      processCanvas.width = coverImg.width;
+      processCanvas.height = coverImg.height;
+      const ctx = processCanvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(coverImg, 0, 0);
+        const processedImgData = processCanvas.toDataURL('image/jpeg', 0.85); // Lower quality slightly to prevent over-sharpening
+        pdf.addImage(processedImgData, 'JPEG', x, y, drawWidth, drawHeight);
+      } else {
+        pdf.addImage(coverImg, 'JPEG', x, y, drawWidth, drawHeight);
+      }
     } catch (e) {
       console.warn('Could not load cover image, skipping cover or using fallback');
       pdf.setFillColor(245, 240, 230); // A light beige color
@@ -176,14 +187,15 @@ export const generateProductPDF = async (
     
     // Render the div to canvas
     const canvas = await html2canvas(tempDiv, {
-      scale: 2, // Higher quality
+      scale: 1.5, // Reduced from 2 to slightly soften the text and prevent overly harsh contrast
       useCORS: true,
       backgroundColor: '#F5F0E6'
     });
     
     document.body.removeChild(tempDiv);
     
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    // Lowered quality to 0.85 to match image processing and soften output colors
+    const imgData = canvas.toDataURL('image/jpeg', 0.85);
     pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
 
 
@@ -219,7 +231,18 @@ export const generateProductPDF = async (
             x = (pageWidth - drawWidth) / 2;
           }
           
-          pdf.addImage(prodImg, 'JPEG', x, y, drawWidth, drawHeight);
+          // Render image through canvas to strip problematic color profiles and soften colors
+          const processCanvas = document.createElement('canvas');
+          processCanvas.width = prodImg.width;
+          processCanvas.height = prodImg.height;
+          const ctx = processCanvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(prodImg, 0, 0);
+            const processedImgData = processCanvas.toDataURL('image/jpeg', 0.85); // 0.85 reduces the aggressive contrast/saturation of full quality
+            pdf.addImage(processedImgData, 'JPEG', x, y, drawWidth, drawHeight);
+          } else {
+            pdf.addImage(prodImg, 'JPEG', x, y, drawWidth, drawHeight);
+          }
         } catch (e) {
           console.warn('Failed to add product image to PDF', e);
         }
