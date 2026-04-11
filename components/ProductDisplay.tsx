@@ -535,9 +535,9 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
               <div className={styles.priceContainer}>
                 <div className={styles.price}>
                   {displayCurrency === baseCurrency ? (
-                    `${currencySymbol}${actualPrice.toLocaleString()}`
+                    `${currencySymbol}${Math.round(actualPrice).toLocaleString()}`
                   ) : (
-                    convertedPrice ? `${displaySymbol}${convertedPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${currencySymbol}${actualPrice.toLocaleString()}`
+                    convertedPrice ? `${displaySymbol}${Math.round(convertedPrice).toLocaleString()}` : `${currencySymbol}${Math.round(actualPrice).toLocaleString()}`
                   )}
                 </div>
               </div>

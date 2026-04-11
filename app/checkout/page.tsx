@@ -334,17 +334,17 @@ const CheckoutPage = () => {
                     <div style={{ flex: 1 }}>
                       <p style={{ fontWeight: '500', marginBottom: '5px' }}>{item.name}</p>
                       <p style={{ fontSize: '0.9rem', color: '#666' }}>
-                        Qty: {item.quantity} × {currencySymbol}{(item.price || 0).toFixed(2)}
+                        Qty: {item.quantity} × {currencySymbol}{(item.price || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   <div style={{ fontWeight: '500', textAlign: 'right' }}>
                     {displayCurrency === cartCurrency ? (
-                      <div>{currencySymbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
+                      <div>{currencySymbol}{((item.price || 0) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     ) : (
                       rates[displayCurrency] ? (
-                        <div>{displaySymbol}{getConvertedPrice((item.price || 0) * item.quantity, displayCurrency, rates, cartCurrency)?.toFixed(2)}</div>
+                        <div>{displaySymbol}{getConvertedPrice((item.price || 0) * item.quantity, displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       ) : (
-                        <div>{currencySymbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
+                        <div>{currencySymbol}{((item.price || 0) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       )
                     )}
                   </div>
@@ -358,12 +358,12 @@ const CheckoutPage = () => {
                   <span>Subtotal ({getItemCount()} items)</span>
                   <div style={{ textAlign: 'right' }}>
                     {displayCurrency === cartCurrency ? (
-                      <div>{currencySymbol}{subtotal.toFixed(2)}</div>
+                      <div>{currencySymbol}{subtotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     ) : (
                       rates[displayCurrency] ? (
-                        <div>{displaySymbol}{getConvertedPrice(subtotal, displayCurrency, rates, cartCurrency)?.toFixed(2)}</div>
+                        <div>{displaySymbol}{getConvertedPrice(subtotal, displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       ) : (
-                        <div>{currencySymbol}{subtotal.toFixed(2)}</div>
+                        <div>{currencySymbol}{subtotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       )
                     )}
                   </div>
@@ -373,12 +373,12 @@ const CheckoutPage = () => {
                   <span>Shipping</span>
                   <div style={{ textAlign: 'right' }}>
                     {displayCurrency === cartCurrency ? (
-                      <div>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toFixed(2)}`}</div>
+                      <div>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}</div>
                     ) : (
                       rates[displayCurrency] ? (
-                        <div>{shipping === 0 ? 'Free UK Delivery' : `${displaySymbol}${getConvertedPrice(shipping, displayCurrency, rates, cartCurrency)?.toFixed(2)}`}</div>
+                        <div>{shipping === 0 ? 'Free UK Delivery' : `${displaySymbol}${getConvertedPrice(shipping, displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}</div>
                       ) : (
-                        <div>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toFixed(2)}`}</div>
+                        <div>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}</div>
                       )
                     )}
                   </div>
@@ -397,12 +397,12 @@ const CheckoutPage = () => {
                   <span>Total</span>
                   <div style={{ textAlign: 'right' }}>
                     {displayCurrency === cartCurrency ? (
-                      <div style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</div>
+                      <div style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                     ) : (
                       rates[displayCurrency] ? (
-                        <div style={{ color: 'var(--brand-green)' }}>{displaySymbol}{getConvertedPrice(total, displayCurrency, rates, cartCurrency)?.toFixed(2)}</div>
+                        <div style={{ color: 'var(--brand-green)' }}>{displaySymbol}{getConvertedPrice(total, displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       ) : (
-                        <div style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</div>
+                        <div style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                       )
                     )}
                   </div>

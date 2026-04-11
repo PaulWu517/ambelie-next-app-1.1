@@ -232,7 +232,7 @@ export default function OrderSuccessClient() {
                           <div className={styles.itemQty}>Quantity: {item.quantity}</div>
                         </div>
                         <div className={styles.itemPrice}>
-                          {currencySymbol(item.currency)}{item.price.toFixed(2)}
+                          {currencySymbol(item.currency)}{item.price.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                           <div className={styles.perItem}>per item</div>
                         </div>
                       </div>
@@ -249,7 +249,7 @@ export default function OrderSuccessClient() {
                 <div className={styles.orderTotalBox}>
                   <div className={styles.orderTotalLabel}>Order Total</div>
                   <div className={styles.orderTotalValue}>
-                    {currencySymbol(orderDetails.currency)}{orderDetails.totalAmount.toFixed(2)} <span className={styles.currency}>{(orderDetails.currency || 'GBP').toUpperCase()}</span>
+                    {currencySymbol(orderDetails.currency)}{orderDetails.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className={styles.currency}>{(orderDetails.currency || 'GBP').toUpperCase()}</span>
                   </div>
                 </div>
               </div>

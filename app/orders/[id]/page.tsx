@@ -594,7 +594,7 @@ const OrderDetailsPage = () => {
                   <span className={styles.infoLabel}>Order Total</span>
                   <span className={styles.totalAmount}>
                     {currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£'}
-                    {getOrderTotal(orderDetails).toFixed(2) || '0.00'}
+                    {getOrderTotal(orderDetails).toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
                     <span className={styles.currency}>{orderDetails.currency || 'GBP'}</span>
                   </span>
                 </div>
@@ -652,12 +652,12 @@ const OrderDetailsPage = () => {
                         <div className={styles.itemDetails}>
                           <p className={styles.itemName}>{getProductName(item)}</p>
                           <p className={styles.itemQuantity}>Quantity: {item.quantity || 1}</p>
-                          <p className={styles.itemPrice}>Price per item: {(currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£')}{getItemPrice(item).toFixed(2)}</p>
+                          <p className={styles.itemPrice}>Price per item: {(currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£')}{getItemPrice(item).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                         </div>
                       </div>
                       <div className={styles.itemTotalPrice}>
                         <p className={styles.itemTotalAmount}>
-                          {(currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£')}{getItemTotal(item).toFixed(2)}
+                          {(currencySymbolMap[(orderDetails.currency || 'GBP').toUpperCase()] || '£')}{getItemTotal(item).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </p>
                         <p className={styles.itemTotalLabel}>Total</p>
                       </div>
@@ -702,7 +702,7 @@ const OrderDetailsPage = () => {
                     <span className={styles.infoLabel}>Payment Amount</span>
                     <span className={styles.totalAmount}>
                       {(currencySymbolMap[(paymentDetails.currency || orderDetails.currency || 'GBP').toUpperCase()] || '£')}
-                      {getPaymentAmount(paymentDetails).toFixed(2) || '0.00'}
+                      {getPaymentAmount(paymentDetails).toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
                       <span className={styles.currency}>{paymentDetails.currency || orderDetails.currency || 'GBP'}</span>
                     </span>
                   </div>

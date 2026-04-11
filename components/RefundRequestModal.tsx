@@ -374,7 +374,7 @@ const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
                         Full Refund
                       </div>
                       <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                        ${orderAmount.toFixed(2)} {currency}
+                        ${orderAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} {currency}
                       </div>
                     </label>
 
@@ -435,7 +435,7 @@ const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
                               </span>
                             </div>
                             <span style={{ fontSize: '14px', fontWeight: '600', color: '#059669' }}>
-                              ${(item.price * item.quantity).toFixed(2)}
+                              ${(item.price * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </span>
                           </label>
                         ))}
@@ -443,7 +443,7 @@ const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
                       <div style={{ marginTop: '12px', textAlign: 'right' }}>
                         <span style={{ fontSize: '14px', color: '#6b7280' }}>Partial refund amount: </span>
                         <span style={{ fontSize: '16px', fontWeight: '600', color: '#059669' }}>
-                          ${calculatePartialRefund().toFixed(2)} {currency}
+                          ${calculatePartialRefund().toLocaleString(undefined, { maximumFractionDigits: 0 })} {currency}
                         </span>
                       </div>
                     </div>
@@ -481,7 +481,7 @@ const RefundRequestModal: React.FC<RefundRequestModalProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontSize: '14px', color: '#6b7280' }}>Refund Amount:</span>
                     <span style={{ fontSize: '16px', fontWeight: '700', color: '#059669' }}>
-                      ${(refundType === 'full' ? orderAmount : calculatePartialRefund()).toFixed(2)} {currency}
+                      ${(refundType === 'full' ? orderAmount : calculatePartialRefund()).toLocaleString(undefined, { maximumFractionDigits: 0 })} {currency}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>

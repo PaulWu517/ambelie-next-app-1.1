@@ -592,33 +592,6 @@ export default function Header() {
         
           {/* 最右侧：用户图标和货币选择 */}
           <div className={styles.topRowRight}>
-            <div className={styles.currencySelector} style={{ marginRight: '15px' }}>
-              <select 
-                value={displayCurrency}
-                onChange={(e) => setCurrency(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: textColor,
-                  fontSize: '0.9rem',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  fontWeight: 500,
-                  appearance: 'none',
-                  padding: '2px 5px',
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'none'
-                }}
-              >
-                <option value="GBP" style={{color: 'black'}}>GBP</option>
-                <option value="USD" style={{color: 'black'}}>USD</option>
-                <option value="EUR" style={{color: 'black'}}>EUR</option>
-                <option value="CNY" style={{color: 'black'}}>CNY</option>
-                <option value="JPY" style={{color: 'black'}}>JPY</option>
-                <option value="HKD" style={{color: 'black'}}>HKD</option>
-                <option value="AUD" style={{color: 'black'}}>AUD</option>
-              </select>
-            </div>
             <div className={styles.userMenuContainer}>
               <UserMenu 
                 user={user} 

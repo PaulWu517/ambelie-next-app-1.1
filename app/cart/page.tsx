@@ -180,12 +180,12 @@ const CartPage = () => {
                   flexDirection: 'column'
                 }}>
                   {displayCurrency === cartCurrency ? (
-                    <span>{symbol}{item.price?.toFixed(2) || '0.00'}</span>
+                    <span>{symbol}{item.price?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</span>
                   ) : (
                     rates[displayCurrency] ? (
-                      <span>{displaySymbol}{getConvertedPrice(item.price || 0, displayCurrency, rates, cartCurrency)?.toFixed(2)}</span>
+                      <span>{displaySymbol}{getConvertedPrice(item.price || 0, displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     ) : (
-                      <span>{symbol}{item.price?.toFixed(2) || '0.00'}</span>
+                      <span>{symbol}{item.price?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</span>
                     )
                   )}
                 </div>
@@ -213,12 +213,12 @@ const CartPage = () => {
                   flexDirection: 'column'
                 }}>
                   {displayCurrency === cartCurrency ? (
-                    <span>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                    <span>{symbol}{((item.price || 0) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                   ) : (
                     rates[displayCurrency] ? (
-                      <span>{displaySymbol}{getConvertedPrice((item.price || 0) * item.quantity, displayCurrency, rates, cartCurrency)?.toFixed(2)}</span>
+                      <span>{displaySymbol}{getConvertedPrice((item.price || 0) * item.quantity, displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     ) : (
-                      <span>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                      <span>{symbol}{((item.price || 0) * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     )
                   )}
                 </div>
@@ -258,12 +258,12 @@ const CartPage = () => {
                   <span>Subtotal ({getItemCount()} items)</span>
                   <div style={{ textAlign: 'right' }}>
                     {displayCurrency === cartCurrency ? (
-                      <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>
+                      <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                     ) : (
                       rates[displayCurrency] ? (
-                        <span style={{ color: 'var(--brand-green)' }}>{displaySymbol}{getConvertedPrice(getCartTotal(), displayCurrency, rates, cartCurrency)?.toFixed(2)}</span>
+                        <span style={{ color: 'var(--brand-green)' }}>{displaySymbol}{getConvertedPrice(getCartTotal(), displayCurrency, rates, cartCurrency)?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       ) : (
-                        <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>
+                        <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                       )
                     )}
                   </div>

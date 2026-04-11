@@ -310,7 +310,7 @@ const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <span style={{ fontSize: '14px', color: '#6b7280' }}>Order Amount:</span>
                     <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                      ${orderAmount.toFixed(2)} {currency}
+                      ${orderAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} {currency}
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -346,7 +346,7 @@ const OrderCancelModal: React.FC<OrderCancelModalProps> = ({
                         Refund Information
                       </h4>
                       <p style={{ fontSize: '14px', color: '#075985', margin: '4px 0 0 0' }}>
-                        A full refund of <strong>${orderAmount.toFixed(2)} {currency}</strong> will be processed to your original payment method within 3-5 business days.
+                        A full refund of <strong>${orderAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} {currency}</strong> will be processed to your original payment method within 3-5 business days.
                       </p>
                     </div>
                   </div>

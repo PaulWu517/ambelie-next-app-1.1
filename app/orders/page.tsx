@@ -571,7 +571,7 @@ const OrdersPage = () => {
                           </div>
                           <div className={styles.itemPrice}>
                             <p className={styles.itemPriceAmount}>
-                              ${getItemPrice(item).toFixed(2)}
+                              ${getItemPrice(item).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             </p>
                             <p className={styles.itemPriceLabel}>per item</p>
                           </div>
@@ -592,7 +592,7 @@ const OrdersPage = () => {
                     <div className={styles.orderTotal}>
                       <p className={styles.totalLabel}>Order Total</p>
                       <p className={styles.totalAmount}>
-                        ${getOrderTotal(order).toFixed(2)}
+                        ${getOrderTotal(order).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         <span className={styles.totalCurrency}>{order.currency || 'GBP'}</span>
                         </p>
                     </div>
