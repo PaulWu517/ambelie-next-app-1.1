@@ -8,6 +8,7 @@ import { Search, User, ShoppingCart, LogOut, FileText, Menu, X } from 'lucide-re
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useCartStore } from '@/lib/stores/cartStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
+import { useCurrencyStore } from '@/lib/stores/currencyStore';
 import styles from './Header.module.css'; // 导入模块化 CSS
 import UserMenu from './UserMenu';
 // import { useAuthStore } from '../lib/stores/authStore'; // 临时注释，避免模块错误
@@ -34,6 +35,12 @@ export default function Header() {
   }, [user, isLoggedIn, authLoading]);
   const { getItemCount } = useCartStore();
   const { getItemCount: getInquiryItemCount } = useInquiryStore();
+  const { displayCurrency, setCurrency, initCurrency } = useCurrencyStore();
+  
+  // 初始化货币设置
+  useEffect(() => {
+    initCurrency();
+  }, [initCurrency]);
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSearchHovered, setIsSearchHovered] = useState(false);
@@ -583,8 +590,35 @@ export default function Header() {
           </Link>
         </div>
         
-          {/* 最右侧：用户图标 */}
+          {/* 最右侧：用户图标和货币选择 */}
           <div className={styles.topRowRight}>
+            <div className={styles.currencySelector} style={{ marginRight: '15px' }}>
+              <select 
+                value={displayCurrency}
+                onChange={(e) => setCurrency(e.target.value)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: textColor,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  fontWeight: 500,
+                  appearance: 'none',
+                  padding: '2px 5px',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none'
+                }}
+              >
+                <option value="GBP" style={{color: 'black'}}>GBP</option>
+                <option value="USD" style={{color: 'black'}}>USD</option>
+                <option value="EUR" style={{color: 'black'}}>EUR</option>
+                <option value="CNY" style={{color: 'black'}}>CNY</option>
+                <option value="JPY" style={{color: 'black'}}>JPY</option>
+                <option value="HKD" style={{color: 'black'}}>HKD</option>
+                <option value="AUD" style={{color: 'black'}}>AUD</option>
+              </select>
+            </div>
             <div className={styles.userMenuContainer}>
               <UserMenu 
                 user={user} 

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Elements } from '@stripe/react-stripe-js';
+import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import { useCartStore } from '@/lib/stores/cartStore';
+import { useCurrencyStore, getConvertedPrice, currencySymbolMap as globalCurrencySymbolMap } from '@/lib/stores/currencyStore';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import getStripe from '@/lib/stripe';
@@ -14,9 +15,12 @@ const stripePromise = getStripe();
 
 const CheckoutPage = () => {
   const { items, getCartTotal, getItemCount, clearCart } = useCartStore();
+  const { displayCurrency, rates } = useCurrencyStore();
+  const displaySymbol = globalCurrencySymbolMap[displayCurrency] || displayCurrency;
   const { user, isLoggedIn, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
   const [customerInfo, setCustomerInfo] = useState({
     email: '',
     name: '',
@@ -70,7 +74,7 @@ const CheckoutPage = () => {
       const orderItems = items.map(item => ({
         productId: item.id,
         quantity: item.quantity,
-        unitPrice: item.price || 0,
+        unitPrice: displayCurrency !== cartCurrency && rates[displayCurrency] ? getConvertedPrice(item.price || 0, displayCurrency, rates, cartCurrency) : (item.price || 0),
         productName: item.name
       }));
 
@@ -117,6 +121,7 @@ const CheckoutPage = () => {
       const paymentUrl = `${apiUrl}/api/payments/create-checkout-session`;
       const paymentPayload = {
         orderItems,
+        currency: displayCurrency, // 强制使用当前选择的货币，抛弃比较逻辑
         customerEmail: customerInfo.email,
         customerName: customerInfo.name,
         successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/orders`,
@@ -146,10 +151,13 @@ const CheckoutPage = () => {
       
       const { success, data } = responseData;
 
-      if (success && data.url) {
-        // 重定向到Stripe Checkout
+      if (success && data.clientSecret) {
+        // 使用 Embedded Checkout 模式
+        setClientSecret(data.clientSecret);
+      } else if (success && data.url) {
+        // 退回到重定向模式
         if (typeof window !== 'undefined') {
-        window.location.href = data.url;
+          window.location.href = data.url;
         }
       } else {
         throw new Error('创建支付会话失败');
@@ -168,6 +176,37 @@ const CheckoutPage = () => {
   const cartCurrency = (items[0]?.currencyKeyword || 'GBP').toUpperCase();
   const currencySymbol = currencySymbolMap[cartCurrency] || '';
   const total: number = subtotal + shipping; // 取消税费计算
+
+  // 如果已经获取到 clientSecret，则显示 Stripe Embedded Checkout 界面
+  if (clientSecret) {
+    return (
+      <div className="checkout-page-root" style={{ paddingTop: '120px', paddingBottom: '100px' }}>
+        <div className="section-container">
+          <h1 className="section-heading" style={{ marginBottom: '40px', textAlign: 'center' }}>
+            COMPLETE PAYMENT
+          </h1>
+          <button 
+            onClick={() => setClientSecret('')}
+            style={{ 
+              marginBottom: '20px', 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
+            ← Back to Order Summary
+          </button>
+          <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret }}
+            >
+            <EmbeddedCheckout />
+          </EmbeddedCheckoutProvider>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="checkout-page-root" style={{ paddingTop: '120px', paddingBottom: '100px' }}>
@@ -298,10 +337,18 @@ const CheckoutPage = () => {
                         Qty: {item.quantity} × {currencySymbol}{(item.price || 0).toFixed(2)}
                       </p>
                     </div>
-                    <div style={{ fontWeight: '500' }}>
-                      {currencySymbol}{((item.price || 0) * item.quantity).toFixed(2)}
-                    </div>
+                  <div style={{ fontWeight: '500', textAlign: 'right' }}>
+                    {displayCurrency === cartCurrency ? (
+                      <div>{currencySymbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
+                    ) : (
+                      rates[displayCurrency] ? (
+                        <div>{displaySymbol}{getConvertedPrice((item.price || 0) * item.quantity, displayCurrency, rates, cartCurrency)?.toFixed(2)}</div>
+                      ) : (
+                        <div>{currencySymbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
+                      )
+                    )}
                   </div>
+                </div>
                 ))}
               </div>
 
@@ -309,12 +356,32 @@ const CheckoutPage = () => {
               <div style={{ borderTop: '1px solid #ddd', paddingTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Subtotal ({getItemCount()} items)</span>
-                  <span>{currencySymbol}{subtotal.toFixed(2)}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    {displayCurrency === cartCurrency ? (
+                      <div>{currencySymbol}{subtotal.toFixed(2)}</div>
+                    ) : (
+                      rates[displayCurrency] ? (
+                        <div>{displaySymbol}{getConvertedPrice(subtotal, displayCurrency, rates, cartCurrency)?.toFixed(2)}</div>
+                      ) : (
+                        <div>{currencySymbol}{subtotal.toFixed(2)}</div>
+                      )
+                    )}
+                  </div>
                 </div>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toFixed(2)}`}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    {displayCurrency === cartCurrency ? (
+                      <div>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toFixed(2)}`}</div>
+                    ) : (
+                      rates[displayCurrency] ? (
+                        <div>{shipping === 0 ? 'Free UK Delivery' : `${displaySymbol}${getConvertedPrice(shipping, displayCurrency, rates, cartCurrency)?.toFixed(2)}`}</div>
+                      ) : (
+                        <div>{shipping === 0 ? 'Free UK Delivery' : `${currencySymbol}${shipping.toFixed(2)}`}</div>
+                      )
+                    )}
+                  </div>
                 </div>
                 
                 {/* Tax removed per requirements */}
@@ -328,7 +395,17 @@ const CheckoutPage = () => {
                   paddingTop: '15px'
                 }}>
                   <span>Total</span>
-                  <span style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    {displayCurrency === cartCurrency ? (
+                      <div style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</div>
+                    ) : (
+                      rates[displayCurrency] ? (
+                        <div style={{ color: 'var(--brand-green)' }}>{displaySymbol}{getConvertedPrice(total, displayCurrency, rates, cartCurrency)?.toFixed(2)}</div>
+                      ) : (
+                        <div style={{ color: 'var(--brand-green)' }}>{currencySymbol}{total.toFixed(2)}</div>
+                      )
+                    )}
+                  </div>
                 </div>
 
                 {/* 移动 Continue to Payment 按钮到订单摘要卡片下方 */}

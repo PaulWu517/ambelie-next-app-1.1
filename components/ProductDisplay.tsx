@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
 import { useInquiryStore } from '@/lib/stores/inquiryStore';
 import { useCollectionStore } from '@/lib/stores/collectionStore';
+import { useCurrencyStore, getConvertedPrice, currencySymbolMap as globalCurrencySymbolMap } from '@/lib/stores/currencyStore';
 import { Product as CartProduct } from '@/types';
 import styles from '../app/products/[slug]/ProductDetailPage.module.css';
 import QRCodeModal from './QRCodeModal';
@@ -132,13 +133,19 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const { addToCart } = useCartStore();
   const { addToInquiry } = useInquiryStore();
   const { addToCollection } = useCollectionStore();
+  const { displayCurrency, rates } = useCurrencyStore();
   
   const actualPrice = product.price || 0;
   const isInquiryOnly = product.isInquiryOnly || false;
 
-  // 根据 currencyKeyword 计算货币符号，默认 CNY
+  // 根据 currencyKeyword 计算基础货币符号
   const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
-  const currencySymbol = currencySymbolMap[(product.currencyKeyword || 'CNY').toUpperCase()] || '';
+  const baseCurrency = (product.currencyKeyword || 'GBP').toUpperCase();
+  const currencySymbol = currencySymbolMap[baseCurrency] || '£';
+
+  // 预估换算后价格
+  const convertedPrice = getConvertedPrice(actualPrice, displayCurrency, rates, baseCurrency);
+  const displaySymbol = globalCurrencySymbolMap[displayCurrency] || displayCurrency;
 
   const images = product.images?.map(img => ({
     src: /^(https?:)?\/\//i.test(img.url) ? img.url : `${API_URL}${img.url}`,
@@ -527,7 +534,11 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
             {!isInquiryOnly && actualPrice > 0 && (
               <div className={styles.priceContainer}>
                 <div className={styles.price}>
-                  {currencySymbol}{actualPrice.toLocaleString()}
+                  {displayCurrency === baseCurrency ? (
+                    `${currencySymbol}${actualPrice.toLocaleString()}`
+                  ) : (
+                    convertedPrice ? `${displaySymbol}${convertedPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `${currencySymbol}${actualPrice.toLocaleString()}`
+                  )}
                 </div>
               </div>
             )}

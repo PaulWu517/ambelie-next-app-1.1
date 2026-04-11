@@ -3,12 +3,16 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useCartStore } from '@/lib/stores/cartStore';
+import { useCurrencyStore, getConvertedPrice, currencySymbolMap as globalCurrencySymbolMap } from '@/lib/stores/currencyStore';
 import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'https://ambelie-backend-production.up.railway.app';
 
 const CartPage = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, getItemCount, loadFromBackend, isLoading } = useCartStore();
+  const { displayCurrency, rates } = useCurrencyStore();
+  const displaySymbol = globalCurrencySymbolMap[displayCurrency] || displayCurrency;
+
   const currencySymbolMap: Record<string, string> = { CNY: '¥', USD: '$', EUR: '€', GBP: '£', JPY: '¥', HKD: 'HK$' };
   const cartCurrency = (items[0]?.currencyKeyword || 'GBP').toUpperCase();
   const subtotalSymbol = currencySymbolMap[cartCurrency] || '';
@@ -171,8 +175,20 @@ const CartPage = () => {
                 <div style={{ 
                   fontFamily: 'var(--font-body)', 
                   color: 'var(--brand-green)',
-                  fontWeight: '500'
-                }}>{symbol}{item.price?.toFixed(2) || '0.00'}</div>
+                  fontWeight: '500',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  {displayCurrency === cartCurrency ? (
+                    <span>{symbol}{item.price?.toFixed(2) || '0.00'}</span>
+                  ) : (
+                    rates[displayCurrency] ? (
+                      <span>{displaySymbol}{getConvertedPrice(item.price || 0, displayCurrency, rates, cartCurrency)?.toFixed(2)}</span>
+                    ) : (
+                      <span>{symbol}{item.price?.toFixed(2) || '0.00'}</span>
+                    )
+                  )}
+                </div>
                 <div className="quantity-input">
                   <input
                     type="number"
@@ -192,8 +208,20 @@ const CartPage = () => {
                 <div style={{ 
                   fontFamily: 'var(--font-body)', 
                   fontWeight: 'bold',
-                  fontSize: '1em'
-                }}>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</div>
+                  fontSize: '1em',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  {displayCurrency === cartCurrency ? (
+                    <span>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                  ) : (
+                    rates[displayCurrency] ? (
+                      <span>{displaySymbol}{getConvertedPrice((item.price || 0) * item.quantity, displayCurrency, rates, cartCurrency)?.toFixed(2)}</span>
+                    ) : (
+                      <span>{symbol}{((item.price || 0) * item.quantity).toFixed(2)}</span>
+                    )
+                  )}
+                </div>
                 <div>
                   <button
                     className="remove-button"
@@ -226,9 +254,19 @@ const CartPage = () => {
 
             <div className="checkout-bar" style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end' }}>
               <div className="checkout-summary" style={{ width: '300px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2em', fontWeight: 'bold', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2em', fontWeight: 'bold', marginBottom: '20px', alignItems: 'center' }}>
                   <span>Subtotal ({getItemCount()} items)</span>
-                  <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    {displayCurrency === cartCurrency ? (
+                      <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>
+                    ) : (
+                      rates[displayCurrency] ? (
+                        <span style={{ color: 'var(--brand-green)' }}>{displaySymbol}{getConvertedPrice(getCartTotal(), displayCurrency, rates, cartCurrency)?.toFixed(2)}</span>
+                      ) : (
+                        <span style={{ color: 'var(--brand-green)' }}>{subtotalSymbol}{getCartTotal().toFixed(2)}</span>
+                      )
+                    )}
+                  </div>
                 </div>
                 <Link 
                   href="/checkout"
