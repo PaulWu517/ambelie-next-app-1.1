@@ -27,6 +27,8 @@ interface Product {
   Manufacturer?: string; // 新增：制造商
   price?: number;
   isInquiryOnly?: boolean;
+  inStock?: boolean;
+  stockQuantity?: number;
   images?: ImageItem[] | null;
   slug: string;
   category?: Category;

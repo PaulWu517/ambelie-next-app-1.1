@@ -11,6 +11,7 @@ import { Product as CartProduct } from '@/types';
 import styles from '../app/products/[slug]/ProductDetailPage.module.css';
 import QRCodeModal from './QRCodeModal';
 import AITryOnChoiceModal from './AITryOnChoiceModal';
+import EnquireSimilarModal from './EnquireSimilarModal';
 import { generateProductPDF } from '@/lib/utils/pdfGenerator';
 
 interface ImageItem {
@@ -30,6 +31,8 @@ interface Product {
   Manufacturer?: string; // 新增：制造商
   price?: number;
   isInquiryOnly?: boolean;
+  inStock?: boolean;
+  stockQuantity?: number;
   images?: ImageItem[] | null;
   slug: string;
   vrModelUrl?: string;
@@ -115,6 +118,7 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
   const [touchEndX, setTouchEndX] = useState(0);
   const [qrOpen, setQrOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [enquireSimilarOpen, setEnquireSimilarOpen] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const vrPageUrl = useMemo(() => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -530,18 +534,28 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
           <div className={`${styles.productInfoContent} ${!hasDescription ? styles.noDescriptionContent : ''}`}>
             <h1 className={styles.productTitle}>{product.name}</h1>
             
-            {/* 当非询价且有价格时显示价格与货币符号；否则不展示任何价格文案 */}
-            {!isInquiryOnly && actualPrice > 0 && (
-              <div className={styles.priceContainer}>
-                <div className={styles.price}>
-                  {displayCurrency === baseCurrency ? (
-                    `${currencySymbol}${Math.round(actualPrice).toLocaleString()}`
-                  ) : (
-                    convertedPrice ? `${displaySymbol}${Math.round(convertedPrice).toLocaleString()}` : `${currencySymbol}${Math.round(actualPrice).toLocaleString()}`
-                  )}
+            {/* 价格与库存同行显示 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+              {/* 当非询价且有价格时显示价格与货币符号；否则不展示任何价格文案 */}
+              {!isInquiryOnly && actualPrice > 0 && (
+                <div className={styles.priceContainer} style={{ marginBottom: 0 }}>
+                  <div className={styles.price}>
+                    {displayCurrency === baseCurrency ? (
+                      `${currencySymbol}${Math.round(actualPrice).toLocaleString()}`
+                    ) : (
+                      convertedPrice ? `${displaySymbol}${Math.round(convertedPrice).toLocaleString()}` : `${currencySymbol}${Math.round(actualPrice).toLocaleString()}`
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* 库存展示：当在售且有库存时显示 */}
+              {product.inStock !== false && (
+                <div style={{ fontSize: '0.9rem', color: '#666', fontWeight: 500, display: 'inline-block' }}>
+                  In Stock: {product.stockQuantity !== undefined ? product.stockQuantity : 1} available
+                </div>
+              )}
+            </div>
 
             {/* Introduction 部分 - 现在在产品详情之前 */}
             {product.description && (
@@ -583,7 +597,8 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
 
           <div className={styles.productActions}>
             {/* 当有价格时：同时展示“Add to Cart”和“Add to Inquiry”，并保证顺序为：Cart -> Inquiry -> Collection */}
-            {!isInquiryOnly && (
+            {/* 如果缺货(inStock === false)，则不展示 Add to Cart */}
+            {!isInquiryOnly && product.inStock !== false && (
               <button 
                 className={`${styles.actionButton} ${styles.addToCartButton}`}
                 onClick={handleAddToCart}
@@ -595,12 +610,20 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
               </button>
             )}
 
-            {/* 无论是否有价格，都保留 Add to Inquiry */}
+            {/* 无论是否有价格，都保留 Inquiry 按钮。如果是缺货，则文案变为 ENQUIRE SIMILAR，并弹出邮件对话框 */}
             <button 
               className={`${styles.actionButton} ${styles.inquireButton}`}
-              onClick={handleAddToInquiry}
+              onClick={() => {
+                if (product.inStock === false) {
+                  setEnquireSimilarOpen(true);
+                } else {
+                  handleAddToInquiry();
+                }
+              }}
             >
-              <span className={styles.buttonText}>ADD TO INQUIRY</span>
+              <span className={styles.buttonText}>
+                {product.inStock === false ? 'ENQUIRE SIMILAR' : 'ADD TO INQUIRY'}
+              </span>
             </button>
             {/* VR 入口：样式与“Add to Inquiry”一致，位于其右侧、Collection 左侧；当无 vrModelUrl 时隐藏 */}
             {hasVRModel && (
@@ -631,11 +654,17 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
                 <span className={styles.buttonText}>AI VIRTUAL TRY-ON</span>
               </button>
             )}
+            
+            {/* 收藏按钮。如果缺货，则变为 SOLD 并禁用 */}
             <button 
               className={`${styles.actionButton} ${styles.addToCollectionButton}`}
               onClick={handleAddToCollection}
+              disabled={product.inStock === false}
+              style={product.inStock === false ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
             >
-              <span className={styles.buttonText}>ADD TO COLLECTION</span>
+              <span className={styles.buttonText}>
+                {product.inStock === false ? 'SOLD' : 'ADD TO COLLECTION'}
+              </span>
             </button>
           </div>
           </div>
@@ -661,6 +690,12 @@ export default function ProductDisplay({ product, API_URL }: ProductDisplayProps
         productName={product.name}
         previewFashionUrl={fashionUrl || undefined}
         previewModelUrl={modelUrl || undefined}
+      />
+      <EnquireSimilarModal 
+        isOpen={enquireSimilarOpen} 
+        onClose={() => setEnquireSimilarOpen(false)} 
+        productName={product.name}
+        productUrl={typeof window !== 'undefined' ? window.location.href : ''}
       />
     </>
   );

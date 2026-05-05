@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     const orderDetails = {
       id: session.client_reference_id || session.id,
-      orderNumber: session.metadata?.order_number || session.id,
+      orderNumber: session.metadata?.order_number || session.metadata?.tempOrderNumber || session.id,
       totalAmount: (session.amount_total || 0) / 100,
       currency: (session.currency || 'GBP').toUpperCase(),
       customerEmail: customerEmail || email || 'Unknown',
@@ -64,6 +64,15 @@ export async function GET(request: NextRequest) {
       orderDate: new Date((session.created || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
       status: session.payment_status === 'paid' ? 'paid' : session.status || 'pending',
       items: lineItems,
+      shippingOption: session.metadata?.shippingOption || 'collect',
+      customerPhone: session.metadata?.customerPhone || '',
+      shippingAddress: {
+        line1: session.metadata?.addressLine1 || '',
+        city: session.metadata?.addressCity || '',
+        state: session.metadata?.addressState || '',
+        postalCode: session.metadata?.addressPostalCode || '',
+        country: session.metadata?.addressCountry || '',
+      },
     };
 
     return NextResponse.json({ success: true, data: orderDetails }, { status: 200 });

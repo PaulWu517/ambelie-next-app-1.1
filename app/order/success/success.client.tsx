@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Package, Calendar, Clock, Copy } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { useCartStore } from '@/lib/stores/cartStore';
 import styles from './page.module.css';
 
@@ -17,16 +17,15 @@ interface OrderDetails {
   orderDate: string;
   status: string;
   items?: { name: string; price: number; quantity: number; currency: string }[];
-}
-
-interface PaymentDetails {
-  id: string;
-  amount: number;
-  currency: string;
-  paymentMethod: string;
-  provider: string;
-  paymentDate: string;
-  status: string;
+  shippingOption?: string;
+  customerPhone?: string;
+  shippingAddress?: {
+    line1?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
 }
 
 export default function OrderSuccessClient() {
@@ -36,10 +35,8 @@ export default function OrderSuccessClient() {
   const { clearCart } = useCartStore();
 
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isMock) {
@@ -48,24 +45,14 @@ export default function OrderSuccessClient() {
       setOrderDetails({
         id: 'mock-1',
         orderNumber: 'TEMP-ORDER-1759817292957',
-        totalAmount: 1.0,
+        totalAmount: 1,
         currency: 'GBP',
         customerEmail: 'guest@example.com',
-        customerName: '华盛颐',
+        customerName: 'Customer',
         orderDate: now,
-        status: 'pending',
-        items: [
-          { name: 'payment-test', price: 1.0, quantity: 1, currency: 'GBP' },
-        ],
-      });
-      setPaymentDetails({
-        id: 'pay_mock_1',
-        amount: 1.0,
-        currency: 'GBP',
-        paymentMethod: 'card',
-        provider: 'stripe',
-        paymentDate: now,
-        status: 'succeeded',
+        status: 'paid',
+        shippingOption: 'collect',
+        items: [{ name: 'payment-test', price: 1, quantity: 1, currency: 'GBP' }],
       });
       setLoading(false);
       return;
@@ -76,72 +63,24 @@ export default function OrderSuccessClient() {
       setLoading(false);
       return;
     }
+
     (async () => {
       try {
         const emailParam = searchParams.get('email');
         const url = `/api/orders/by-session?session_id=${encodeURIComponent(sessionId)}${emailParam ? `&email=${encodeURIComponent(emailParam)}` : ''}`;
         const res = await fetch(url, { method: 'GET' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.success && data.data) {
-            clearCart();
-            setOrderDetails(data.data);
-            setPaymentDetails(prev => prev || null);
-          } else {
-            setError('Order data not found');
-          }
+        if (!res.ok) {
+          const errText = await res.text();
+          setError(`Failed to load order: ${res.status} ${errText || ''}`);
+          return;
+        }
+
+        const data = await res.json();
+        if (data?.success && data?.data) {
+          clearCart();
+          setOrderDetails(data.data);
         } else {
-          // 如果前端服务端未配置 Stripe Secret（501），降级调用后端接口获取会话详情
-          if (res.status === 501) {
-            try {
-              const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://ambelie-backend-production.up.railway.app';
-              const backendUrl = `${apiUrl}/api/payments/session/${encodeURIComponent(sessionId)}`;
-              const bRes = await fetch(backendUrl, { method: 'GET' });
-              if (bRes.ok) {
-                const bData = await bRes.json();
-                const session = bData?.data;
-                if (session) {
-                  // 将 Stripe session 映射为前端 orderDetails
-                  const lineItems = (session?.line_items?.data || []).map((item: any) => {
-                    const qty = item.quantity || 1;
-                    const unitAmount = typeof item.amount_subtotal === 'number' ? item.amount_subtotal / 100 / qty : (item.price?.unit_amount || 0) / 100;
-                    return {
-                      name: item.description || item.price?.nickname || 'Item',
-                      price: unitAmount,
-                      quantity: qty,
-                      currency: (item.currency || session.currency || 'GBP').toUpperCase(),
-                    };
-                  });
-                  const customerEmail = session?.customer_details?.email || session?.customer_email || emailParam || 'Unknown';
-                  const mapped = {
-                    id: session.client_reference_id || session.id,
-                    orderNumber: session.metadata?.order_number || session.id,
-                    totalAmount: (session.amount_total || 0) / 100,
-                    currency: (session.currency || 'GBP').toUpperCase(),
-                    customerEmail,
-                    customerName: session?.customer_details?.name || 'Customer',
-                    orderDate: new Date((session.created || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-                    status: session.payment_status === 'paid' ? 'paid' : session.status || 'pending',
-                    items: lineItems,
-                  } as OrderDetails;
-                  clearCart();
-                  setOrderDetails(mapped);
-                  setPaymentDetails(prev => prev || null);
-                } else {
-                  const bt = await bRes.text();
-                  setError(`Fallback failed: ${bt || 'No session data'}`);
-                }
-              } else {
-                const bt = await bRes.text();
-                setError(`Backend fetch failed: ${bRes.status} ${bt || ''}`);
-              }
-            } catch (fallbackErr) {
-              setError(fallbackErr instanceof Error ? fallbackErr.message : 'Fallback unknown error');
-            }
-          } else {
-            const errText = await res.text();
-            setError(`Failed to load order: ${res.status} ${errText || ''}`);
-          }
+          setError('Order data not found');
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Unknown error');
@@ -149,7 +88,7 @@ export default function OrderSuccessClient() {
         setLoading(false);
       }
     })();
-  }, [sessionId, isMock, clearCart]);
+  }, [sessionId, isMock, clearCart, searchParams]);
 
   const currencySymbol = (code: string) => ({
     USD: '$', GBP: '£', EUR: '€', CNY: '¥', JPY: '¥', HKD: 'HK$'
@@ -168,13 +107,28 @@ export default function OrderSuccessClient() {
     );
   }
 
+  const shippingOption = orderDetails?.shippingOption === 'full_service' ? 'full_service' : 'collect';
+
   return (
-    <main className={styles.successPage}>
-      <div className={styles.container}>
-        <div className={styles.pageHeader}>
-          <CheckCircle className={styles.titleIcon} />
-          <h1 className={styles.pageTitle}>Payment Successful!</h1>
-          <p className={styles.subtitle}>Thank you for your purchase. We have received your order.</p>
+    <main style={{ paddingTop: '160px', paddingBottom: '100px', minHeight: '100vh', backgroundColor: '#fff' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '50px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', color: '#666', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ fontWeight: 'bold', color: '#000' }}>
+              <span style={{ display: 'inline-block', width: '24px', height: '24px', backgroundColor: '#000', color: '#fff', borderRadius: '50%', textAlign: 'center', lineHeight: '24px', marginRight: '8px' }}>1</span>
+              SHIPPING DETAILS
+            </div>
+            <div style={{ width: '40px', height: '1px', backgroundColor: '#ddd' }}></div>
+            <div style={{ fontWeight: 'bold', color: '#000' }}>
+              <span style={{ display: 'inline-block', width: '24px', height: '24px', backgroundColor: '#000', color: '#fff', borderRadius: '50%', textAlign: 'center', lineHeight: '24px', marginRight: '8px' }}>2</span>
+              REVIEW & PAY
+            </div>
+            <div style={{ width: '40px', height: '1px', backgroundColor: '#ddd' }}></div>
+            <div style={{ fontWeight: 'bold', color: '#000' }}>
+              <span style={{ display: 'inline-block', width: '24px', height: '24px', backgroundColor: '#000', color: '#fff', borderRadius: '50%', textAlign: 'center', lineHeight: '24px', marginRight: '8px' }}>3</span>
+              ORDER SUCCESS
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -185,92 +139,74 @@ export default function OrderSuccessClient() {
         )}
 
         {orderDetails && (
-          <div className={styles.orderCard}>
-            <div className={styles.orderHeader}>
-              <div className={styles.orderTitleRow}>
-                <div className={`${styles.orderTitle} ${styles.orderTitleText}`}>Order #{orderDetails.orderNumber}</div>
-                <button
-                  type="button"
-                  className={styles.copyButton}
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(String(orderDetails.orderNumber || ''));
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1500);
-                    } catch (e) {
-                      // ignore
-                    }
-                  }}
-                  aria-label="Copy order number"
-                >
-                  <Copy className={styles.copyIcon} /> {copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <div className={styles.orderPlaced}><Clock className={styles.cardIcon} /> Order Placed</div>
-            </div>
-            <div className={styles.orderBody}>
-              <div className={styles.orderMeta}>
-                <Calendar className={styles.cardIcon} />
-                <span>Order Date: {new Date(orderDetails.orderDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-              <div className={styles.statusRow}>
-                <div className={styles.statusLabel}>Order Status: {orderDetails.status}</div>
-                <div className={styles.progressWrap}><div className={styles.progressBar} /></div>
-              </div>
+          <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto' }}>
+            <CheckCircle style={{ width: '54px', height: '54px', color: '#4b5563', margin: '0 auto 20px' }} />
+            <h1 style={{ fontSize: '2rem', marginBottom: '10px', fontWeight: 500 }}>THANK YOU FOR YOUR ORDER</h1>
+            <p style={{ fontSize: '1.2rem', marginBottom: '10px' }}>Order #{orderDetails.orderNumber}</p>
+            <p style={{ color: '#666', marginBottom: '40px' }}>
+              A confirmation email has been sent to {orderDetails.customerEmail}.
+            </p>
 
-              {orderDetails.items && orderDetails.items.length > 0 && (
-                <div style={{ marginTop: '16px' }}>
-                  <div className={styles.itemsHeader}>
-                    <h2 className={styles.itemsTitle}>Items in this order</h2>
-                  </div>
-                  <div className={styles.itemsBody}>
-                    {orderDetails.items.map((item, idx) => (
-                      <div key={idx} className={styles.itemRow}>
-                        <Package className={styles.itemIcon} />
-                        <div>
-                          <div className={styles.itemName}>{item.name}</div>
-                          <div className={styles.itemQty}>Quantity: {item.quantity}</div>
-                        </div>
-                        <div className={styles.itemPrice}>
-                          {currencySymbol(item.currency)}{item.price.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          <div className={styles.perItem}>per item</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div style={{ backgroundColor: '#f9f9f9', padding: '30px', borderRadius: '8px', marginBottom: '30px', textAlign: 'left', border: '1px solid #eee' }}>
+              <h2 style={{ fontSize: '1.05rem', marginBottom: '15px', fontWeight: 'bold' }}>WHAT HAPPENS NEXT</h2>
+
+              {shippingOption === 'collect' ? (
+                <>
+                  <p style={{ marginBottom: '15px', lineHeight: '1.7', color: '#333' }}>
+                    Our team is preparing your item(s). You will receive a separate email within 24-48 hours providing the pickup address, a unique reference number, and available time slots.
+                  </p>
+                  <p style={{ fontSize: '0.95rem', color: '#666', lineHeight: '1.7' }}>
+                    Please note: All logistics-related costs and arrangements beyond the point of collection are the customer&apos;s responsibility. Ensure you have your order confirmation and valid ID for a seamless handover.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ marginBottom: '15px', lineHeight: '1.7', color: '#333' }}>
+                    Thank you for requesting a delivery quote. Our logistics team is calculating a comprehensive shipping route tailored to your destination, including estimated taxes and duties.
+                  </p>
+                  <p style={{ marginBottom: '15px', lineHeight: '1.7', color: '#333' }}>
+                    A formal quote will be sent to your email within 1-3 business days.
+                  </p>
+                  <p style={{ fontSize: '0.95rem', color: '#666', lineHeight: '1.7' }}>
+                    Please note: While we strive for accuracy, our quotes cover standard delivery and predictable taxes. Any destination-specific fees incurred locally remain the customer&apos;s responsibility.
+                  </p>
+                </>
               )}
+            </div>
 
-              <div className={styles.summaryRow}>
-                <div className={styles.customerInfo}>
-                  <div>Customer: {orderDetails.customerName}</div>
-                  <div>Email: {orderDetails.customerEmail}</div>
-                </div>
-                <div className={styles.orderTotalBox}>
-                  <div className={styles.orderTotalLabel}>Order Total</div>
-                  <div className={styles.orderTotalValue}>
-                    {currencySymbol(orderDetails.currency)}{orderDetails.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className={styles.currency}>{(orderDetails.currency || 'GBP').toUpperCase()}</span>
+            {orderDetails.items && orderDetails.items.length > 0 && (
+              <div style={{ backgroundColor: '#fff', padding: '24px 30px', borderRadius: '8px', marginBottom: '30px', textAlign: 'left', border: '1px solid #eee' }}>
+                <h3 style={{ fontSize: '1rem', marginBottom: '16px', fontWeight: 'bold' }}>ORDER SUMMARY</h3>
+                {orderDetails.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', padding: '14px 0', borderBottom: idx === orderDetails.items!.length - 1 ? 'none' : '1px solid #eee' }}>
+                    <div>
+                      <div style={{ fontWeight: 500, marginBottom: '4px' }}>{item.name}</div>
+                      <div style={{ color: '#666', fontSize: '0.95rem' }}>Quantity: {item.quantity}</div>
+                    </div>
+                    <div style={{ fontWeight: 500 }}>
+                      {currencySymbol(item.currency)}{(item.price * item.quantity).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    </div>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '18px', paddingTop: '18px', borderTop: '1px solid #eee', fontSize: '1.05rem' }}>
+                  <div style={{ color: '#333' }}>Order Total</div>
+                  <div style={{ fontWeight: 'bold', color: 'var(--brand-green)' }}>
+                    {currencySymbol(orderDetails.currency)}{orderDetails.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </div>
                 </div>
               </div>
+            )}
 
-              <div className={styles.actions}>
-                <Link href="/" className={styles.tertiaryButton}>Back to Home</Link>
-                <Link href="/products" className={styles.primaryButton}>Continue Shopping</Link>
-              </div>
+            <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link href="/orders" style={{ padding: '12px 24px', backgroundColor: '#000', color: '#fff', border: 'none', textDecoration: 'none' }}>
+                VIEW ORDER STATUS
+              </Link>
+              <Link href="/" style={{ padding: '12px 24px', backgroundColor: '#fff', color: '#000', border: '1px solid #000', textDecoration: 'none' }}>
+                CONTINUE BROWSING
+              </Link>
             </div>
           </div>
         )}
-
-        <div className={styles.tipBox} style={{ marginTop: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-            <Calendar style={{ width: '20px', height: '20px' }} />
-            <div>
-              <h4 className={styles.tipTitle}>Next Steps</h4>
-              <p className={styles.tipText}>We will process your order within 1–2 business days and send tracking information via email.</p>
-            </div>
-          </div>
-        </div>
       </div>
     </main>
   );

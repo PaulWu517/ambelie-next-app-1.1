@@ -15,6 +15,7 @@ interface Product {
   period: string;
   main_image?: ImageItem | null;
   hover_image?: ImageItem | null;
+  inStock?: boolean;
 }
 
 interface ProductCardProps {
@@ -50,6 +51,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               height={667}
               style={{ aspectRatio: '3/4', objectFit: 'cover' }}
             />
+          )}
+          {product.inStock === false && (
+            <div className={styles.soldOverlay}>
+              <span className={styles.soldText}>SOLD</span>
+            </div>
           )}
         </div>
         <div className={styles.productInfo}>
