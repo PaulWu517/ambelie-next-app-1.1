@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from '@stripe/react-stripe-js';
 import { useCartStore } from '@/lib/stores/cartStore';
 import { useCurrencyStore, getConvertedPrice, currencySymbolMap as globalCurrencySymbolMap } from '@/lib/stores/currencyStore';
@@ -10,7 +10,7 @@ import getStripe from '@/lib/stripe';
 
 const stripePromise = getStripe();
 
-const CheckoutPage = () => {
+const CheckoutContent = () => {
   const searchParams = useSearchParams();
   const { items, getCartTotal, getItemCount, clearCart } = useCartStore();
   const { displayCurrency, rates } = useCurrencyStore();
@@ -565,4 +565,10 @@ const CheckoutPage = () => {
   );
 };
 
-export default CheckoutPage;
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div style={{ paddingTop: '160px', textAlign: 'center' }}>Loading checkout...</div>}>
+      <CheckoutContent />
+    </Suspense>
+  );
+}
