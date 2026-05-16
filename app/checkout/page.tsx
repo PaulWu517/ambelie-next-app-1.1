@@ -8,6 +8,105 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import getStripe from '@/lib/stripe';
 
+const COUNTRIES = [
+  // 北美洲
+  { code: 'US', name: 'United States', currency: 'USD' },
+  { code: 'CA', name: 'Canada', currency: 'CAD' },
+  { code: 'MX', name: 'Mexico', currency: 'MXN' },
+  { code: 'BS', name: 'Bahamas', currency: 'BSD' },
+  { code: 'JM', name: 'Jamaica', currency: 'JMD' },
+
+  // 欧洲 (欧元区及其他)
+  { code: 'GB', name: 'United Kingdom', currency: 'GBP' },
+  { code: 'FR', name: 'France', currency: 'EUR' },
+  { code: 'DE', name: 'Germany', currency: 'EUR' },
+  { code: 'IT', name: 'Italy', currency: 'EUR' },
+  { code: 'ES', name: 'Spain', currency: 'EUR' },
+  { code: 'NL', name: 'Netherlands', currency: 'EUR' },
+  { code: 'BE', name: 'Belgium', currency: 'EUR' },
+  { code: 'AT', name: 'Austria', currency: 'EUR' },
+  { code: 'IE', name: 'Ireland', currency: 'EUR' },
+  { code: 'PT', name: 'Portugal', currency: 'EUR' },
+  { code: 'FI', name: 'Finland', currency: 'EUR' },
+  { code: 'GR', name: 'Greece', currency: 'EUR' },
+  { code: 'LU', name: 'Luxembourg', currency: 'EUR' },
+  { code: 'CY', name: 'Cyprus', currency: 'EUR' },
+  { code: 'MT', name: 'Malta', currency: 'EUR' },
+  { code: 'EE', name: 'Estonia', currency: 'EUR' },
+  { code: 'SK', name: 'Slovakia', currency: 'EUR' },
+  { code: 'SI', name: 'Slovenia', currency: 'EUR' },
+  { code: 'LV', name: 'Latvia', currency: 'EUR' },
+  { code: 'LT', name: 'Lithuania', currency: 'EUR' },
+  { code: 'MC', name: 'Monaco', currency: 'EUR' },
+  { code: 'CH', name: 'Switzerland', currency: 'CHF' },
+  { code: 'SE', name: 'Sweden', currency: 'SEK' },
+  { code: 'DK', name: 'Denmark', currency: 'DKK' },
+  { code: 'NO', name: 'Norway', currency: 'NOK' },
+  { code: 'PL', name: 'Poland', currency: 'PLN' },
+  { code: 'CZ', name: 'Czech Republic', currency: 'CZK' },
+  { code: 'HU', name: 'Hungary', currency: 'HUF' },
+  { code: 'RO', name: 'Romania', currency: 'RON' },
+  { code: 'BG', name: 'Bulgaria', currency: 'BGN' },
+  { code: 'HR', name: 'Croatia', currency: 'EUR' },
+  { code: 'IS', name: 'Iceland', currency: 'ISK' },
+
+  // 亚洲
+  { code: 'CN', name: 'China', currency: 'CNY' },
+  { code: 'HK', name: 'Hong Kong SAR', currency: 'HKD' },
+  { code: 'TW', name: 'Taiwan', currency: 'TWD' },
+  { code: 'MO', name: 'Macao SAR', currency: 'MOP' },
+  { code: 'JP', name: 'Japan', currency: 'JPY' },
+  { code: 'KR', name: 'South Korea', currency: 'KRW' },
+  { code: 'SG', name: 'Singapore', currency: 'SGD' },
+  { code: 'MY', name: 'Malaysia', currency: 'MYR' },
+  { code: 'TH', name: 'Thailand', currency: 'THB' },
+  { code: 'VN', name: 'Vietnam', currency: 'VND' },
+  { code: 'ID', name: 'Indonesia', currency: 'IDR' },
+  { code: 'PH', name: 'Philippines', currency: 'PHP' },
+  { code: 'IN', name: 'India', currency: 'INR' },
+  { code: 'PK', name: 'Pakistan', currency: 'PKR' },
+  { code: 'BD', name: 'Bangladesh', currency: 'BDT' },
+  { code: 'LK', name: 'Sri Lanka', currency: 'LKR' },
+  { code: 'NP', name: 'Nepal', currency: 'NPR' },
+  { code: 'MV', name: 'Maldives', currency: 'MVR' },
+
+  // 中东
+  { code: 'AE', name: 'United Arab Emirates', currency: 'AED' },
+  { code: 'SA', name: 'Saudi Arabia', currency: 'SAR' },
+  { code: 'QA', name: 'Qatar', currency: 'QAR' },
+  { code: 'KW', name: 'Kuwait', currency: 'KWD' },
+  { code: 'BH', name: 'Bahrain', currency: 'BHD' },
+  { code: 'OM', name: 'Oman', currency: 'OMR' },
+  { code: 'IL', name: 'Israel', currency: 'ILS' },
+  { code: 'TR', name: 'Turkey', currency: 'TRY' },
+  { code: 'JO', name: 'Jordan', currency: 'JOD' },
+  { code: 'LB', name: 'Lebanon', currency: 'LBP' },
+
+  // 大洋洲
+  { code: 'AU', name: 'Australia', currency: 'AUD' },
+  { code: 'NZ', name: 'New Zealand', currency: 'NZD' },
+  { code: 'FJ', name: 'Fiji', currency: 'FJD' },
+  { code: 'PF', name: 'French Polynesia', currency: 'XPF' },
+
+  // 南美洲
+  { code: 'BR', name: 'Brazil', currency: 'BRL' },
+  { code: 'AR', name: 'Argentina', currency: 'ARS' },
+  { code: 'CL', name: 'Chile', currency: 'CLP' },
+  { code: 'CO', name: 'Colombia', currency: 'COP' },
+  { code: 'PE', name: 'Peru', currency: 'PEN' },
+  { code: 'UY', name: 'Uruguay', currency: 'UYU' },
+  
+  // 非洲
+  { code: 'ZA', name: 'South Africa', currency: 'ZAR' },
+  { code: 'EG', name: 'Egypt', currency: 'EGP' },
+  { code: 'MA', name: 'Morocco', currency: 'MAD' },
+  { code: 'NG', name: 'Nigeria', currency: 'NGN' },
+  { code: 'KE', name: 'Kenya', currency: 'KES' },
+  { code: 'GH', name: 'Ghana', currency: 'GHS' },
+  { code: 'MU', name: 'Mauritius', currency: 'MUR' },
+  { code: 'SC', name: 'Seychelles', currency: 'SCR' }
+];
+
 const stripePromise = getStripe();
 
 const CheckoutContent = () => {
@@ -345,14 +444,22 @@ const CheckoutContent = () => {
                       <input type="text" placeholder="Full Name *" value={customerInfo.name} onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} className="form-input" required />
                       <input type="tel" placeholder="Phone Number *" value={customerInfo.phone} onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})} className="form-input" required />
                     </div>
-                    <select value={customerInfo.address.country} onChange={(e) => setCustomerInfo({...customerInfo, address: {...customerInfo.address, country: e.target.value}})} className="form-input" required>
-                      <option value="US">United States</option>
-                      <option value="GB">United Kingdom</option>
-                      <option value="CN">China</option>
-                      <option value="AU">Australia</option>
-                      <option value="CA">Canada</option>
-                      <option value="JP">Japan</option>
-                      <option value="FR">France</option>
+                    <select 
+                      value={customerInfo.address.country} 
+                      onChange={(e) => {
+                        const newCountryCode = e.target.value;
+                        setCustomerInfo({...customerInfo, address: {...customerInfo.address, country: newCountryCode}});
+                        const countryData = COUNTRIES.find(c => c.code === newCountryCode);
+                        if (countryData && useCurrencyStore.getState().setCurrency) {
+                          useCurrencyStore.getState().setCurrency(countryData.currency);
+                        }
+                      }} 
+                      className="form-input" 
+                      required
+                    >
+                      {COUNTRIES.map(c => (
+                        <option key={c.code} value={c.code}>{c.name}</option>
+                      ))}
                     </select>
                     <input type="text" placeholder="Address Line 1 *" value={customerInfo.address.line1} onChange={(e) => setCustomerInfo({...customerInfo, address: {...customerInfo.address, line1: e.target.value}})} className="form-input" required />
                     <div className="two-col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
