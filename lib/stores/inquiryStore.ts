@@ -192,16 +192,16 @@ export const useInquiryStore = create<InquiryState>()((set, get) => ({
       },
       
       loadFromBackend: async () => {
-        console.log('🔄 [Inquiry Debug] Loading inquiry from backend, clearing cache...');
+        console.log('🔄 [Inquiry Debug] Loading inquiry from backend...');
         
-        // 首先清空本地数据，确保不依赖缓存
-        set({ items: [], isLoading: true });
+        // 保留本地问询列表；仅在成功获取到后端数据后再覆盖。
+        set({ isLoading: true });
         
         const token = await getUserToken();
         console.log('🔑 [Inquiry Debug] Token found for load:', !!token, token ? `Length: ${token.length}` : 'No token');
         
         if (!token) {
-          console.warn('❌ [Inquiry Debug] No user token found, keeping empty inquiry');
+          console.warn('❌ [Inquiry Debug] No user token found, preserving local inquiry items');
           set({ isLoading: false });
           return;
         }

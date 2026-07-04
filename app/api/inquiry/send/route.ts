@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-// 创建邮件发送器
-const createTransporter = () => {
-  const smtpPort = parseInt(process.env.SMTP_PORT || '465');
-  const isSecurePort = smtpPort === 465;
-  
+type TransporterConfig = {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+};
+
+const createTransporter = ({ host, port, user, pass }: TransporterConfig) => {
+  const isSecurePort = port === 465;
+
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.exmail.qq.com',
-    port: smtpPort,
+    host,
+    port,
     secure: isSecurePort, // 端口465使用隐式TLS，端口587使用STARTTLS
     tls: {
       rejectUnauthorized: false
     },
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
+      user,
+      pass,
     },
   });
 };
@@ -23,6 +28,17 @@ const createTransporter = () => {
 export async function POST(request: NextRequest) {
   try {
     const { customerInfo, inquiryItems, submissionDate, totalItems } = await request.json();
+
+    const inquirySmtpHost = process.env.INQUIRY_SMTP_HOST || 'smtp.qq.com';
+    const inquirySmtpPort = parseInt(process.env.INQUIRY_SMTP_PORT || '465');
+    const inquirySmtpUser = process.env.INQUIRY_SMTP_USER;
+    const inquirySmtpPassword = process.env.INQUIRY_SMTP_PASSWORD;
+    const inquiryReceiverEmail = process.env.INQUIRY_RECEIVER_EMAIL || 'info@ambelie.com';
+
+    const defaultSmtpHost = process.env.SMTP_HOST || 'smtp.exmail.qq.com';
+    const defaultSmtpPort = parseInt(process.env.SMTP_PORT || '465');
+    const defaultSmtpUser = process.env.SMTP_USER;
+    const defaultSmtpPassword = process.env.SMTP_PASSWORD;
 
     if (!customerInfo.email || !customerInfo.firstName) {
       return NextResponse.json(
@@ -38,8 +54,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!inquirySmtpUser || !inquirySmtpPassword) {
+      return NextResponse.json(
+        { error: 'Inquiry SMTP configuration is incomplete' },
+        { status: 500 }
+      );
+    }
+
+    if (!defaultSmtpUser || !defaultSmtpPassword) {
+      return NextResponse.json(
+        { error: 'Default SMTP configuration is incomplete' },
+        { status: 500 }
+      );
+    }
+
     // 构建邮件内容
-    const companyEmail = 'info@ambelie.com';
+    const companyEmail = inquiryReceiverEmail;
     
     // 构建商品列表HTML
     const itemsListHtml = inquiryItems.map((item: any, index: number) => `
@@ -131,18 +161,30 @@ export async function POST(request: NextRequest) {
       </html>
     `;
 
-    // 发送邮件
-    const transporter = createTransporter();
+    // 发给内部团队的通知邮件使用独立 SMTP，避免公司邮箱自发自收。
+    const inquiryTransporter = createTransporter({
+      host: inquirySmtpHost,
+      port: inquirySmtpPort,
+      user: inquirySmtpUser,
+      pass: inquirySmtpPassword,
+    });
+
+    const defaultTransporter = createTransporter({
+      host: defaultSmtpHost,
+      port: defaultSmtpPort,
+      user: defaultSmtpUser,
+      pass: defaultSmtpPassword,
+    });
     
     const mailOptions = {
-      from: `"AMBELIE Inquiry System" <${process.env.SMTP_USER}>`,
+      from: `"AMBELIE Inquiry System" <${inquirySmtpUser}>`,
       to: companyEmail,
       subject: `🔍 New Inquiry: Product Inquiry - ${customerInfo.firstName} ${customerInfo.lastName || ''}`,
       html: emailHtml,
       replyTo: customerInfo.email,
     };
 
-    await transporter.sendMail(mailOptions);
+    await inquiryTransporter.sendMail(mailOptions);
 
     // 发送确认邮件给客户
     const customerEmailHtml = `
@@ -208,13 +250,13 @@ export async function POST(request: NextRequest) {
     `;
 
     const customerMailOptions = {
-      from: `"AMBELIE" <${process.env.SMTP_USER}>`,
+      from: `"AMBELIE" <${defaultSmtpUser}>`,
       to: customerInfo.email,
       subject: 'Thank You for Your Inquiry - AMBELIE',
       html: customerEmailHtml,
     };
 
-    await transporter.sendMail(customerMailOptions);
+    await defaultTransporter.sendMail(customerMailOptions);
 
     return NextResponse.json({ 
       success: true, 

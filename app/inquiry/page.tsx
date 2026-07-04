@@ -25,10 +25,12 @@ const InquiryPage = () => {
     message: '' // 保留但不显示，用于兼容后端
   });
 
-  // 组件加载时总是从后端重新加载问询清单，不依赖缓存
+  // 已登录用户从后端同步问询清单；未登录用户保留本地列表。
   useEffect(() => {
-    loadFromBackend();
-  }, [loadFromBackend]);
+    if (isLoggedIn) {
+      loadFromBackend();
+    }
+  }, [isLoggedIn, loadFromBackend]);
 
   // 当用户登录时，自动填充表单信息
   useEffect(() => {
